@@ -1,0 +1,29 @@
+flowchart LR
+  CL1["CityLearn v1"] --> CLS["Standardized CityLearn"]
+  CLS --> CL2["CityLearn v2 / current 2.x"]
+  CLS --> GL["GridLearn<br/>+ power flow"]
+  CL2 --> EVL["EVLearn lineage<br/>+ EV / G2V / V2G"]
+  EVL --> CLCUR["Current CityLearn EV capabilities"]
+  CLS --> CH["CityLearn Challenge<br/>2020–2023"]
+
+  ACND["ACN-Data"] --> ACNS["ACN-Sim"]
+  ACNS --> SG["SustainGym EVCharging"]
+
+  EPLUS["EnergyPlus"] --> SIN["Sinergym"]
+  FMI["Modelica / EnergyPlus via FMI"] --> ENGYM["Energym"]
+  BOP["IBPSA BOPTEST"] --> BOPG["BOPTEST-Gym"]
+
+  EVIND["Independent EV charging"] --> CHARGYM["Chargym"]
+  EVIND --> EV2["EV2Gym"]
+  EVIND --> CHARGAX["Chargax"]
+  EVIND --> EVEC["EV-EcoSim"]
+
+  GRID["Grid-control RL"] --> PGW["PowerGridworld"]
+  GRID --> PGYM["PowerGym"]
+  GRID --> G2O["Grid2Op"]
+  G2O --> RL2["RL2Grid"]
+  GRID --> CP["CommonPower"]
+
+  COSIM["Co-simulation"] --> MOS["mosaik"]
+  COSIM --> HEL["HELICS"]
+  COSIM --> EVEC

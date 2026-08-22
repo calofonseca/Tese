@@ -1,0 +1,329 @@
+%% FEUP THESIS STYLE - project-local working copy
+%%
+%% Based on the FEUP Dissertation format by
+%% João Canas Ferreira and João Correia Lopes (CC BY 4.0).
+%% This local copy keeps the public interface and visual conventions needed
+%% by this doctoral-thesis working project. Before final submission, compare
+%% it with the latest FEUP/PRODEI distribution.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{feupteses}[2026/08/12 v1.0 project-local FEUP thesis style]
+
+\newif\if@portugues
+\newif\if@juri
+\newif\if@final
+\newif\if@onpaper
+\newif\if@backrefs
+\newif\if@committeepage
+\newif\if@provisional
+\newif\ifthesisannotations
+
+\DeclareOption{portugues}{\@portuguestrue}
+\DeclareOption{juri}{\@juritrue}
+\DeclareOption{final}{\@finaltrue}
+\DeclareOption{onpaper}{\@onpapertrue}
+\DeclareOption{backrefs}{\@backrefstrue}
+\DeclareOption{annotated}{\thesisannotationstrue}
+\ProcessOptions\relax
+
+\if@final
+  \@provisionalfalse
+  \@committeepagetrue
+\else
+  \if@juri
+    \@provisionalfalse
+    \@committeepagetrue
+  \else
+    \if@onpaper
+      \@provisionalfalse
+    \else
+      \@provisionaltrue
+    \fi
+  \fi
+\fi
+
+\@ifundefined{chapter}{%
+  \PackageError{feupteses}{The package must be used with a class that defines chapters}{Use the report class.}%
+}{}
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\if@portugues
+  \RequirePackage[portuges]{babel}
+  \RequirePackage{indentfirst}
+\else
+  \RequirePackage[english]{babel}
+\fi
+\RequirePackage[outer=25mm,inner=35mm,vmargin=20mm,includehead,includefoot,headheight=27pt]{geometry}
+\RequirePackage{iftex}
+\RequirePackage{mathptmx}
+\RequirePackage[scaled]{couriers}
+\RequirePackage[scaled]{helvet}
+\ifPDFTeX
+  \RequirePackage[pdftex]{graphicx}
+\else
+  \RequirePackage{graphicx}
+\fi
+\RequirePackage{xurl}
+\RequirePackage{setspace}
+\RequirePackage[tableposition=top]{caption}
+\RequirePackage{booktabs}
+\RequirePackage{xcolor}
+\RequirePackage{float}
+\RequirePackage{array}
+\RequirePackage{multirow}
+\RequirePackage{longtable}
+\RequirePackage{tabularx}
+\RequirePackage{siunitx}
+\RequirePackage{microtype}
+\RequirePackage{enumitem}
+\RequirePackage{fancyhdr}
+\RequirePackage{csquotes}
+\ifPDFTeX
+  \RequirePackage[pdftex,pdfpagelabels,bookmarks,hyperindex,hyperfigures]{hyperref}
+\else
+  \RequirePackage[pdfpagelabels,bookmarks,hyperindex,hyperfigures]{hyperref}
+\fi
+\RequirePackage{bookmark}
+\RequirePackage{emptypage} % keep intentionally blank verso pages truly blank
+\RequirePackage{comment}
+
+\definecolor{engineering}{RGB}{140,45,25}
+\definecolor{draftnote}{RGB}{178,94,0}
+\definecolor{draftnotebg}{RGB}{255,247,232}
+
+\if@onpaper
+  \hypersetup{colorlinks=false,pdfborder={0 0 0},bookmarksnumbered=true,breaklinks=true,linktocpage}
+\else
+  \hypersetup{colorlinks=true,allcolors=engineering,bookmarksnumbered=true,breaklinks=true,linktocpage}
+\fi
+
+\clubpenalty=6000
+\widowpenalty=6000
+\brokenpenalty=9000
+\onehalfspacing
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+\setcounter{topnumber}{2}
+\renewcommand{\topfraction}{0.85}
+\renewcommand{\textfraction}{0.10}
+\renewcommand{\floatpagefraction}{0.75}
+\setlist{itemsep=0.3\baselineskip,topsep=0.5\baselineskip}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{#1}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\if@twoside
+  \fancyhead[LE]{\thepage}
+  \fancyhead[RO]{\thepage}
+  \fancyhead[LO]{\slshape\rightmark}
+  \fancyhead[RE]{\slshape\leftmark}
+\else
+  \fancyhead[L]{\slshape\nouppercase{\leftmark}}
+  \fancyhead[R]{\thepage}
+\fi
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\gdef\@school{Faculdade de Engenharia da Universidade do Porto}
+\def\school#1{\gdef\@school{#1}}
+\gdef\@logo{uporto-feup}
+\def\logo#1{\gdef\@logo{#1}}
+\gdef\@degree{Programa Doutoral em Engenharia Informática}
+\def\degree#1{\gdef\@degree{#1}}
+\gdef\@thesisdate{\today}
+\def\thesisdate#1{\gdef\@thesisdate{#1}}
+\gdef\@provisionaltext{Working version}
+\def\additionalfronttext#1{\gdef\@provisionaltext{#1}}
+\gdef\@copyrightnotice{}
+\def\copyrightnotice#1{\gdef\@copyrightnotice{\copyright\ #1}}
+
+\gdef\@supervisorstext{}
+\def\supervisor#1#2{%
+  \g@addto@macro\@supervisorstext{%
+    \par\vspace{0.35\baselineskip}%
+    \begin{center}\large #1: #2\end{center}%
+  }%
+}
+
+\gdef\@vivatext{}
+\def\committeetext#1{%
+  \gdef\@vivatext{\Large\noindent #1\par\vspace{0.5\baselineskip}}%
+}
+\def\committeemember#1#2{%
+  \g@addto@macro\@vivatext{%
+    \vspace{0.5\baselineskip}%
+    \noindent\large #1: #2\par
+  }%
+}
+\def\signature{%
+  \g@addto@macro\@vivatext{%
+    \vspace{2\baselineskip}%
+    \hfill\rule{0.75\linewidth}{0.2mm}%
+    \vspace{2\baselineskip}%
+  }%
+}
+
+\renewcommand{\maketitle}{%
+  \begin{titlepage}
+    \thispagestyle{empty}
+    \raggedright
+    {\vspace*{-8mm}\Large\bfseries\textsc{\@school}\par}
+    \vspace*{19mm}
+    {\def\baselinestretch{1.15}\selectfont\Huge\bfseries\@title\par}
+    \vspace{10mm}
+    {\Large\bfseries\@author\par}
+    \if@provisional
+      \vspace{8mm}
+      {\Large\textsc{\@provisionaltext}\par}
+    \fi
+    \vfill
+    \includegraphics[width=72mm]{\@logo}
+    \vfill
+    {\large\bfseries\@degree\par}
+    \vspace{5mm}
+    \@supervisorstext
+    \vspace{10mm}
+    {\large\@thesisdate\par}
+  \end{titlepage}
+  \ifx\@copyrightnotice\@empty\else
+    \thispagestyle{empty}
+    \vspace*{\fill}
+    \begin{center}\@copyrightnotice\end{center}
+    \clearpage
+  \fi
+}
+
+\newcommand{\committeepage}{%
+  \cleardoublepage
+  \thispagestyle{empty}
+  \begin{center}
+    \vspace*{12mm}
+    {\LARGE\bfseries\@title\par}
+    \vspace{14mm}
+    {\Large\bfseries\@author\par}
+    \vspace{14mm}
+    {\Large\@degree\par}
+  \end{center}
+  \vfill
+  \@supervisorstext
+  \vfill
+  \@vivatext
+  \vspace{6mm}
+  \@thesisdate
+  \clearpage
+}
+
+\providecommand{\preprologpages}{}
+
+\newenvironment{Prolog}{%
+  % Title and copyright pages are deliberately left without PDF page anchors.
+  % This avoids duplicate destinations when roman and arabic page numbering
+  % both begin at page 1 later in the document.
+  \hypersetup{pageanchor=false}%
+  \maketitle
+  \preprologpages
+  \if@committeepage\committeepage\fi
+  \cleardoublepage
+  \pagenumbering{roman}
+  \setcounter{page}{1}
+  \hypersetup{pageanchor=true}%
+  \pagestyle{fancy}
+  \begin{singlespace}
+}{%
+  \end{singlespace}
+}
+
+\newcommand{\StartBody}{%
+  \cleardoublepage
+  \hypersetup{pageanchor=false}%
+  \pagenumbering{arabic}
+  \setcounter{page}{1}
+  \hypersetup{pageanchor=true}%
+  \pagestyle{fancy}
+}
+
+\newcommand{\PrintBib}{%
+  \cleardoublepage
+  \phantomsection
+  \addcontentsline{toc}{chapter}{References}
+  \begin{singlespace}\printbibliography[title={References}]\end{singlespace}
+}
+
+\newcommand{\frontmatterchapter}[1]{%
+  \cleardoublepage
+  \phantomsection
+  \chapter*{#1}
+  \addcontentsline{toc}{chapter}{#1}
+  \markboth{#1}{#1}
+}
+
+% Invisible one-line placeholder used in chapter blueprints. It gives TeX a
+% legal page-break point after headings without adding visible draft prose.
+\newcommand{\outlineplaceholder}{%
+  \par\noindent\rule{0pt}{1.05\baselineskip}\par
+}
+
+\newcommand{\evidencepending}{%
+  \ifthesisannotations
+    \textcolor{draftnote}{\textbf{[TBD]}}%
+  \else
+    \textemdash%
+  \fi
+}
+
+\newcommand{\draftnote}[1]{%
+  \ifthesisannotations
+    \par\smallskip
+    \noindent\colorbox{draftnotebg}{%
+      \parbox{0.96\linewidth}{\color{draftnote}\small\textbf{Draft note.} #1}%
+    }
+    \par\smallskip
+  \fi
+}
+
+\ifthesisannotations
+  \newenvironment{draftonly}{}{}
+  \excludecomment{cleanonly}
+\else
+  \excludecomment{draftonly}
+  \newenvironment{cleanonly}{}{}
+\fi
+
+% Planning placeholder for figures that still require a final diagram,
+% photograph, screenshot, or data-driven plot. Annotated builds expose the
+% evidence/source instructions; clean builds retain only a neutral placeholder.
+\newcommand{\plannedfigure}[4][0.12\textheight]{%
+  \begin{figure}[htbp]
+    \centering
+    \ifthesisannotations
+      \fcolorbox{draftnote}{draftnotebg}{%
+        \begin{minipage}[c][#1][c]{0.91\linewidth}
+          \centering
+          \color{draftnote}
+          \textbf{Planned figure placeholder}\\[0.55\baselineskip]
+          \begin{minipage}{0.88\linewidth}
+            \small\RaggedRight #4
+          \end{minipage}
+        \end{minipage}%
+      }
+    \else
+      \fcolorbox{black!25}{black!1}{%
+        \begin{minipage}[c][#1][c]{0.91\linewidth}
+          \centering\mbox{}
+        \end{minipage}%
+      }
+    \fi
+    \caption{#3}
+    \label{#2}
+  \end{figure}
+}
+
+\newenvironment{thesisstatement}{%
+  \begin{quote}\itshape\large
+}{%
+  \end{quote}
+}
+
+\endinput

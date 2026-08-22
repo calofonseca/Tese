@@ -1,0 +1,201 @@
+\chapter{EnergAIze: An Integrated Framework for Intelligent Energy Management}
+\label{chap:energAIze}
+\markboth{The EnergAIze Framework}{The EnergAIze Framework}
+
+A Renewable Energy Community is not controlled by an algorithm alone. Before a controller can decide when an electric vehicle should charge, it must receive coherent measurements from different platforms, estimate information that is not directly observable, understand the user's flexibility, and translate its decision into a command accepted by the physical device. The same path must continue to operate when measurements are delayed, a vehicle does not expose its state of charge, or an external platform rejects an action. These concerns are usually treated as separate data, forecasting, optimisation, and deployment problems. In a real community, they form one control system.
+
+EnergAIze is the framework developed in this thesis to connect those concerns. Its purpose is to transform heterogeneous energy and mobility data into safe, auditable decisions for flexible assets while retaining a path for simulation, learning, validation, and deployment. Percepta and the Data Provider provide the integration boundary; prediction and vehicle services complete the controller's view of the installation; the Algorithms component computes local and community-aware decisions; the Fail-Safe Supervisor validates those decisions; and CityLearn and EVLearn provide the environment in which alternative controllers can be developed before they receive physical authority \parencite{fonseca2024energAIze,fonseca2025evlearn,fonseca2025realworldrec,percepta2025,opeva2026d63}.
+
+The framework is distributed by design. Each building can host an EnergAIze instance adapted to its available assets and information, while the instances contribute to Renewable Energy Community objectives such as cost reduction, renewable self-consumption, peak shaving, and smoother demand. A dwelling with photovoltaic production and one charger does not need to expose the same interface as an office with several chargers or a factory with a local power controller. EnergAIze preserves this heterogeneity instead of forcing every participant into one fixed device model.
+
+\draftnote{This chapter presents the EnergAIze framework through its concrete energy-domain components. Before submission, audit the final names and ownership of collaborative components, the deployed versions, the exact interface schemas, and which cloud, edge, and physical paths were exercised in each demonstrator. The architecture figure is redrawn from the framework view in the OPEVA manuscript and deliverable D6.3; confirm the required attribution and permission for the final thesis.}
+
+\section{The EnergAIze Framework as a Whole}
+\label{sec:energAIze-overview}
+\label{sec:energaize-overview}
+
+\subsection{From Heterogeneous Measurements to a Physical Decision}
+
+Consider one charging decision in a prosumer building. The meter and photovoltaic inverter may report through an energy-management platform, the charger through a charging-service platform, and the vehicle through a manufacturer-facing service. Their messages use different identifiers, units, sampling periods, and communication mechanisms. Consumption and photovoltaic production for the next decision horizon are not measurements at all, but forecasts. The vehicle's departure time may come from a recurrent schedule, a prediction, or an explicit user request. A useful controller must distinguish these sources and their confidence before deciding how much energy to charge, discharge, or defer.
+
+EnergAIze organises this decision around five cooperating capabilities:
+
+\begin{enumerate}
+  \item \textbf{perception and integration}, which turn provider-specific data into one installation-level representation and return validated decisions to the appropriate provider;
+  \item \textbf{prediction and flexibility}, which estimate consumption, photovoltaic production, vehicle state, and the time and energy boundaries within which an asset can be scheduled;
+  \item \textbf{algorithms}, which convert the available observations and objectives into proposed actions for local flexible assets and, where applicable, coordinate those actions with the wider community;
+  \item \textbf{safe execution and traceability}, which check actions against physical and user constraints, apply conservative alternatives when required, and record what was proposed and executed; and
+  \item \textbf{simulation, learning, and lifecycle support}, which use historical or synthetic scenarios to train and compare controllers and move an approved controller towards a cloud or edge runtime.
+\end{enumerate}
+
+These are components of one framework rather than independent processing stages. Percepta does not merely clean a dataset: it maintains the boundary between external platforms and the controller during both training and inference. Prediction services do not replace observations silently: their provenance and confidence affect which decision is defensible. The Fail-Safe Supervisor is not part of the learned policy: it retains the authority to restrict or replace an unsafe proposal.
+
+\Cref{fig:energaize-overview} presents the framework in the form used throughout the remainder of the thesis. The detailed building instance is repeated according to the composition of each participant. External platforms and physical assets remain outside the EnergAIze boundary because they preserve their own communication, actuation, and electrical-protection responsibilities.
+
+\begin{figure}[!t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  component/.style={draw,rounded corners=2mm,align=center,minimum height=11mm,text width=34mm,inner sep=2.5mm},
+  core/.style={component,draw=engineering,very thick,fill=engineering!8,text width=82mm},
+  integration/.style={component,draw=blue!55!black,fill=blue!7,text width=59mm},
+  service/.style={component,draw=green!45!black,fill=green!8,text width=34mm},
+  safety/.style={component,draw=red!65!black,fill=red!5,text width=28mm},
+  store/.style={component,draw=black!55,fill=black!4,text width=30mm},
+  scope/.style={draw=draftnote,very thick,rounded corners=3mm,fill=draftnotebg,minimum width=128mm,minimum height=82mm},
+  community/.style={component,draw=engineering!85!black,fill=engineering!5,text width=118mm,minimum height=11mm},
+  external/.style={component,draw=black!65,fill=black!3,text width=118mm,minimum height=14mm},
+  physical/.style={component,draw=engineering!85!black,fill=engineering!5,text width=118mm,minimum height=14mm},
+  development/.style={component,draw=black!65,dashed,fill=black!2,text width=118mm,minimum height=14mm},
+  dataflow/.style={-{Latex[length=2.2mm]},thick,draw=blue!65!black},
+  actionflow/.style={-{Latex[length=2.2mm]},thick,draw=engineering},
+  supportflow/.style={-{Latex[length=2.2mm]},thick,dashed,draw=black!65},
+  tinylabel/.style={font=\sffamily\scriptsize,fill=white,inner sep=1pt,align=center}
+]
+\node[scope,label={[font=\sffamily\bfseries,anchor=south west]north west:EnergAIze building instance $i$}] (scope) at (0,2.5) {};
+
+\node[core] (algorithms) at (0,5.0) {\textbf{Algorithms / Flexibility Scheduling}\\RBC, optimisation, RL, MARL, and TI-MARL};
+\node[integration] (percepta) at (-2.0,2.65) {\textbf{Percepta and Data Provider}\\receivers, translation, normalisation, aggregation, and routing};
+\node[safety] (failsafe) at (4.15,2.65) {\textbf{Fail-Safe Supervisor}\\constraint and authority checks};
+\node[service] (predictor) at (-4.15,0.15) {\textbf{Prediction}\\consumption, PV, and flexibility};
+\node[service] (pulse) at (0,0.15) {\textbf{PulseCharge}\\vehicle state and user needs};
+\node[store] (database) at (4.15,0.15) {\textbf{Local record}\\observations, actions, and KPIs};
+
+\node[font=\sffamily\scriptsize,align=center,text width=112mm] at (0,-1.15) {Configured from the assets and information available at each installation; replicated across Buildings $1,\ldots,n$.};
+
+\node[community] (community) at (0,7.8) {\textbf{Renewable Energy Community coordination}\\shared objectives, prices, grid signals, and aggregate state};
+\node[external] (platforms) at (0,-2.85) {\textbf{External platforms and services}\\Cleanwatts \quad $\vert$ \quad my.i-charging \quad $\vert$ \quad other IoT APIs\\weather, tariff, and grid services};
+\node[physical] (assets) at (0,-5.15) {\textbf{Building and mobility assets}\\meters and demand \quad $\vert$ \quad PV and batteries \quad $\vert$ \quad EVs and chargers\\heat pumps and flexible loads};
+\node[development] (development) at (0,-7.55) {\textbf{Development and validation}\\historical data $\rightarrow$ CityLearn/EVLearn $\rightarrow$ training and comparison $\rightarrow$ approved controller};
+
+\draw[dataflow] (platforms.west) -- ++(-7mm,0) |- node[tinylabel,pos=0.42,left] {measurements} (percepta.west);
+\draw[dataflow] (percepta.north) -- node[tinylabel,left] {observations} (algorithms.south west);
+\draw[dataflow] (predictor.north) -- (percepta.south west);
+\draw[dataflow] (pulse.north) -- (percepta.south);
+\draw[dataflow,<->] (percepta.south east) -- (database.north west);
+
+\draw[actionflow] (algorithms.south east) -- node[tinylabel,right] {proposed actions} (failsafe.north);
+\draw[actionflow] (failsafe.east) -- ++(12mm,0) |- node[tinylabel,pos=0.60,right] {validated commands} (platforms.east);
+\draw[actionflow,<->] (platforms.south) -- node[tinylabel,right] {telemetry and control} (assets.north);
+
+\draw[dataflow,<->] (algorithms.north) -- node[tinylabel,right] {local contribution and\\community context} (community.south);
+\draw[supportflow] (development.west) -- ++(-6mm,0) |- node[tinylabel,pos=0.78,left] {promoted model} (algorithms.west);
+\end{tikzpicture}%
+}
+\caption{EnergAIze as a complete intelligent energy-management framework. A repeatable building instance connects perception, predictive context, algorithms, safe execution, and traceability to external platforms and physical assets; simulation and training provide candidate controllers, while community information coordinates otherwise local decisions. Adapted from the EnergAIze framework view in the OPEVA demonstrator documentation \parencite{opeva2026d63}.}
+\label{fig:energaize-overview}
+\end{figure}
+
+\subsection{A Distributed Framework for Heterogeneous Buildings}
+
+The building instance is the basic unit of the framework. It contains the information and decision path required for one participant or installation, but its contents are not identical everywhere. An asset-poor dwelling can contribute demand and photovoltaic measurements without exposing a controllable device. A prosumer can add a stationary battery or domestic EV charger. An office or industrial installation can expose several chargers through one local controller and a shared site-power constraint. The instance is therefore assembled from the available interfaces rather than copied as a fixed observation vector.
+
+Local execution supports privacy and resilience because raw household data and device control need not be centralised solely to compute an action. Community coordination nevertheless requires selected shared information. Depending on the controller, this can include a price or grid signal, aggregate demand, a community peak, or messages exchanged among agents. The algorithms developed in this thesis use these signals to balance participant objectives with community outcomes while keeping the physical action local.
+
+The architecture supports both centralised and edge deployment. In a centralised arrangement, one cloud service hosts multiple installation models and the Data Provider separates their data and decisions. In an edge arrangement, an installation hosts its middleware and controller close to its assets. These are deployment alternatives for the same logical building instance; they do not change the meaning of its observations and actions.
+
+\section{Percepta and the Data Provider}
+\label{sec:energaize-percepta}
+
+Percepta addresses the first obstacle to intelligent control: physical installations do not produce model-ready observations. Cleanwatts, my.i-charging, meters, local controllers, vehicle services, and other IoT providers expose different APIs, message formats, identifiers, units, and sampling rates. A controller coupled directly to those details would need to be rewritten whenever a provider or asset changed. Percepta provides the stream-processing capability that separates those details from the decision model \parencite{percepta2025}.
+
+In the OPEVA instantiation, the Data Provider middleware realises this boundary for both historical-data preparation and runtime inference \parencite{opeva2026d63}. A receiver contains the communication logic for one source, such as HTTP for a REST service or RabbitMQ for a message-based provider. A translator extracts the relevant fields and converts the provider message into the common EnergAIze representation. Installation queues and an accumulator decouple the remaining processing from the original source. A manager then aligns the decision interval, checks missing values, reconstructs relationships among the installation's assets, and assembles the observation expected by the corresponding controller.
+
+This organisation makes a new provider a local integration task: its receiver and translator are added without changing the controller or the other providers. It also keeps data treatment visible. Resampling a power measurement, interpolating a short gap, repeating a previous state, and substituting a value from a comparable day are not equivalent operations. Percepta records the transformation and source because an apparently complete observation can still contain low-confidence information that should restrict control.
+
+\subsection{Historical-Data and Runtime Paths}
+
+The historical-data path produces installation-level datasets for simulation and training. The user specifies the period and observation interval; receivers retrieve each asset's records; translators align formats and time; and the manager reconstructs the installation view. Energy prices can follow their own translation path when they are not associated with one installation. The resulting dataset retains the temporal and asset relationships needed by CityLearn, EVLearn, and the controller experiments.
+
+The runtime path performs the same semantic work under a decision deadline. It collects recent messages, aggregates them at the configured interval, identifies unavailable information, and constructs one inference request for the installation. After the model returns a decision, a forwarder applies the communication logic required by the responsible provider. The Data Provider therefore carries information in both directions: observations towards the algorithm and validated device requests towards Cleanwatts, my.i-charging, or another platform.
+
+The OPEVA middleware calls the component that invokes the installation's AI model the \emph{Predictor}. This name refers to the inference gateway inside the Data Provider, not to the consumption, photovoltaic, or flexibility forecasting services discussed next. The distinction matters: the Data Provider Predictor executes a control model, whereas the forecasting components estimate future quantities used by that model.
+
+\section{Prediction, Vehicle State, and User Flexibility}
+\label{sec:energaize-prediction}
+
+A controller cannot base every decision on direct measurements. Future consumption and photovoltaic production determine whether charging now is preferable to waiting. An EV charger often exposes delivered energy and connection state but not the vehicle's current state of charge. The time at which the user needs the vehicle, and the required departure energy, are behavioural constraints rather than device telemetry. EnergAIze therefore treats predictive and user-facing services as explicit components around the controller.
+
+\subsection{Consumption and Photovoltaic-Production Prediction}
+
+The consumption and production services estimate the near-term exogenous profiles used by the scheduling algorithm. Their outputs allow the controller to anticipate a demand peak or a period of local photovoltaic surplus instead of reacting only after it occurs. They can also provide a bounded substitute during a temporary sensor interruption. A forecast remains distinguishable from a meter reading, and the controller can be evaluated with perfect, predicted, degraded, or unavailable information without modifying the physical asset model.
+
+These services are updated independently of the scheduling policy. A better photovoltaic model changes one input source; it does not require a new implementation of Percepta, the Fail-Safe Supervisor, or the charging platform. Conversely, a controller can be compared under a common frozen forecast so that performance differences are not confounded with different predictive information.
+
+\subsection{PulseCharge and Flexibility Prediction}
+
+PulseCharge provides the vehicle and user context that charging infrastructure alone frequently cannot supply. It hides manufacturer-specific authentication and telemetry behind a common vehicle-data interface and retrieves information such as state of charge, connection, and charging state when those data are available. Request budgets and periodic-task supervision reflect a real limitation of manufacturer-facing services: the data source can impose rate limits or temporarily fail.
+
+The associated flexibility model ranks information according to its reliability. A non-integrated or uncontrollable vehicle provides no actionable flexibility. A recurrent schedule supplies a low-interaction baseline. Flexibility Prediction uses historical behaviour to estimate the likely connection window and energy requirement. Explicit user input has the highest priority when the current journey differs from the routine. This hierarchy prevents a convenient prediction from silently overriding a declared departure requirement \parencite{opeva2026d63}.
+
+The Route Planner extends the same information model to an EV in transit. It combines route, range, charger, price, and community information to propose a charging stop and, where supported, connect that request to the scheduling algorithm of a Renewable Energy Community. It is an optional application component rather than a prerequisite for building-level control, and its physical integration remains bounded as described in \cref{chap:real-world}.
+
+\section{Algorithms and the Flexibility Scheduling Decision}
+\label{sec:energaize-algorithms}
+
+The Algorithms component is the decision-making core of EnergAIze. In the OPEVA demonstrator it is referred to as the Flexibility Scheduling Algorithm. It receives the installation state assembled by the Data Provider, including measurements, prices, forecasts, asset availability, vehicle requirements, and the community information permitted by the selected control formulation. It returns actions such as a battery charge or discharge request, an EV charging limit, or the schedule of another flexible load \parencite{fonseca2024energAIze,opeva2026d63}.
+
+Each building-level controller represents a local objective and the assets available to that participant. Community coordination adds outcomes that no building can optimise from its local meter alone: aggregate peak, renewable sharing, ramping, or a common grid request. The original EnergAIze algorithm uses multi-agent reinforcement learning so that local agents can learn from their own state and actions while being shaped by individual and community objectives. Only the information required by the selected coordination mechanism needs to cross the building boundary.
+
+EnergAIze is not restricted to one algorithm family. Rule-based control provides an interpretable baseline and fallback. Optimisation exposes an explicit model and constraints. Single-agent reinforcement learning supports adaptive local decisions, while MARL and hierarchical control coordinate several participants. TI-MARL later removes fixed-interface assumptions that limit these approaches when assets, agents, and capabilities change. The important architectural property is that these controllers receive a declared observation interface and return a declared action interface; Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} provide their formulations and evidence.
+
+\subsection{The Fail-Safe Supervisor and Executed Action}
+
+The result produced by an algorithm is a proposed action, not an unconditional physical command. The Fail-Safe Supervisor checks it against rated power, state-of-charge bounds, vehicle departure requirements, connection state, site limits, unavailable observations, and the authority granted to the current controller. It can bound the action, reject it, retain a previously safe value, or invoke a conservative rule-based controller. The external platform and device retain their lower-level protections and can still reject the resulting request.
+
+EnergAIze records the observation context, controller and model version, proposed action, supervised action, provider response, and relevant KPIs in the local or central data store. This distinction between proposed and executed actions is essential. A physically stable trajectory accompanied by frequent supervisor corrections demonstrates an effective protection layer, but does not by itself demonstrate a reliable learned policy.
+
+\section{CityLearn, EVLearn, and the Development of Controllers}
+\label{sec:energaize-simulation}
+
+Trial-and-error learning cannot begin on occupied buildings or connected vehicles. An exploratory charging action can violate a site limit, increase cost, or leave a user without the required departure energy. EnergAIze therefore develops controllers against a simulated representation of the same installations before considering real-world inference or actuation.
+
+CityLearn provides the building, demand, photovoltaic, storage, weather, tariff, and community environment. EVLearn extends it with vehicles, charging stations, connection sessions, battery dynamics, and V1G/V2G flexibility \parencite{nweye2025citylearnv2,fonseca2025evlearn}. Historical datasets produced through Percepta can populate this environment, while synthetic or modified scenarios expose the controller to events and conditions that are rare or unsafe to create physically. Rule-based, optimisation, RL, and MARL methods can then be compared under the same assets, information, time period, and KPIs.
+
+The simulator is not a copy of the complete physical system. Provider latency, rejected commands, unavailable vehicle telemetry, human overrides, and electrical protections require separate representation or real-world evidence. The purpose of the simulation path is to make controller development controlled and comparable, not to convert simulation performance into an automatic deployment claim. Chapter~\ref{chap:simulator} establishes the simulator and scenario contracts, and Chapter~\ref{chap:real-world} identifies which assumptions survived contact with the demonstrators.
+
+Training and evaluation are supported by experiment workers, artefact storage, and policy records. A training request binds the algorithm configuration to a scenario, data version, seed, and compute target. The resulting model is associated with its observation and action interfaces, preprocessing, validation results, and intended installation. Chapter~\ref{chap:lifecycle} develops this supporting lifecycle in detail. Here, its role is deliberately secondary: it provides a controlled route by which a model created in CityLearn or EVLearn becomes the version invoked by the Data Provider Predictor.
+
+\section{Deployment Across Buildings and the Community}
+\label{sec:energaize-deployment}
+
+An EnergAIze instance can run centrally for several installations or locally beside one installation. The central arrangement suits a community platform that already aggregates household data. The edge arrangement suits a local controller that requires lower latency, reduced external data movement, or continued local operation during a cloud interruption. The Algorithms component and Data Provider can be packaged separately so that a model update does not require the integration middleware to be replaced, and a new provider adapter does not require the policy to be retrained solely because the transport protocol changed \parencite{opeva2026d63}.
+
+At the external boundary, the framework uses the interface exposed by each platform. In OPEVA, OCPP links chargers and the charging platform; Modbus TCP/IP links selected chargers, meters, and local controllers; OCPI carries charging information and profiles between charging and community platforms; and REST or RabbitMQ connects data and algorithm services. These protocols belong behind Percepta receivers and forwarders. They should not appear as assumptions inside the policy.
+
+The distributed arrangement permits Buildings $1,\ldots,n$ to retain different assets, providers, and local constraints while participating in a shared control problem. It does not imply that every component was deployed with the same authority at every site. A building can contribute historical data only, execute a controller in simulation, run inference without actuation, or accept bounded physical commands. The OPEVA and DemFlex demonstrators are therefore reported by evidence level in \cref{chap:real-world} rather than being represented as one uniform deployment.
+
+\section{Component Responsibilities and Thesis Map}
+\label{sec:energAIze-forward-map}
+\label{sec:energaize-chapter-map}
+
+\Cref{tab:energaize-component-responsibilities} summarises the complete framework without replacing the component descriptions above. The table follows the direction of one decision: external information is made coherent, missing context is estimated, an algorithm proposes an action, the action is supervised and executed, and the outcome becomes evidence for evaluation or a later update.
+
+\begin{table}[htbp]
+\centering
+\caption{Principal EnergAIze components, their role, and the chapters that provide their detailed methods or evidence.}
+\label{tab:energaize-component-responsibilities}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.23\textwidth}p{0.39\textwidth}X@{}}
+\toprule
+\textbf{Component} & \textbf{Role in EnergAIze} & \textbf{Detailed treatment} \\
+\midrule
+Percepta and Data Provider & Acquire, align, normalise, quality-check, aggregate, and route provider-specific observations and device requests & this chapter and \cref{chap:real-world} \\
+Consumption and PV Prediction & Estimate the near-term exogenous profiles required for anticipatory scheduling and controlled data-gap substitution & this chapter and demonstrator evidence in \cref{chap:real-world} \\
+PulseCharge and Flexibility Prediction & Provide vehicle state, user requirements, behavioural flexibility, and confidence-ranked availability information & this chapter and \cref{chap:real-world} \\
+Algorithms / FSA & Convert local and community observations into proposed actions using RBC, optimisation, RL, MARL, hierarchical, or typed-interface control & Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} \\
+Fail-Safe Supervisor and data store & Validate proposed actions, apply conservative alternatives, and preserve the distinction between proposed, requested, and executed control & Chapters~\ref{chap:lifecycle} and~\ref{chap:real-world} \\
+CityLearn and EVLearn & Represent buildings, flexible assets, EV sessions, scenarios, events, constraints, and KPIs for training and controlled comparison & \Cref{chap:simulator} \\
+Experiment and policy lifecycle & Bind data, scenarios, controller versions, validation, packaging, targets, monitoring, updates, and recovery & \Cref{chap:lifecycle} \\
+External platforms and local controllers & Expose physical data and actuation interfaces while retaining provider, device, and electrical authority & \Cref{chap:real-world} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The framework boundary is intentional. EnergAIze produces and governs energy-management decisions; it does not replace device firmware, electrical protection, charging-service operation, or every external data source. Likewise, the presence of a component in \cref{fig:energaize-overview} records its architectural role, not an equal level of real-world validation. Simulation, external-platform integration, target-runtime execution, bounded actuation, and sustained closed-loop use support different claims.
+
+\paragraph{Chapter synthesis.}
+EnergAIze connects the complete path from heterogeneous energy and mobility data to a supervised physical decision. Percepta and the Data Provider create a stable information and actuation boundary. Prediction, PulseCharge, and flexibility services complete the installation state. The Algorithms component coordinates local assets and community objectives, while the Fail-Safe Supervisor preserves physical and user constraints. CityLearn and EVLearn provide the development environment, and the experiment and policy lifecycle governs the movement of selected controllers towards cloud or edge execution.
+
+This component-centred view provides the map for the remaining thesis. Chapter~\ref{chap:simulator} develops the simulated world in which controllers are trained and compared. Chapter~\ref{chap:control-benchmark} presents the cumulative progression of energy-management algorithms. Chapter~\ref{chap:ti-marl} develops the principal algorithmic contribution for changing typed interfaces. Chapter~\ref{chap:lifecycle} addresses the supporting experiment and deployment lifecycle. Chapter~\ref{chap:real-world} then returns to the complete EnergAIze path and examines which components, interfaces, and decisions were exercised in the OPEVA and DemFlex demonstrators.

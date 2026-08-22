@@ -1,0 +1,14 @@
+system_or_study,type,evidence_level,lifecycle_strength,important_limit
+RLOps / Open RAN,RL lifecycle research system,implemented platform,Explicit RL specification-development-serving-monitoring-safety lifecycle,Not a production MARL policy-set registry
+I-24 MARL VSL deployment,MARL CPS deployment,sustained operational,"67 controllers, runtime guards, millions of decisions",One deployment lineage; bespoke operational stack
+RLlib,distributed RL/MARL framework,research framework,Scalable training and multiple-policy mappings,Not policy-set production governance
+Acme,distributed RL framework,research framework,"Actor/learner architecture, replay and reproducible implementations",Not full deployment lifecycle
+MARLlib,MARL framework,research framework,Standard environment wrapper and flexible policy mapping,"Mappings are learning abstractions, not registry/deployment contracts"
+MALib,population-based MARL framework,research framework,Policy populations/combinations and parallel orchestration,Policy population is not open physical-agent lifecycle
+Pearl,production-oriented RL library,production-oriented research,"Dynamic action spaces, safety, modular applied RL",Primarily single-agent RL; limited policy-set semantics
+MLflow,generic MLOps platform,operational platform/documented,"Tracking, lineage, registry and deployment primitives",No MARL compatibility or coordination semantics
+Kubernetes/Argo,deployment infrastructure,operational platform/documented,"Declarative rollout, canary/blue-green and rollback",Software success does not imply coordinated-policy validity
+KubeEdge,edge orchestration,operational platform/documented,Cloud-edge application and device management,No native MARL policy-set governance
+AWS IoT Greengrass,edge fleet management,operational platform/documented,Component deployment and failed-update rollback,Vendor-specific; no coordination semantics
+Azure IoT Edge,edge module lifecycle,operational platform/documented,Remote module deployment and health monitoring,Infrastructure health is not policy coordination monitoring
+HELICS,dynamic CPS co-simulation,infrastructure/testbed,Federates can join and leave at runtime,No learned-policy compatibility or safety semantics

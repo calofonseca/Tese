@@ -1,0 +1,25 @@
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdv
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+
+# The current reading PDF is published at the repository root.
+/Tiago_Fonseca_PhD_Thesis_Overleaf_Review_v25/main.pdf

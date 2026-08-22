@@ -1,0 +1,275 @@
+% Acronyms --------------------------------------------------------------------
+\newacronym{ai}{AI}{Artificial Intelligence}
+\newacronym{api}{API}{Application Programming Interface}
+\newacronym{ac}{AC}{Alternating Current}
+\newacronym{boptest}{BOPTEST}{Building Optimization Testing Framework}
+\newacronym{cpu}{CPU}{Central Processing Unit}
+\newacronym{csv}{CSV}{Comma-Separated Values}
+\newacronym{dc}{DC}{Direct Current}
+\newacronym{fmi}{FMI}{Functional Mock-up Interface}
+\newacronym{g2v}{G2V}{Grid-to-Vehicle}
+\newacronym{gpu}{GPU}{Graphics Processing Unit}
+\newacronym{helics}{HELICS}{Hierarchical Engine for Large-scale Infrastructure Co-Simulation}
+\newacronym{hpc}{HPC}{High-Performance Computing}
+\newacronym{lstm}{LSTM}{Long Short-Term Memory}
+\newacronym{mappo}{MAPPO}{Multi-Agent Proximal Policy Optimization}
+\newacronym{onnx}{ONNX}{Open Neural Network Exchange}
+\newacronym{cps}{CPS}{Cyber-Physical System}
+\newacronym{ctde}{CTDE}{Centralised Training with Decentralised Execution}
+\newacronym{der}{DER}{Distributed Energy Resource}
+\newacronym{decpomdp}{Dec-POMDP}{Decentralised Partially Observable Markov Decision Process}
+\newacronym{dr}{DR}{Demand Response}
+\newacronym{ems}{EMS}{Energy Management System}
+\newacronym{ev}{EV}{Electric Vehicle}
+\newacronym{evse}{EVSE}{Electric Vehicle Supply Equipment}
+\newacronym{hil}{HIL}{Hardware-in-the-Loop}
+\newacronym{gdpr}{GDPR}{General Data Protection Regulation}
+\newacronym{hvac}{HVAC}{Heating, Ventilation, and Air Conditioning}
+\newacronym{iot}{IoT}{Internet of Things}
+\newacronym{kpi}{KPI}{Key Performance Indicator}
+\newacronym{maddpg}{MADDPG}{Multi-Agent Deep Deterministic Policy Gradient}
+\newacronym{madrl}{MADRL}{Multi-Agent Deep Reinforcement Learning}
+\newacronym{marl}{MARL}{Multi-Agent Reinforcement Learning}
+\newacronym{mas}{MAS}{Multi-Agent System}
+\newacronym{mdp}{MDP}{Markov Decision Process}
+\newacronym{ml}{ML}{Machine Learning}
+\newacronym{mlops}{MLOps}{Machine Learning Operations}
+\newacronym{mpc}{MPC}{Model Predictive Control}
+\newacronym{ocpp}{OCPP}{Open Charge Point Protocol}
+\newacronym{opeva}{OPEVA}{Optimisation of Electric Vehicle Autonomy}
+\newacronym{pomdp}{POMDP}{Partially Observable Markov Decision Process}
+\newacronym{pv}{PV}{Photovoltaic}
+\newacronym{rbc}{RBC}{Rule-Based Controller}
+\newacronym{rec}{REC}{Renewable Energy Community}
+\newacronym{rest}{REST}{Representational State Transfer}
+\newacronym{rl}{RL}{Reinforcement Learning}
+\newacronym{rlops}{RLOps}{Reinforcement Learning Operations}
+\newacronym{rq}{RQ}{Research Question}
+\newacronym{soc}{SoC}{State of Charge}
+\newacronym{tou}{ToU}{Time of Use}
+\newacronym{v2g}{V2G}{Vehicle-to-Grid}
+\newacronym{bc}{BC}{Behaviour Cloning}
+\newacronym{bess}{BESS}{Battery Energy Storage System}
+\newacronym{gnn}{GNN}{Graph Neural Network}
+\newacronym{hrl}{HRL}{Hierarchical Reinforcement Learning}
+\newacronym{matd3}{MATD3}{Multi-Agent Twin Delayed Deep Deterministic Policy Gradient}
+\newacronym{milp}{MILP}{Mixed-Integer Linear Programming}
+\newacronym{ood}{OOD}{Out of Distribution}
+\newacronym{per}{PER}{Prioritized Experience Replay}
+\newacronym{ppo}{PPO}{Proximal Policy Optimization}
+\newacronym{sac}{SAC}{Soft Actor-Critic}
+\newacronym{td3}{TD3}{Twin Delayed Deep Deterministic Policy Gradient}
+\newacronym{timdp}{TI-MDP}{Typed-Interface Markov Decision Process}
+\newacronym{tirl}{TI-RL}{Typed-Interface Reinforcement Learning}
+\newacronym{timg}{TIMG}{Typed-Interface Markov Game}
+\newacronym{timarl}{TI-MARL}{Typed-Interface Multi-Agent Reinforcement Learning}
+\newacronym{tic}{TIC}{Typed Interface Compiler}
+\newacronym{tip}{TIP}{Typed-Interface Policy}
+\newacronym{tcg}{TCG}{Typed Constraint Graph}
+\newacronym{ral}{RAL}{Runtime Assurance Layer}
+\newacronym{vpp}{VPP}{Virtual Power Plant}
+
+% Glossary terms ----------------------------------------------------------------
+\newglossaryentry{agent}{
+  name={agent},
+  description={A decision-making entity that receives observations, selects actions, and pursues one or more objectives within an environment. In this thesis, an agent may represent a participant, building, charging installation, or controllable resource, depending on the control setting}
+}
+
+\newglossaryentry{asset}{
+  name={energy asset},
+  description={A physical or virtual energy resource that can be observed or controlled, such as an electric vehicle, charger, battery, photovoltaic system, heat pump, or flexible electrical load}
+}
+
+\newglossaryentry{policy}{
+  name={policy},
+  description={A mapping from the information available to an agent to the action selected by that agent. A policy may be rule-based, optimisation-based, or learned}
+}
+
+\newglossaryentry{controller}{
+  name={controller},
+  description={The software or physical component responsible for producing control actions. A controller may implement a rule-based strategy, an optimisation method, or a learned policy}
+}
+
+\newglossaryentry{community}{
+  name={community},
+  description={A set of participants and energy assets coordinated under shared rules or objectives. In the principal case studies, this term refers to a renewable energy community}
+}
+
+\newglossaryentry{dynamicreconfiguration}{
+  name={dynamic reconfiguration},
+  description={A change in the composition, availability, capabilities, or interaction structure of a system during or between operating periods, such as an electric vehicle arriving or leaving, an asset becoming unavailable, or a new participant joining a community}
+}
+
+\newglossaryentry{scalability}{
+  name={scalability},
+  description={The ability of an algorithm, simulator, infrastructure, or deployed system to accommodate increasing numbers of agents, assets, interactions, experiments, or devices without unacceptable loss of performance or excessive resource use}
+}
+
+\newglossaryentry{deployability}{
+  name={deployability},
+  description={The ability to package, validate, install, configure, execute, monitor, update, and recover a control solution or coordinated policy set within its intended operational environment}
+}
+
+
+\newglossaryentry{policyset}{
+  name={policy set},
+  description={A governed collection of interdependent policies intended to operate together, including their agent-role mappings, observation and action schemas, communication assumptions, safety dependencies, compatibility rules, and shared deployment version}
+}
+
+\newglossaryentry{policyregistry}{
+  name={policy registry},
+  description={A lifecycle service that records policy identity, versions, provenance, evaluation evidence, compatibility metadata, promotion state, deployment associations, and rollback lineage, rather than storing only model bytes}
+}
+
+\newglossaryentry{experimentmanifest}{
+  name={experiment manifest},
+  description={An immutable or content-addressed record that links an experiment to its source revision, environment, scenario and data, reward, observations and actions, constraints, seeds, algorithm configuration, dependencies, resources, and resulting artefacts}
+}
+
+\newglossaryentry{coordinationmonitoring}{
+  name={coordination-aware monitoring},
+  description={Operational monitoring that detects failures in the relationships among agents and policies, such as incompatible versions, oscillating or conflicting actions, stale messages, unfair shared-resource allocation, or degradation of a community-level objective despite healthy processes}
+}
+
+\newglossaryentry{safety}{
+  name={safety},
+  description={The prevention of unacceptable actions or system states through the satisfaction of physical, operational, and user-related constraints}
+}
+
+\newglossaryentry{robustness}{
+  name={robustness},
+  description={The ability to maintain acceptable behaviour and performance under uncertainty, disturbances, faults, imperfect data, dynamic reconfiguration, or differences between training and operation}
+}
+
+\newglossaryentry{resilience}{
+  name={resilience},
+  description={The ability of a system to recover after a fault, disruption, or period of degraded operation}
+}
+
+\newglossaryentry{transferability}{
+  name={transferability},
+  description={The extent to which knowledge, representations, or policies learned in one setting can be reused or adapted in a different agent, configuration, scenario, or environment}
+}
+
+\newglossaryentry{realworld}{
+  name={real-world operation},
+  description={Execution under physical, computational, communication, organisational, and lifecycle constraints that are not fully represented by a conventional isolated simulation experiment}
+}
+
+\newglossaryentry{energAIze}{
+  name={EnergAIze},
+  description={The integrated research platform and energy-domain reference implementation through which the methods, software components, lifecycle mechanisms, and demonstrators developed in this thesis are connected and evaluated}
+}
+
+
+\newglossaryentry{entity}{
+  name={entity},
+  description={A runtime object that gives observations or actions a concrete identity and operational meaning, such as a connected electric-vehicle session, charger, battery, or other controlled or observed object within an agent}
+}
+
+\newglossaryentry{moduleinstance}{
+  name={module instance},
+  description={A concrete runtime instance of a capability-bearing component associated with an agent, such as one charger, battery, or controllable subsystem; module instances may appear, disappear, or change availability without redefining the complete policy architecture}
+}
+
+\newglossaryentry{capabilityschema}{
+  name={capability schema},
+  description={A versioned description of the potential observations, action groups, action ports, constraints, compatibility requirements, and fallback semantics that an agent or module type can expose}
+}
+
+\newglossaryentry{runtimehealth}{
+  name={runtime health state},
+  description={The current quality and availability state of observations, modules, communication channels, or controlled entities used by the Typed Interface Compiler to determine validity, bounds, degraded modes, and fallback behaviour}
+}
+
+\newglossaryentry{actiongroup}{
+  name={action group},
+  description={A set of mutually exclusive action ports representing alternative operating modes for one controllable function or entity, while compatible action groups may be controlled simultaneously within the same local action bundle}
+}
+
+\newglossaryentry{compatibilitysignature}{
+  name={compatibility signature},
+  description={A versioned summary of interface and capability requirements used to determine whether a policy, compiler, schema, and runtime target can operate together safely}
+}
+
+\newglossaryentry{localfeasibility}{
+  name={local feasibility},
+  description={The construction or adjustment of an agent's local action bundle so that simultaneous actions remain within non-negotiable local physical, device, and service constraints while preserving policy intent as far as possible}
+}
+
+\newglossaryentry{sharedhardmonitor}{
+  name={shared hard-constraint monitor},
+  description={An exceptional runtime assurance mechanism that detects and, when necessary, minimally corrects or rejects joint actions that would violate non-negotiable constraints shared across agents; it is not the normal community optimisation mechanism}
+}
+
+\newglossaryentry{typedinterface}{
+  name={typed interface},
+  description={A runtime contract that describes an agent's available observation parts, action ports, parameter types and bounds, validity conditions, capabilities, and constraints rather than assuming one permanently fixed flat observation and action vector}
+}
+
+\newglossaryentry{observationpart}{
+  name={observation part},
+  description={A typed block of information exposed to a policy, such as self state, scanner status, battery state of charge, deadline, entity relation, or measurement-quality indicator}
+}
+
+\newglossaryentry{actionport}{
+  name={action port},
+  description={A callable typed action exposed by the current agent interface, including its semantic name, parameters, bounds, validity conditions, and any projection or safety rule applied before execution}
+}
+
+\newglossaryentry{failsafemode}{
+  name={fail-safe mode},
+  description={A controlled operating state in which a learned controller is constrained, bypassed, or replaced by a conservative controller because data, communication, policy compatibility, confidence, or safety conditions are not sufficient for normal operation}
+}
+
+
+\newglossaryentry{behaviourcloning}{
+  name={behaviour cloning},
+  description={Supervised policy learning from state--action demonstrations produced by an expert, rule-based controller, optimiser, or previously deployed policy}
+}
+
+\newglossaryentry{offlinerl}{
+  name={offline reinforcement learning},
+  description={Reinforcement learning from a fixed dataset of previously collected transitions or trajectories without additional environment interaction during the offline training stage}
+}
+
+\newglossaryentry{physicsinformedrl}{
+  name={physics-informed reinforcement learning},
+  description={A family of approaches that incorporates physical models, invariants, residuals, constraints, or model-based structure into policy learning, value estimation, action validation, or training objectives}
+}
+
+
+\newglossaryentry{actionbundleintent}{
+  name={local action bundle},
+  description={The structured action produced by one local typed-interface policy, containing one selected port and its parameters for each active action-group instance after local hard-feasibility construction}
+}
+
+\newglossaryentry{actiongroupinstance}{
+  name={action-group instance},
+  description={A runtime controllable group bound to a specific module or entity instance, such as the operating mode of one particular EV charger; the same shared decoder can be applied to multiple instances of the same group type}
+}
+
+\newglossaryentry{entityboundinterface}{
+  name={entity-bound typed interface},
+  description={A runtime observation--action interface in which observation parts, action groups, and ports explicitly identify the module and controlled entity that give them meaning}
+}
+
+\newglossaryentry{healthclosure}{
+  name={health closure},
+  description={The deterministic propagation of source or module health through declared dependencies to observation validity, action-port availability, parameter bounds, action groups, constraints, and operational mode}
+}
+
+\newglossaryentry{typeddecisiontrace}{
+  name={typed decision trace},
+  description={An execution record grounded in the actual interface snapshot, including active entities, observations and health, available and invalid ports, selected actions, local feasibility adjustments, shared safety interventions, and final commands}
+}
+
+\newglossaryentry{interfacesnapshot}{
+  name={interface snapshot},
+  description={An immutable record of the observation parts, action ports, dependencies, validity states, bounds, health, and resource couplings exposed to an agent at one decision step}
+}
+
+\newglossaryentry{typedconstraintgraph}{
+  name={typed constraint graph},
+  description={A runtime graph connecting agents, modules, entities, action ports, resources, topology, and local or shared constraints through typed relations; it supports local bundle feasibility, training-time graph critics, hard shared checks, compatibility, and decision traces}
+}

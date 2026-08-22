@@ -1,0 +1,11 @@
+gap,confidence,thesis interpretation
+Versioned MARL policy-set registry with compatibility metadata,Strong,Generic registries and MARL policy mappings exist separately; the governed interdependent policy set remains weakly represented.
+Coordinated or atomic policy-set promotion and rollback,Strong,"Progressive rollout and rollback exist for software, but MARL-specific mixed-version and compatibility semantics remain weakly evidenced."
+Coordination-aware production monitoring,Strong,Infrastructure monitoring is mature; coordination failure is rarely a first-class operational signal.
+Disconnected-edge consistency for policy sets,Strong,"Edge fleet tooling exists, but preserving coherent multi-policy state during disconnection and partial update remains weakly evidenced."
+Lifecycle support for true open heterogeneous populations,Strong,"Dynamic components and policy populations exist at other layers, but compatible online governance of new physical agent interfaces remains weak."
+Replicated long-duration operational MARL evidence,Strong,I-24 is a decisive counterexample to absence but remains one unusually mature lineage.
+Coupled policy-environment-scenario-reward-schema lineage,Moderate,"Flexible metadata systems exist; standardisation, enforcement and demonstrated reconstruction remain incomplete."
+Performance-robustness-safety-resource promotion gates,Moderate,Generic evaluation gates exist; reusable MARL gate semantics remain domain and system dependent.
+Deployable package contract for policy plus control semantics,Moderate,"Packaging technology exists; consistent inclusion of schemas, adapters, safety and target constraints remains incomplete."
+Formal safety assurance as generic lifecycle primitive,Tentative,"Runtime assurance systems exist, but the evidence is too heterogeneous for a broad lifecycle claim."

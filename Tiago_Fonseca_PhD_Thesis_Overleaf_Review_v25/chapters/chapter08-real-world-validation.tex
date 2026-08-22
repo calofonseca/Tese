@@ -1,0 +1,169 @@
+\chapter{EnergAIze in Operation: Real-World Deployment and Validation}
+\label{chap:real-world}
+\markboth{EnergAIze in Operation}{EnergAIze in Operation}
+
+The preceding chapters developed the representation, simulation, control, and lifecycle mechanisms required to move learned energy control beyond an isolated experiment. This chapter examines that movement through two distinct demonstrators. The OPEVA demonstrator connects Renewable Energy Community operation, residential and corporate charging installations, external platforms, vehicle information, simulation, and distributed control. The DemFlex demonstrator provides a second and independently attributable setting. Their sites, assets, control authority, evaluation periods, and results are kept separate even where both instantiate the EnergAIze architecture.
+
+Real-world evidence spans several levels. Historical measurements can drive a simulation; a target device can execute a policy without actuating an asset; a controller can operate in shadow beside the active system; and a bounded field test can apply physical commands. None of these results establishes sustained closed-loop operation by itself. Each demonstrator is therefore reported through its physical configuration, integration path, controller authority, duration, interventions, and evidence level.
+
+\draftnote{The OPEVA account is grounded in the final Demo 9 description in deliverable D6.3, the current OPEVA demonstrator manuscript, and the published real-world REC paper. Before submission, reconcile exact dates, installation identifiers, asset counts, action authority, duration, policy versions, and partner-approved figures. The DemFlex section requires its demonstrator brief, site and asset inventory, experiment log, and verified results; no OPEVA fact should be transferred to DemFlex without evidence.}
+
+\section{Evidence Levels and Comparative Reading}
+\label{sec:real-evidence-context}
+\label{sec:real-evidence-levels}
+\label{sec:rw-levels}
+
+The validation uses the following hierarchy:
+
+\begin{enumerate}
+  \item \textbf{real-data simulation}: historical operational data drive the simulator;
+  \item \textbf{target-hardware inference}: the controller runs on the intended class of device;
+  \item \textbf{hardware- or software-in-the-loop}: the policy interacts with physical or emulated interfaces in a closed loop;
+  \item \textbf{shadow operation}: decisions are produced and compared but not applied;
+  \item \textbf{limited physical or field control}: actions affect assets during a bounded pilot; and
+  \item \textbf{sustained operational control}: repeated closed-loop use forms part of normal site operation.
+\end{enumerate}
+
+The evidence level is part of each claim. Real-data simulation can compare controllers over long and identical periods, but cannot establish that a device accepted the requested action. Integration tests can establish protocol and interface compatibility, but not long-term energy benefit. Physical control can expose latency, rejection, fallback, and user constraints, but a short pilot cannot establish seasonal performance. The two demonstrators are consequently assessed against the same questions: which assets were represented, which information was available, which decisions were produced, which commands were applied, which protection remained external, and what outcome was measured.
+
+\Cref{fig:validation-evidence-levels} maps each thesis demonstrator to the exact evidence level and action authority it supports.
+
+\plannedfigure[0.15\textheight]{fig:validation-evidence-levels}{Validation evidence levels and the claims supported by each level.}{\textbf{Type:} evidence ladder reused from Chapter 2 and annotated separately for OPEVA and DemFlex. For each case show duration, action authority, physical assets, and whether the controller was evaluated through real-data simulation, target hardware, HIL, shadow operation, limited field control, or sustained closed-loop operation. \textbf{Purpose:} prevent evidence from one demonstrator or level being used to support a stronger claim. \textbf{Source needed:} audited demonstrator logs and partner confirmation.}
+
+Controller selection follows the promotion logic in \cref{chap:lifecycle}. A method is included in a demonstrator only when its control performance, stability, interface compatibility, runtime resources, and protection mechanisms are adequate for the intended evidence level. A transparent rule-based controller remains available as a reference or fallback. The EnergAIze MADDPG controller preserves continuity with the OPEVA work; later MATD3, hierarchical, or TI-MARL policies require their own target-scoped validation before receiving physical authority.
+
+\section{OPEVA Demonstrator}
+\label{sec:opeva-demonstrator}
+
+\subsection{Control Problem and Physical Configuration}
+\label{sec:opeva-configuration}
+
+OPEVA Demo 9 addresses the coordination problem created when EV charging is added to buildings that already have non-controllable demand, photovoltaic generation, storage, and site-power limits. Charging immediately at connection can satisfy the driver while increasing a building or community peak. Delaying or modulating the session can reduce cost and align demand with local photovoltaic production, but only within the vehicle's connection window and required departure energy. Corporate installations add a further allocation problem because several simultaneous charging requests can exceed the power available to the charging switchboard or site \parencite{opeva2026d63}.
+
+The demonstrator connects three complementary contexts. The Cleanwatts Living Lab represents a heterogeneous community of real residential participants, including consumers without controllable assets, prosumers with photovoltaic production, and flexsumers with batteries or domestic EV charging. The i-charging S.~Mamede factory represents an industrial site with one \SI{50}{\kilo\watt} DC charger, two AC charging units with two outlets each, photovoltaic generation, meters, and a local controller. The i-charging headquarters represents a larger office installation with one \SI{50}{\kilo\watt} DC charger, eighteen \SI{22}{\kilo\watt} AC chargers, photovoltaic generation, building loads, meters, and a common charging switchboard. Simultaneous charging can request more than \SI{400}{\kilo\watt}, making site-level power allocation a physical requirement rather than only an optimisation preference \parencite{opeva2026d63}.
+
+Across the three sites, the reported installation comprises four domestic \SI{7.4}{\kilo\volt\ampere} AC chargers, two corporate \SI{7.4}{\kilo\volt\ampere} AC units with two outputs, eighteen corporate \SI{22}{\kilo\volt\ampere} AC chargers, two \SI{50}{\kilo\watt} DC chargers, two local charging controllers, and three AC meters. These devices are distributed across installations with different demand, generation, storage, communication, and control capabilities. The resulting heterogeneity is central to the demonstrator: the controller cannot assume that every participant owns the same assets or exposes the same telemetry.
+
+The later real-data study associated with the demonstrator represents 17 installations. The first 15 form a heterogeneous residential and commercial REC; the remaining two represent an office and an industrial facility with photovoltaic generation and multiple EV chargers. The dataset contains 18 months of operational measurements aligned to 15-minute intervals. This simulation configuration and the physical Demo 9 installation are related research objects, but they are not interchangeable: the dataset supports long-horizon comparison, while the physical sites provide interface, device, and bounded-actuation evidence.
+
+\subsection{EnergAIze Integration Path}
+\label{sec:opeva-integration}
+
+The demonstrator instantiates EnergAIze as a path from heterogeneous physical interfaces to a controlled action. Cleanwatts provides the community-facing platform for residential measurements, photovoltaic and consumption forecasts, batteries, energy prices, and selected actuation. My.i-charging monitors charging sessions and connects the residential and corporate chargers to the wider system. At the corporate sites, omni-e local controllers acquire charger and meter data and enforce local power-management functions. OCPP connects chargers with the charging platform, Modbus TCP/IP connects selected meters and chargers to local controllers, OCPI exchanges charging information and profiles between platform boundaries, and REST or RabbitMQ interfaces connect the data and algorithm services \parencite{opeva2026d63}.
+
+Percepta and the associated Data Provider middleware isolate the controller from those provider-specific details. Receivers acquire measurements from each platform; translators normalise identifiers, units, timestamps, and message formats; per-installation managers align the required decision interval, identify asset relationships, and handle data gaps; and predictors invoke the policy associated with the installation. The reverse path sends the validated result to the provider responsible for the corresponding battery or charger. Training and inference use the same physical meanings while following different data paths: historical records are assembled into reproducible datasets for simulation and learning, whereas runtime messages are collected and aggregated periodically for the active controller \parencite{fonseca2025realworldrec,opeva2026d63}.
+
+Vehicle SoC illustrates why the integration layer is part of the control problem. Many chargers report session status and energy but do not expose the vehicle's current SoC. PulseCharge obtains available vehicle telemetry through manufacturer-facing services and combines it with user-declared or predicted flexibility. Recurrent user schedules provide a low-interaction baseline, predictions use historical routines when available, and explicit user input has priority when a journey departs from the routine. Consumption, photovoltaic-production, and flexibility prediction services provide additional derived observations and can temporarily compensate for unavailable direct measurements. Missing or low-confidence information remains distinguishable from a healthy observation because it changes which charging or V2G decisions can be justified.
+
+The Flexibility Scheduling Algorithm receives the resulting observations and produces building-level actions for controllable assets. CityLearn and EVLearn reproduce the relevant building, EV, charger, battery, and community conditions so that rule-based, optimisation, single-agent, and multi-agent controllers can be trained or compared without trial and error on the physical installations \parencite{fonseca2024energAIze,fonseca2025evlearn}. At runtime, the policy can execute centrally as one model instance per installation in a cloud environment or locally beside an installation. In both arrangements, provider and device protections retain the final authority to accept, limit, reject, or override a command.
+
+\Cref{fig:operational-contexts-topology} presents the three OPEVA sites, the assets available at each, and the data and command path through the partner platforms and EnergAIze components.
+
+\plannedfigure[0.18\textheight]{fig:operational-contexts-topology}{OPEVA Demo 9 sites, assets, platforms, and EnergAIze integration path.}{\textbf{Type:} site and data/control topology. Show the Cleanwatts Living Lab, S.~Mamede factory, and i-charging headquarters; residential and corporate chargers; PV, batteries, meters, building loads, and local controllers; Cleanwatts and my.i-charging; Percepta/Data Provider; PulseCharge and prediction services; CityLearn/EVLearn; the EnergAIze controller; and the action-validation boundary. Distinguish monitoring, training data, runtime observations, and physical commands. \textbf{Purpose:} show how the demonstrator joins physical assets, external platforms, simulation, and intelligent control without implying that every path had the same action authority. \textbf{Source needed:} partner-approved OPEVA D6.3 figures, final asset inventory, and as-built interface audit.}
+
+\subsection{Scenarios and Validation Strategy}
+\label{sec:opeva-validation}
+
+Four use cases organise the demonstrator. Their value lies in the progression from a common residential charging problem to V2G, in-transit charging, and constrained fleet charging. Their implementation levels must remain explicit.
+
+\begin{table}[htbp]
+\centering
+\caption{OPEVA Demo 9 scenarios and the evidence boundary reported in deliverable D6.3.}
+\label{tab:opeva-scenarios}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.13\textwidth}p{0.38\textwidth}p{0.17\textwidth}X@{}}
+\toprule
+\textbf{Scenario} & \textbf{Control question} & \textbf{Reported implementation} & \textbf{Boundary} \\
+\midrule
+1 & Schedule residential charging within the connection window and departure requirement & Simulation and real setting & Physical action authority and duration require final log confirmation \\
+2 & Use a connected EV for local storage and V2G & Simulation and partial real integration & Bidirectional charger operation remained simulated \\
+3 & Select and reserve an in-route charging option using trip, tariff, range, and community information & Simulation and partial integration & Public charging and community/charger communication were not available for complete physical execution \\
+4 & Prioritise several corporate charging requests under building loads, photovoltaic production, user needs, and site-power limits & Simulation and partial real integration & Testing was bounded to avoid disturbing office and industrial operation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The real-data simulation study compares unmanaged operation, passive REC energy sharing, rule-based scheduling, and EnergAIze coordination under common data and pricing assumptions. The 18-month records are aligned to 15-minute intervals, with accumulated and instantaneous quantities treated differently during resampling. Short gaps, longer missing periods, timestamp inconsistencies, physically invalid values, and post-gap accumulation spikes are handled according to declared data-type rules. This processing enables a common experiment but does not erase the fact that some controller inputs were interpolated, repeated, estimated, or unavailable in the original system.
+
+The final evidence must keep this campaign separate from the earlier nine-building benchmark reported in D6.3. That benchmark combined demonstrator measurements with CityLearn data and simulated EV flexibility. It supported the initial controller and simulator evaluation, whereas the later 17-installation campaign addresses a different population, time resolution, data horizon, and performance-and-equity question. Numerical results from the two campaigns are not pooled.
+
+\subsection{Results and Demonstrated Boundary}
+\label{sec:opeva-results}
+
+The four-building operational study provides preliminary evidence that the complete data and coordination path can work with real participants and imperfect measurements. It reports approximately 9\% lower daily peak demand and 5\% lower energy cost for the evaluated coordinated operation \parencite{fonseca2025realworldrec}. These values are interpreted with the reported site, baseline, duration, weather, participant behaviour, and degree of direct control; they are not extrapolated to all 17 installations or to sustained autonomous operation.
+
+The later real-data simulation campaign provides the long-horizon comparison. Relative to the unmanaged reference, EnergAIze reports a 10.2\% reduction in grid energy demand, a 13.6\% reduction in energy cost, a 14.2\% improvement in renewable self-consumption, a 20.7\% reduction in peak demand, and a 30.1\% reduction in ramping under the stated scenario and pricing assumptions. Participant-level results remain heterogeneous, which is scientifically important: aggregate improvement does not establish that participants with different assets and flexibility obtain equal benefits.
+
+The systems evidence is similarly layered. The Cleanwatts and my.i-charging integration exchanged charging-session data; OCPI charging profiles provided a path for control; local controllers operated at the corporate sites; the middleware produced periodic real-data messages for inference; and selected Cleanwatts-device actuation tests had begun at the reporting point \parencite{opeva2026d63}. The same report described containerised model and middleware deployment as an early-stage activity. The defensible conclusion is therefore that OPEVA established substantial real-platform, real-data, local-controller, and bounded-actuation evidence, while V2G, in-route charging, fleet-wide policy deployment, and sustained closed-loop operation retained scenario-specific limitations.
+
+\Cref{fig:operational-runtime-timeline} aligns one audited OPEVA period with observation quality, policy state, requested and applied charging actions, site demand, limits, and interventions.
+
+\plannedfigure[0.17\textheight]{fig:operational-runtime-timeline}{Timeline of one audited OPEVA control or integration period.}{\textbf{Type:} aligned time-series and event timeline showing data availability, forecast or flexibility confidence, active policy/fallback state, proposed and executed charging actions, site/community demand, constraints, platform rejection or override, communication incidents, and manual actions. \textbf{Purpose:} connect energy outcomes to the actual runtime path. \textbf{Source needed:} timestamp-aligned OPEVA logs with timezone, sampling interval, policy version, action authority, and event provenance.}
+
+\section{DemFlex Demonstrator}
+\label{sec:demflex-demonstrator}
+
+DemFlex constitutes the second demonstrator context of this chapter. It is kept separate from OPEVA because its physical setting, available assets, data lineage, control authority, experimental periods, and deployment history define a different body of evidence. The same EnergAIze abstractions can be reused, but compatibility of an interface or component does not permit a result, asset count, or evidence level to be transferred between demonstrators.
+
+\draftnote{Insert the DemFlex account after receiving the authoritative demonstrator context. Use the same compact structure as OPEVA: (1) scientific control problem and site configuration; (2) assets, participants, and physical limits; (3) EnergAIze components and external interfaces; (4) controller, baseline, and safety/fallback; (5) testing sequence and action authority; (6) verified results; and (7) limitations. Confirm whether any existing four-building or forecasting evidence belongs to DemFlex before moving it.}
+
+\section{Cross-Demonstrator Lessons and Simulation-to-Operation Differences}
+\label{sec:real-lessons}
+\label{sec:sim2op}
+
+The demonstrators expose differences that are easily hidden by a nominal simulator. Real timestamps and APIs are not perfectly aligned. SoC can be unavailable or estimated. User-declared departure times can be absent or incorrect. Physical platforms can reject, quantise, delay, or override commands. Assets can be unavailable for reasons not represented in the training scenario. Edge devices can restart and communication can be interrupted.
+
+These differences are classified as data, interface, dynamics, execution, constraint, or lifecycle shifts. The appropriate response depends on the source of the mismatch. A unit or timestamp error requires a data-contract correction; a provider-specific action requires an adapter; a known observation failure requires an explicit degraded mode; a persistent distribution shift can justify retraining; and an incompatible capability can require rejection rather than numerical imputation. The learning algorithm is changed only when the evidence identifies it as the relevant failure source.
+
+Fail-safe behaviour is evaluated through proposed and executed actions separately. Missing or stale critical data can contract the current interface, activate conservative bounds, invoke a rule-based fallback, hold a previously safe value, or suspend learned control. The number, duration, cause, and effect of these interventions are part of the result. A stable physical trajectory produced almost entirely by external correction is evidence for a useful assurance layer, but weak evidence for the policy itself.
+
+\Cref{fig:sim-to-operation-gap-map} turns the observed differences between simulation assumptions and demonstrator conditions into explicit findings, mitigations, and remaining limits.
+
+\plannedfigure[0.16\textheight]{fig:sim-to-operation-gap-map}{Observed differences between simulation assumptions and demonstrator conditions.}{\textbf{Type:} paired assumption/evidence map, with separate OPEVA and DemFlex markers. Include timestamps and missing data; device/API semantics; unavailable SoC; asynchronous updates; rejected actions; forecast error; operator intervention; site limits; and platform dependencies. For each difference show the mitigation and remaining limitation. \textbf{Purpose:} turn integration difficulties into cross-demonstrator scientific findings without erasing their provenance. \textbf{Source needed:} incident and integration logs linked to Chapters~\ref{chap:simulator}, \ref{chap:ti-marl}, and~\ref{chap:lifecycle}.}
+
+The evidence remains bounded by the number of sites, deployment duration, seasonal coverage, partner access, manual steps, and degree of direct actuation. Weather, occupancy, prices, and participant behaviour can confound energy outcomes. Where randomised field periods are unavailable, matched baselines, replay, and counterfactual simulation can support interpretation without extending the causal claim beyond the study design.
+
+\begin{draftonly}
+\begin{table}[htbp]
+\centering
+\caption{Cross-demonstrator evidence ledger to be completed from the audited records.}
+\label{tab:rw-ledger}
+\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.20\textwidth}p{0.25\textwidth}X@{}}
+\toprule
+\textbf{Case} & \textbf{Evidence level} & \textbf{Current reported outcome} & \textbf{Required final context} \\
+\midrule
+OPEVA four-building REC & operational/field, exact mode to confirm & approximately 9\% daily peak and 5\% cost reduction & period, baseline, action authority, weather, policy version \\
+OPEVA 17-installation campaign & real-data simulation & 20.7\% peak and 30.1\% ramping reduction; additional KPI and equity results & frozen dataset, scenario, seeds, controller, pricing, statistical analysis \\
+OPEVA platform and charger integration & external-platform and bounded-actuation evidence & data exchange, local-controller integration, charging-profile path, selected actuation tests & exact sites, commands, acceptance/rejection, duration, logs \\
+DemFlex & \evidencepending & \evidencepending & site, assets, data, controller, baseline, authority, duration, incidents, results \\
+\bottomrule
+\end{tabularx}
+\end{table}
+\end{draftonly}
+
+\Cref{fig:realworld-results} reports the final demonstrator evidence without collapsing simulated, integration, and physical outcomes into one score.
+
+\plannedfigure[0.18\textheight]{fig:realworld-results}{Verified OPEVA and DemFlex results by evidence level.}{\textbf{Type:} coordinated data-driven panels rather than a software dashboard. Separate real-data simulation, interface/integration, target-runtime, and physical-control evidence; distinguish OPEVA and DemFlex visually. Suggested measures include cost, peak, ramping, self-consumption, participant distribution, service and constraint outcomes, latency, data incidents, and fallback interventions. \textbf{Purpose:} make the final real-world claim auditable and multi-criteria. \textbf{Source needed:} final demonstrator datasets, baselines, policy versions, action authority, periods, exclusions, and calculation scripts.}
+
+\section{Contribution to the Research Questions and Chapter Summary}
+\label{sec:real-rq-summary}
+\label{sec:rw-rqs}
+
+The two demonstrators contribute to all four research questions by testing interactions that the preceding chapters isolate experimentally. For RQ1, they identify the heterogeneous interfaces, participant and asset configurations, and availability changes that occurred outside a fixed benchmark. For RQ2, they establish the installation, device, data, and runtime scales actually reached, while larger controlled population claims remain in simulation. For RQ3, they expose data-quality failures, missing vehicle state, physical limits, platform interventions, and degraded operation. For RQ4, they test the path from historical data and training to packaging, external-platform integration, edge or cloud inference, monitoring, updates, and recovery.
+
+\begin{draftonly}
+The numbered operational findings will be instantiated from the audited OPEVA and DemFlex records:
+
+\begin{itemize}
+  \item \textbf{F8.1:} Real integration exposes data and interface shifts that are not captured by nominal simulator reward.
+  \item \textbf{F8.2:} Layered fallback preserves service during selected failures, but intervention logs are required to distinguish policy quality from runtime correction.
+  \item \textbf{F8.3:} OPEVA real-data and operational REC experiments show promising aggregate improvements with heterogeneous participant outcomes and explicitly bounded physical authority.
+  \item \textbf{F8.4:} DemFlex contributes [verified mechanism and result] under [verified evidence level and boundary].
+  \item \textbf{F8.5:} Real-data simulation, target hardware, external-platform integration, testbeds, shadow operation, and direct control support different claims and cannot be pooled as one real-world result.
+\end{itemize}
+\end{draftonly}
+
+\paragraph{Chapter synthesis.}
+OPEVA demonstrates how EnergAIze joins heterogeneous community and charging assets, external platforms, data normalisation, vehicle and flexibility information, simulation, learned control, and bounded actuation. Its strongest current evidence combines long-horizon real-data simulation, real-platform integration, local charging control, and preliminary field outcomes, while several scenarios remain partially simulated or bounded by platform access and site-operation constraints. DemFlex is treated as a separate demonstrator so that its contribution can be stated from its own configuration and evidence.
+
+Together, the demonstrators show what changes when the architectural and algorithmic contributions meet physical assets, provider interfaces, imperfect data, runtime resources, and human authority. The next chapter synthesises that evidence with the controlled results from Chapters~\ref{chap:simulator}--\ref{chap:lifecycle} and answers the research questions explicitly.

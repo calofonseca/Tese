@@ -1,0 +1,21 @@
+Environment,Native MARL,EV/V2G,Session dynamics,Variable scenario size,Online RL-agent entry/exit,Grid physics,Real data / HIL,Main scalability evidence
+CityLearn 2.x,Yes,Yes,Yes,Config,Not evidenced,"Electrical constraints, not general feeder PF",Dataset-driven,Multi-building/community benchmark; canonical challenges used 9 buildings
+CityLearn Challenge,Yes/centralized option,Edition-dependent,Edition-dependent,Fixed benchmark,No,No general PF,Benchmark datasets,Controlled multi-year evaluation; held-out test data
+EVLearn,Via CityLearn,Yes,Yes,Config,Not evidenced,No general PF,Data-driven,No dedicated simulator-throughput benchmark found
+GridLearn,Yes,Not native,No EV sessions,Config,Not evidenced,Yes,Mostly modeled,IEEE 33-bus published case
+SustainGym EVCharging,Yes,Charging-focused,Yes,Site/config,No; EVSE agents fixed,Charging-network constraints,Real Caltech/JPL sessions,52/54 EVSE networks; 288 steps/day
+ACN-Sim,Not inherently,Charging-focused,Yes,Config,N/A,Charging-network constraints,Real ACN data,Real-site-scale charging networks
+Chargym,No native MARL evidence,Yes,Yes,Mostly fixed,No evidence,No,Limited,Canonical 10 charging spots
+EV2Gym,Primarily Gym RL interface,Yes,Yes,"Yes, Config",Not native,"Yes, current optional support",Multiple open real datasets,N/topology parameterized; large scenarios supported
+Chargax,Not native MARL,EV charging,Yes,Config,No MARL semantics,No general PF,Real-data scenarios,>100×–1000× reported simulator speedup
+PowerGridworld,Yes,Extensible,Not native,Config,Not evidenced,Yes,Mostly model-based,Heterogeneous multi-device MARL; RLlib/MADDPG examples
+CommonPower,Yes,Extensible,Not native,Config,Not evidenced,Yes/symbolic + grid tooling,Flexible data interface,Heterogeneous controller composition; safety layer
+Sinergym,Primarily single-agent,No native,No,Model/config,No,No grid PF,Model/weather driven,Cloud/experiment execution rather than population scale
+BOPTEST-Gym,Primarily single-agent,No,No,Test-case,No,No grid PF,High-fidelity emulator,Vectorized parallel environments since v0.6
+PowerGym,"RL, not primarily MARL",No,No,Benchmark cases,No,OpenDSS,Standard feeders,13/34/123 bus and 8500-node systems; parallel mode
+Grid2Op,Primarily grid-control RL,No,N/A,Multiple environments,No MARL-population semantics,Yes,Realistic chronics,Fast large-scale PF; active reproducibility support
+RL2Grid,RL benchmark,No,N/A,Multiple tasks,No,AC PF via Grid2Op,TSO-informed,Standardized multi-network task suite
+mosaik,Controller-dependent,Via component,Component-dependent,Yes,Not established as MARL API,Via component,Component-dependent,Distributed multi-simulator composition
+HELICS,Controller-dependent,Via federate,Yes if modeled,Yes,Yes at federate level,Via federate,Real-time/HIL supported,Dynamic distributed federation
+EV-EcoSim,Controller-dependent,Yes,Yes/modelled,Config,No MARL semantics evidenced,Yes,Scenario-dependent,Multi-timescale grid/EV co-simulation
+Energym,Controller-agnostic,No,No,Model selection,No,No,Some site-calibrated models,14 packaged building models

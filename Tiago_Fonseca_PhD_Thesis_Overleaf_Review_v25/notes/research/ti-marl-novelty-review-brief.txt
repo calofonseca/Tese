@@ -1,0 +1,323 @@
+Conduct a rigorous, falsification-oriented scoping review to determine
+whether the proposed Typed-Interface Multi-Agent Reinforcement Learning
+concept is scientifically novel, partially novel, or already covered by
+existing work.
+
+This review is for private method development. Do not write thesis prose
+and do not assume novelty. Actively search for the strongest prior work
+that could invalidate or substantially narrow each proposed contribution.
+
+PROPOSED CONCEPT
+
+The proposed method concerns multi-agent reinforcement learning for
+heterogeneous and dynamically reconfigurable cyber-physical systems.
+
+At each decision step, every active agent exposes a runtime Agent Schema
+that may contain:
+
+- agent identity and role;
+- installed modules and capabilities;
+- sensors and observation sources;
+- actuators and callable action capabilities;
+- local physical and operational constraints;
+- status and health information;
+- timing, communication, and computational properties;
+- dependencies between observations, action capabilities, constraints,
+  and validity conditions.
+
+The Agent Schema generates a variable set of typed observation parts and
+typed action ports.
+
+A typed observation part may include:
+
+- semantic type;
+- value or structured value;
+- unit and shape;
+- scope: self, local, community, or global;
+- source and provenance;
+- timestamp and age;
+- quality, confidence, or uncertainty;
+- validity and missingness state;
+- dependencies and relationships with other observations or actions.
+
+A typed action port may include:
+
+- semantic name and action family;
+- discrete type or mode;
+- parameter schema;
+- continuous or discrete parameter domains;
+- units and physical bounds;
+- dynamic bounds;
+- validity predicate;
+- required observations or capabilities;
+- resource-consumption or coupling metadata;
+- safety class and fallback behaviour;
+- expected physical effect or effect model.
+
+The policy does not emit through one fixed universal action vector.
+Instead, it:
+
+1. encodes the current Agent Schema;
+2. encodes the current typed observation parts;
+3. encodes the currently available typed action ports;
+4. produces a shared latent representation;
+5. scores or selects one or more current action ports;
+6. generates port-specific parameters;
+7. produces a local action proposal.
+
+The method must also support multiple agents whose individually valid
+actions are jointly incompatible. For example, two EV chargers may each
+propose 0.6 charging power while the shared site limit is 1.0.
+
+A joint coordination and safety layer therefore receives:
+
+- local action proposals;
+- local policy scores, Q-values, priorities, or utilities;
+- participant objectives;
+- community objectives;
+- local constraints;
+- shared physical and resource constraints;
+- fairness and service requirements.
+
+It returns jointly feasible and coordinated executed actions. The
+mechanism should do more than clipping: it should decide how scarce
+capacity is allocated based on urgency, expected utility, fairness,
+community objectives, and physical limits.
+
+The method should support:
+
+- heterogeneous agents and asset types;
+- agents joining and leaving;
+- modules or capabilities appearing and disappearing;
+- observation and action interfaces changing at runtime;
+- missing, stale, uncertain, or failed sensors;
+- graceful degradation and fail-safe operation;
+- multi-dimensional scalability;
+- explicit decision traces and interface-level explainability;
+- deployment through versioned and machine-readable interface contracts.
+
+REVIEW OBJECTIVES
+
+Determine whether prior work already provides any of the following:
+
+A. A formal Markov-game or related model in which each active agent has
+   a runtime schema that induces both observations and actions.
+
+B. A policy that operates directly over variable sets of semantically
+   typed action candidates rather than over a fixed universal head.
+
+C. Dynamic parameterised action ports with individual parameter schemas,
+   bounds, validity predicates, and dependencies on observation sources.
+
+D. Explicit relations between sensor health and action-port validity or
+   parameter bounds.
+
+E. Runtime interface contraction or expansion when capabilities,
+   observations, or modules change.
+
+F. A multi-agent architecture combining dynamic typed interfaces with
+   centralised training and decentralised execution.
+
+G. Joint correction or optimisation of locally proposed actions under
+   coupled physical constraints and community objectives.
+
+H. A mechanism that simultaneously provides feasibility, intelligent
+   allocation, fairness, and minimum deviation from the local policies.
+
+I. Policy compatibility and deployment semantics derived from machine-
+   readable observation and action schemas.
+
+J. Interface-level explainability, including selected action port,
+   rejected or invalid ports, validity reasons, supporting observations,
+   parameter bounds, safety corrections, active global constraints, and
+   coordination adjustments.
+
+RELATED-WORK FAMILIES TO SEARCH
+
+Search primary literature and official implementations covering at least:
+
+1. Parameterised Action Markov Decision Processes.
+2. Hybrid discrete–continuous action reinforcement learning.
+3. P-DQN, MP-DQN, PADDPG, HyAR, DLPA, and related methods.
+4. Variable action-space and action-set reinforcement learning.
+5. Action embeddings and semantic action representations.
+6. Action primitives, skills, options, affordances, and tool-use policies.
+7. Action masking and feasible-action generation.
+8. Object-centric, entity-centric, set-based, graph-based, and
+   Transformer-based policies.
+9. Pointer networks and dynamic candidate-action selection.
+10. Hypernetworks and dynamically generated policy heads.
+11. Modular policies and cross-embodiment control.
+12. Compositional observation and action interfaces.
+13. Generalist and multi-embodiment agents with different action spaces.
+14. Heterogeneous-agent MARL with different observation/action spaces.
+15. Parameter sharing and selective parameter sharing.
+16. Role-based, type-based, capability-aware, and agent-conditioned MARL.
+17. Open ad hoc teamwork and open multi-agent systems.
+18. Variable and dynamic agent populations.
+19. Dynamic coordination graphs and learned communication.
+20. Mean-field and local-neighbourhood MARL.
+21. Constrained Markov games and constrained MARL.
+22. Shared-resource and congestion-constrained multi-agent control.
+23. Joint-action projection, safety layers, control barrier functions,
+    differentiable QP/MILP/OPF layers, and runtime shields.
+24. Safe policy improvement and action correction.
+25. Decentralised optimisation, consensus, ADMM, dual decomposition,
+    and resource allocation combined with learned policies.
+26. Runtime assurance and graceful degradation.
+27. Sensor-health-aware and fault-tolerant RL/MARL.
+28. Neuro-symbolic RL, PDDL/action schemas, semantic APIs, robotics
+    interfaces, ROS actions, Web of Things affordances, and typed
+    software contracts where they interact with learned policies.
+29. Multi-agent policy registries, policy–interface compatibility,
+    and deployment of heterogeneous policy sets.
+30. Explainable RL based on action structure, affordances, constraints,
+    or execution traces.
+
+SOURCES
+
+Search primary and authoritative sources from:
+
+- ICML, NeurIPS, ICLR, AAMAS, AAAI, IJCAI;
+- CoRL, ICRA, IROS, RSS, RA-L, TRO;
+- L4DC, CDC, ACC, TAC;
+- JMLR and PMLR;
+- OpenReview;
+- IEEE Xplore;
+- ACM Digital Library;
+- arXiv for recent work not yet peer-reviewed;
+- official repositories and project documentation.
+
+Include influential earlier work and recent work through 2026.
+
+Do not use surveys as substitutes for primary-study evidence. Surveys may
+be used to discover primary sources.
+
+EVIDENCE MATRIX
+
+Create one row per primary work with at least:
+
+- citation and stable identifier;
+- year and venue;
+- single-agent or multi-agent;
+- application domain;
+- fixed or variable agent population;
+- homogeneous or heterogeneous agents;
+- what heterogeneity means;
+- fixed or variable observation space;
+- fixed or variable action space;
+- whether action semantics change or only cardinality/order;
+- whether unseen action types appear at evaluation time;
+- whether the policy receives an explicit action or interface schema;
+- whether the schema is symbolic, typed, learned, or implicit;
+- observation representation;
+- action representation;
+- fixed head, masked head, action embedding, candidate-set policy,
+  pointer network, hypernetwork, modular decoder, or other mechanism;
+- support for hybrid discrete–continuous actions;
+- support for port-specific parameter schemas;
+- support for dynamic bounds and validity predicates;
+- support for observation–action dependency relations;
+- support for sensor health, missingness, or uncertainty;
+- runtime interface expansion/contraction;
+- action correction or safety layer;
+- local versus coupled constraints;
+- joint-resource coordination;
+- fairness or community-level optimisation;
+- CTDE or execution structure;
+- scalability evidence;
+- runtime/deployment evidence;
+- explainability or traceability;
+- closest overlap with the proposed method;
+- important difference;
+- whether the work invalidates, narrows, or does not affect a candidate
+  novelty claim;
+- confidence and notes.
+
+NOVELTY CLAIMS TO TEST SEPARATELY
+
+Test these candidate claims independently:
+
+N1. Runtime agent schemas induce both typed observation parts and typed
+    parameterised action ports.
+
+N2. The policy selects and parameterises action ports from the current
+    runtime interface, rather than emitting through a fixed universal
+    output head.
+
+N3. Observation health and semantic dependencies modify action-port
+    validity and bounds at runtime.
+
+N4. The same method supports interface expansion, contraction, and agent
+    population changes without rebuilding the global policy layout.
+
+N5. Local policies produce proposals that are transformed into jointly
+    feasible and utility-aware actions under shared physical constraints.
+
+N6. The joint coordination layer balances local utility, community
+    utility, fairness, service urgency, and deviation from agent
+    proposals.
+
+N7. The interface contract supports both learning and deployment,
+    including policy compatibility, runtime validation, fail-safe
+    operation, and versioning.
+
+N8. Typed interfaces produce faithful execution-level explanations:
+    selected port, invalid ports and reasons, supporting observations,
+    bounds, corrections, active constraints, and coordination changes.
+
+For each claim classify the literature as:
+
+- IDENTICAL PRIOR ART;
+- STRONG SUBSTANTIAL OVERLAP;
+- PARTIAL OVERLAP;
+- ADJACENT BUT DISTINCT;
+- NO CLOSE PRIMARY EVIDENCE FOUND.
+
+Do not classify “no close evidence found” as proof of novelty.
+
+FALSIFICATION REQUIREMENT
+
+For every candidate claim, actively identify the three strongest papers
+that could defeat it.
+
+Explain:
+
+- what those papers already solve;
+- whether they support the same runtime semantics;
+- whether they use a fixed superset and masking;
+- whether they support unseen semantic action types;
+- whether they connect observation health to action availability;
+- whether they handle coupled multi-agent constraints;
+- whether they work only in one fixed environment;
+- whether their interface representation is policy-facing or only an
+  environment adapter.
+
+DELIVERABLES
+
+1. Executive summary with no novelty claim unless strongly supported.
+2. Transparent search protocol and limitations.
+3. Full evidence matrix.
+4. Taxonomy of the neighbouring research areas.
+5. Closest-prior-work table.
+6. Candidate novelty claims N1–N8 with confidence.
+7. Strongest counterexamples.
+8. Components that are clearly not novel independently.
+9. Components that may be novel only in combination.
+10. Recommended minimal scientific claim.
+11. Recommended stronger claim if additional experiments succeed.
+12. Recommendations for formalism, terminology, and method name.
+13. Recommended baselines and ablations.
+14. A “kill list”: findings that would require abandoning or radically
+    reformulating the proposed method.
+15. A final novelty map:
+
+    proposed component
+    → closest prior art
+    → exact overlap
+    → exact difference
+    → evidence needed
+
+The report is for method design, not thesis inclusion. Be critical,
+specific, and prepared to conclude that the idea is not sufficiently
+novel.

@@ -1,0 +1,899 @@
+\chapter{Real-World Multi-Agent Control in Cyber-Physical Systems: Foundations, State of the Art, and Research Gaps}
+\label{chap:foundations}
+\markboth{State of the Art for Real-World MARL}{State of the Art for Real-World MARL}
+
+Chapter~\ref{chap:introduction} established the thesis proposition and four research questions around dynamic and heterogeneous control, multi-dimensional scalability, safe and robust operation, and the governed deployment of MARL-based control. This chapter examines the knowledge that supports those questions and determines which parts of the problem are already addressed by prior work.
+
+The argument begins with the class of systems under study rather than with a learning algorithm. Distributed, heterogeneous, and dynamically reconfigurable cyber-physical systems define the operational conditions. Renewable Energy Communities then provide the principal empirical instantiation, making heterogeneity, temporal flexibility, mixed objectives, and physical constraints concrete. The chapter next compares established control families and identifies the conditions under which MARL offers a meaningful alternative. Only after that comparison are the RL and MARL foundations needed by the remainder of the thesis introduced formally.
+
+Simulation is treated as an experimental instrument rather than as evidence of deployment. The chapter therefore distinguishes controlled simulation from higher levels of operational evidence, while the detailed comparison of simulation and benchmarking platforms is developed in Chapter~\ref{chap:simulator}, immediately before the simulator contribution itself. The final sections return explicitly to RQ1--RQ4, test broad gap claims against counterexamples, retain adjacent problems that lie outside the thesis scope, and derive the residual requirements used by the later contribution chapters.
+
+\section{Literature Scope and Evidence Approach}
+\label{sec:ch2-purpose}
+
+The state of the art is organised around the four research questions defined in Chapter~\ref{chap:introduction}. The objective is not to produce an exhaustive census of reinforcement learning, energy management, simulation, or MLOps. It is to establish the strongest relevant prior capabilities, identify counterexamples to overly broad absence claims, and determine which limitations remain when the requirements of this thesis are considered together.
+
+\subsection{Scope and Sources}
+\label{sec:ch2-review-objectives}
+
+The literature base combines four bodies of evidence that are needed by the thesis: MARL in distributed cyber-physical systems; control and learning in Renewable Energy Communities and EV charging; simulation, benchmarking, and operational evidence; and lifecycle mechanisms for learned controllers and coordinated policy sets. These bodies are not presented as four independent reviews. They form one structured evidence base whose purpose is to support the argument developed across this chapter and the more detailed local state-of-the-art analyses in Chapters~\ref{chap:simulator} and~\ref{chap:lifecycle}.
+
+Peer-reviewed primary studies are preferred when a scientific claim depends on experimental evidence. Surveys and tutorials are used to establish terminology and to identify important lineages. Recent preprints are retained when they provide unusually relevant counterexamples or emerging capabilities, but their evidential status is stated explicitly. Official documentation, standards, and software repositories are used where a platform capability, interface, release history, or deployment mechanism cannot be established reliably from a research paper alone.
+
+Searches combined targeted concept searches with backward and forward citation tracing. The concepts were selected from RQ1--RQ4 and from the operational conditions introduced in Chapter~\ref{chap:introduction}: heterogeneity and reconfiguration; scale and resource use; safety, robustness, and uncertainty; and deployment, monitoring, rollback, and recovery. The energy domain remained the principal empirical lens, while selected studies from robotics, transport, and industrial systems were retained when they tested whether a limitation was specific to energy or recurrent across distributed CPSs.
+
+Detailed search expressions, screening records, evidence matrices, and source notes are retained with the research artefacts supporting the thesis. Keeping that operational record outside the chapter allows the dissertation to present the scientific synthesis without turning the state of the art into a procedural report of individual search passes.
+
+\subsection{Evidence Synthesis and Limitations}
+\label{sec:ch2-review-method}
+
+Three kinds of statement are kept distinct throughout the chapter. A \emph{foundation} is an established concept used to formulate the work, such as an MDP, a Markov game, or CTDE. A \emph{reported limitation} belongs to a particular study, platform, or line of work. A \emph{research gap} is a broader conclusion that must remain defensible after strong counterexamples have been considered. This distinction is important because the existence of one limitation in one study does not establish that an entire field lacks the corresponding capability.
+
+The synthesis is therefore deliberately counterexample-oriented. Candidate gaps were tested against work demonstrating dynamic teams, heterogeneous agents, large populations, explicit safety mechanisms, physical testbeds, operational deployment, model registries, edge orchestration, rollback, and related mechanisms. Where such evidence exists, the claim is narrowed rather than preserved for convenience. The resulting gaps concern combinations, assumptions, and evidence boundaries, not the blanket absence of individual techniques.
+
+Evidence is also interpreted according to what was actually demonstrated. A documented software feature is not equivalent to an evaluated control mechanism; a physical testbed is not the same as sustained operational service; a policy evaluated on a larger population is not automatically scalable in communication, simulation throughput, or deployment cost. The relevant evidence level is stated when it changes the interpretation of a result.
+
+This review is structured and scoping in nature rather than exhaustive. The retained literature was selected to cover the mechanisms, counterexamples, domains, and evidence levels needed to answer the thesis questions, and it includes recent work whose status may change before submission. Absence from the retained evidence is therefore not treated as proof that a capability has never been studied. Claims are limited to what the cited literature and archived evidence support, and the detailed records are retained so that the synthesis can be audited and updated.
+
+\section{Distributed, Heterogeneous, and Dynamically Reconfigurable Cyber-Physical Systems}
+\label{sec:ch2-cps}
+
+The first step is to characterise the system class independently of any particular learning method. Chapter~\ref{chap:introduction} introduced distribution, heterogeneity, and reconfiguration as recurring properties of the thesis problem. Here they are examined more closely because they determine what information is available, which actions are meaningful, how controllers can be coordinated, and what changes when the operational configuration evolves. These properties establish the setting for RQ1 and introduce communication, computation, and runtime constraints that later shape RQ2--RQ4.
+
+\subsection{Distributed Control and Operational Constraints}
+\label{sec:ch2-cps-control}
+
+A \gls{cps} connects computation, communication, and physical processes through feedback. Sensors measure the physical world, software estimates or predicts its state, controllers select actions, and actuators affect the next physical state. Timing and physical dynamics are part of the computation rather than external details \parencite{lee2008cps}.
+
+Distribution changes this feedback loop. Information may be generated near an asset, processed at an edge device, aggregated by a platform, and used by a controller running elsewhere. Different actions may also be applied at different locations. A distributed architecture can reduce latency, preserve local data, and avoid a single control bottleneck, but it also creates coordination and consistency problems. Reviews of distributed CPS control show that these trade-offs appear across domains rather than only in energy \parencite{hamzah2023distributedcps}.
+
+It is useful to distinguish three broad patterns.
+
+\begin{description}
+  \item[Centralised control.] A central controller receives the relevant information and computes the actions for the complete system. This can support globally coordinated decisions, but it depends on communication, a sufficiently accurate global model, and enough computation within the decision interval.
+
+  \item[Decentralised control.] Local controllers select actions using local information, possibly without a central decision maker. This can reduce latency and improve fault isolation, but global coordination is more difficult.
+
+  \item[Hierarchical control.] Local controllers retain selected responsibilities, while higher levels coordinate shared objectives, constraints, or resource allocation. Many operational systems use this intermediate pattern.
+\end{description}
+
+Decentralisation is a control structure, not an objective in itself. A centralised optimiser may remain the strongest baseline for a small, well-modelled system. The relevant question is whether the structure remains effective as the system grows, changes, or cannot share all data continuously. Some MARL studies describe decentralised agents while retaining a central simulator, global training information, or coordinated deployment outside the learning algorithm; those assumptions are reported explicitly.
+
+\paragraph{Examples across CPS application domains.}
+\label{sec:ch2-cps-domains}
+
+Table~\ref{tab:cps-domain-examples} shows how recurring system properties appear in energy, robotics or mobility, and industrial CPS. The examples establish generality at the level of the modelling and systems problem; they do not imply direct transfer of one controller between domains.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Examples of recurring properties across distributed CPS domains.}
+  \label{tab:cps-domain-examples}
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth} X X X}
+    \toprule
+    \textbf{Property} & \textbf{Energy community} & \textbf{Robotics or mobility} & \textbf{Industrial CPS} \\
+    \midrule
+    Distribution & Buildings and chargers act at different sites & Robots or vehicles act at different locations & Machines and controllers are distributed across a plant \\
+    Heterogeneity & Batteries, EVs, PV, and heat pumps expose different interfaces & Aerial, ground, or specialised agents have different capabilities & Machines have different processes, sensors, and cycle times \\
+    Dynamic population & Vehicles arrive and depart; assets become unavailable & Agents join, leave, or move out of range & Machines enter maintenance or production cells are reconfigured \\
+    Mixed objectives & Individual cost and comfort coexist with community peaks and emissions & Local task progress coexists with mission-wide coordination & Local throughput coexists with plant-wide quality and energy targets \\
+    Physical constraints & Power, energy, comfort, and network limits & Collision, dynamics, battery, and motion constraints & Safety envelopes, capacity, timing, and maintenance constraints \\
+    Communication limits & Local meters and community platforms may be intermittently connected & Wireless links vary with position and interference & Field networks have timing, bandwidth, and reliability limits \\
+    Edge operation & Policies run in building or charger controllers & Policies run on robots or roadside units & Control runs on industrial PCs, PLC-connected devices, or embedded nodes \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Evaluation remains domain-aware. Collision avoidance in robotics and battery or grid constraints in energy require different physical models and validation criteria, even when the systems share representations or lifecycle principles. The architectural argument is broader than energy, while the measured empirical claims remain grounded in the energy domain.
+
+\subsection{Heterogeneous Agents, Assets, and Interfaces}
+\label{sec:ch2-cps-heterogeneity}
+
+Heterogeneity can refer to several different properties. Agents may have different physical capabilities, sensors, action spaces, objectives, computing resources, communication links, or software interfaces. Treating all of these differences as one category can hide the reason a method fails.
+
+The distinction between \gls{agent} and \gls{asset} is particularly important. An asset is the physical or virtual resource being observed or controlled. An agent is the decision-making entity. One agent may control several assets, several agents may coordinate around one shared resource, or a rule-based controller may operate an asset without being a learning agent. These alternatives lead to different observation spaces, action spaces, and deployment units.
+
+Consider three energy assets. A battery accepts a continuous charge or discharge power constrained by its \gls{soc}. An EV charger may accept a current limit but only while a vehicle is connected. A heat pump affects a temperature state whose response is delayed by building thermal dynamics. Even if all three actions are normalised to the interval $[-1,1]$, the meaning of the actions is not the same. A shared neural network cannot safely treat them as interchangeable without an explicit representation of asset type and capability.
+
+The same issue appears in other CPS. A heterogeneous robot team may contain aerial and ground robots. A transport system contains vehicles, traffic signals, and charging infrastructure. A factory contains machines with different cycle times and maintenance states. The general challenge is not merely to train several policies; it is to connect each policy to an interface that correctly represents what its agent can observe and do.
+
+Heterogeneity therefore affects both learning and software architecture. During learning, it influences parameter sharing, representation, coordination, and generalisation. During deployment, it influences compatibility, packaging, hardware requirements, testing, and updates. A method that supports heterogeneous tensors inside a simulator may still require a separate operational process for each physical interface.
+
+The literature also reveals a useful distinction between \emph{environmental heterogeneity} and \emph{architectural heterogeneity}. Buildings can have different demand profiles, capacities, or locations while all agents still share one observation structure, action structure, and policy class. This is environmental heterogeneity. Architectural heterogeneity is stronger: agents differ in what they can observe, what they can control, how often they act, or which role they play. Residential-flexibility research has considered heterogeneous flexible resources under partial observability, and building-control work has explicitly compared homogeneous and heterogeneous MARL formulations \parencite{charbonnier2022scalable,wu2023heterogeneous}. These studies are important counterexamples to a claim that heterogeneity is absent. At the same time, most evidence remains tied to fixed agent sets and predeclared interfaces. Supporting a battery, an EV charger, and a heat pump in one experiment is not yet the same as supporting previously unseen interface types that join an operational system without controller redesign.
+
+\subsection{Dynamic Populations, Capabilities, and Reconfiguration}
+\label{sec:ch2-cps-dynamic-populations}
+
+A fixed-agent problem assumes that the same agents remain present throughout training and operation. A dynamically reconfigurable system relaxes this assumption. Agents or assets may join, leave, fail, recover, or change capabilities. The relevant interaction topology may change with them.
+
+Electric-vehicle charging provides the recurring example. The charger exists continuously, but the vehicle that creates the energy request is temporary. Its arrival time, departure time, initial \gls{soc}, desired \gls{soc}, battery capacity, and admissible charging power can vary. The control problem at 18:00 may therefore contain a different set of active requests from the problem at 15:00.
+
+There are several levels of change:
+
+\begin{itemize}
+  \item \textbf{state variation}: values change while the agent and interface remain fixed;
+  \item \textbf{availability variation}: an existing asset is temporarily unavailable;
+  \item \textbf{population variation}: agents or controllable requests enter or leave;
+  \item \textbf{capability variation}: the observation or action interface changes;
+  \item \textbf{topology variation}: communication or coordination relationships change.
+\end{itemize}
+
+These cases should not be collapsed into one generic disturbance. A missing sensor value can be imputed. A departed vehicle should no longer receive a charging action. A new charger type may require a policy compatible with a different action space. The representation and lifecycle mechanisms must therefore know not only the current data but also which agents and interfaces are valid.
+
+Dynamic populations interact strongly with training. Padding a fixed-size input can handle a known maximum number of agents, but it does not by itself provide generalisation to unseen team sizes or types. Training separate policies for every configuration is often impractical. Type-conditioned policies, permutation-invariant representations, graph-based models, attention, role-based policies, or hierarchical coordination are possible responses, but their suitability depends on the domain and evidence.
+
+Dynamic teams have already received targeted attention, and this must be acknowledged before defining the residual gap. In traffic, MARL has been applied to a varying number of connected vehicles under changing connectivity penetration \parencite{su2020dynamicqueuejump}. In robotics, asynchronous policies have been designed to tolerate different action durations and robot loss \parencite{yu2023asynchronous}; event-triggered communication has been evaluated when the number of transport robots differs from training \parencite{shibata2023eventtriggered}; and physics-informed policies have handled time-varying communication graphs and robot teams larger than those observed during training, including physical Robotarium experiments \parencite{sebastian2025physicsmarl}. The remaining difficulty is therefore not simply ``a variable number of agents''. It is the joint case in which capabilities, observations, actions, timing, and availability differ while agents join, leave, fail, recover, or change role during continuing operation.
+
+\Cref{fig:ch2-reconfiguration-taxonomy} fixes the reconfiguration vocabulary used in the remaining chapters and prevents weaker forms of dynamicity from being mistaken for open heterogeneous agent populations.
+
+\plannedfigure[0.15\textheight]{fig:ch2-reconfiguration-taxonomy}{Taxonomy of dynamicity and reconfiguration used throughout the thesis.}{\textbf{Type:} six-level horizontal or staircase taxonomy. Distinguish: dynamic asset state; fixed-slot session dynamics; variable scenario size; variable-set representation; online agent entry/exit; and true open heterogeneous populations. \textbf{Purpose:} prevent EV arrival/departure or between-run resizing from being described as open-agent reconfiguration. \textbf{Evidence/source:} synthesise the definitions established by the state-of-the-art analysis; cite representative counterexamples in the surrounding text rather than inside every box.}
+
+\paragraph{Physical, computational, and communication constraints.}
+\label{sec:ch2-cps-constraints}
+
+A real CPS is constrained at several levels.
+
+\paragraph{Physical constraints.}
+Actions must respect power, energy, temperature, speed, mechanical, and other domain-specific limits. Physical systems also have inertia and delays: an action may not have an immediate or perfectly predictable effect.
+
+\paragraph{Operational constraints.}
+Users, operators, and organisations impose requirements beyond physical feasibility. A vehicle may need a minimum charge before departure. A building must preserve comfort. Maintenance windows, market rules, and contractual limits can restrict otherwise feasible actions.
+
+\paragraph{Computational constraints.}
+A policy may be trained on a cluster but executed on an embedded device. Memory, inference time, processor capability, and energy consumption constrain the deployed model. Edge computing can reduce latency and keep data local, but it also distributes hardware and maintenance responsibilities \parencite{shi2016edge}.
+
+\paragraph{Communication constraints.}
+Data can be delayed, lost, compressed, or unavailable. Bandwidth and privacy may limit what is shared. A local controller should know what to do when a community service is temporarily unreachable.
+
+\paragraph{Lifecycle constraints.}
+The controller must be installed, configured, monitored, updated, and, when necessary, rolled back. The operating system, dependencies, interface version, and policy version become part of the control solution. These concerns are not represented in a conventional Markov game, but they can determine whether the policy is usable.
+
+The constraints interact. Sending more data can improve coordination while increasing communication cost and privacy exposure. A larger model can improve simulated performance while exceeding edge memory or latency limits. A conservative safety filter can reduce violations while also reducing nominal reward. Scalability, deployability, safety, and robustness are therefore evaluated as connected properties rather than independent checkboxes.
+
+Taken together, these properties define the operational problem before any controller family is selected. For RQ1, they establish that reconfiguration can change the set and meaning of observations, actions, capabilities, and relationships rather than merely the numerical state. For RQ2, they expose communication, computation, and representation costs. The same changes also alter the conditions under which safety evidence and deployed policy compatibility remain valid, connecting the system model directly to RQ3 and RQ4.
+
+\section{Renewable Energy Communities as Representative CPSs}
+\label{sec:ch2-recs}
+
+Renewable Energy Communities make the preceding CPS properties concrete in the principal domain of this thesis. They combine physically distributed participants, heterogeneous assets, time-coupled flexibility, changing availability, local and collective objectives, and shared electrical constraints. The purpose of this section is not to claim that energy is unique, but to show how the general system properties become measurable control requirements in a domain where the thesis can evaluate them directly.
+
+This domain perspective gives RQ1 a concrete representation problem, gives RQ3 explicit physical and service constraints, and provides the operational scales and shared resources needed to examine RQ2. It also exposes the interfaces and organisational boundaries that later matter to RQ4.
+
+\subsection{Participants, Assets, and Heterogeneity}
+\label{sec:ch2-rec-participants}
+
+European legislation defines a \gls{rec} through participation, control, geographical proximity, and community benefit \parencite{eu2018redii}. This legal framing distinguishes a REC from an arbitrary collection of simulated buildings. It also means that technical control operates within an organisational setting containing members, operators, service providers, network actors, and possibly market participants. Reviews of energy-community business models show that governance, value distribution, and stakeholder roles are central to implementation \parencite{reis2021businessmodels}.
+
+For the control problem, participants can consume, produce, store, or shift energy. The term \emph{participant} is preferable to inventing a different agent label for every possible role. A participant may be a consumer, a prosumer with local generation, or an entity providing flexibility through controllable assets. Whether that participant corresponds to one learning agent is a design choice addressed later by the EnergAIze architecture and controller formulations.
+
+Typical assets include:
+
+\begin{itemize}
+  \item photovoltaic generation;
+  \item stationary batteries;
+  \item electric vehicles and chargers;
+  \item heat pumps and thermal storage;
+  \item water heaters and other shiftable loads;
+  \item smart meters, sensors, and controllable switches;
+  \item external signals such as prices, emissions, weather, and grid limits.
+\end{itemize}
+
+The asset list is less important than the interfaces it creates. A photovoltaic system may be largely uncontrollable but provides uncertain production. A battery is controllable in both directions but constrained by energy and power limits. A flexible load may only be shifted within a comfort or deadline window. These differences explain why a community cannot be modelled simply as many copies of the same agent.
+
+Stakeholders also define who is allowed to see data and apply actions. A community platform may know aggregate demand without receiving every raw household measurement. A charger operator may control the charging station but not the building's other loads. A network operator may impose a limit without participating in the optimisation of individual costs. These boundaries later become part of deployment and information architecture.
+
+\paragraph{Three layers of heterogeneity.}
+\label{sec:ch2-rec-heterogeneity}
+
+The energy literature often describes a system as heterogeneous, but that word can refer to different things. Keeping the distinction explicit is important because each layer creates a different control problem.
+
+\begin{description}
+  \item[Asset heterogeneity.] Batteries, EVs, photovoltaic systems, heat pumps, and flexible loads have different physical dynamics, actions, limits, and time scales. This is well represented in optimisation, predictive-control, and learning studies \parencite{srithapon2023predictive,zhu2022industrialpark,fonseca2024energAIze}.
+
+  \item[Participant and objective heterogeneity.] Buildings and users differ in demand, routines, comfort, mobility requirements, tariffs, available data, and preferred objectives. MERLIN, for example, studies buildings with distinct occupant behaviour, while EnergAIze permits different local management objectives within one community \parencite{nweye2023merlin,fonseca2024energAIze}.
+
+  \item[Controller and interface heterogeneity.] Agents can expose different observation fields, valid actions, capabilities, operating timescales, communication interfaces, or policy architectures. This layer is harder. A system may contain different assets while still mapping all of them into a fixed, homogeneous controller schema. Dynamic participation becomes substantially more demanding when a joining controller introduces a capability or action meaning that was not present during training.
+\end{description}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Three layers of heterogeneity in REC control.}
+  \label{tab:rec-heterogeneity-layers}
+  \small
+  \begin{tabularx}{\textwidth}{p{0.21\textwidth} X X}
+    \toprule
+    \textbf{Layer} & \textbf{Example} & \textbf{Control implication} \\
+    \midrule
+    Assets & One building has a battery and EV, another has a heat pump and photovoltaic production. & Models, constraints, and actions differ, but a common abstraction may still preserve one fixed controller interface. \\
+    Participants and objectives & One participant prioritises cost, another mobility readiness, while the community limits aggregate import. & Local and community outcomes must be represented and reported separately. \\
+    Controllers and interfaces & A new agent exposes different measurements, valid actions, timing, or hardware resources. & The architecture must discover or describe capabilities and bind a compatible controller without assuming an unchanged input--output contract. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The first two layers are already well represented in REC and EV research. The third is the stronger residual problem for this thesis. It explains why a community with different load profiles is not automatically evidence of an architecture that can accept a new charger type, a new action space, or a participant with a different policy role during operation.
+
+\subsection{Flexibility, Temporal Coupling, and Dynamic Availability}
+\label{sec:ch2-flexibility}
+
+Energy flexibility is the ability to change production, consumption, storage, or exchange relative to a baseline in response to an internal or external need. The literature uses several related definitions and modelling approaches, but a common element is the possibility of moving an energy action in time or changing its magnitude within constraints \parencite{hussain2023flexibility}.
+
+Different assets provide flexibility in different forms:
+
+\begin{itemize}
+  \item a battery moves energy across time;
+  \item an EV charge can be delayed or modulated before departure;
+  \item a heat pump uses thermal inertia to move electricity consumption while maintaining comfort;
+  \item a flexible industrial process can be rescheduled within production requirements;
+  \item controllable generation or curtailment changes the balance directly.
+\end{itemize}
+
+The value of flexibility depends on time. One kilowatt-hour of battery capacity is not equally useful in every interval. It may be valuable before a predicted community peak and less valuable after the peak has passed. Similarly, an EV with eight hours before departure provides more scheduling flexibility than an EV with twenty minutes remaining.
+
+This temporal coupling is why one-step optimisation can be insufficient. A controller must consider the future opportunity cost of using flexibility now. Model predictive control addresses this through a receding horizon. RL addresses it through expected return. Rule-based control may encode selected temporal knowledge explicitly. The controller families differ, but the underlying sequential problem is shared.
+
+Uncertainty further complicates the value of flexibility. Photovoltaic production, demand, arrival times, departure times, and prices may be forecast rather than known. A controller can reserve flexibility for a predicted event that does not occur or use it too early when the actual event is larger than expected. Robustness therefore includes not only sensor failures but also ordinary forecast error.
+
+\paragraph{Electric vehicles and dynamic asset availability.}
+\label{sec:ch2-evs}
+
+Electric vehicles are both mobility assets and energy assets. Their primary purpose is transport, which means that energy control is subordinate to a mobility requirement. A charging policy that reduces cost but fails to provide the energy needed for departure is not acceptable.
+
+An EV charging request is characterised by arrival time, expected or required departure time, initial \gls{soc}, target \gls{soc}, battery capacity, charger power, efficiency, and possibly vehicle-to-grid capability. These quantities differ between sessions and may be uncertain. The same charger can therefore present a different control problem each time a vehicle connects.
+
+This makes EV charging an intuitive example of a dynamic system, but the word \emph{dynamic} must be used carefully. In most studies, the physical charger or controller identity remains fixed while the session state changes. Puech et al. model uncertain starts, ends, energy requests, and early disconnections over 32 fixed charging slots using MPC and stochastic programming \parencite{puech2024evcs}. Hermans et al. forecast occupancy and control 174 fixed chargers in an operational microgrid \parencite{hermans2024mpc}. In both cases, users and sessions change, but the controller topology is known beforehand.
+
+Table~\ref{tab:energy-dynamics-taxonomy} defines the vocabulary used throughout the thesis. The categories are ordered by the extent to which the controller architecture itself changes.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Operational classification of dynamics in REC and EV control.}
+  \label{tab:energy-dynamics-taxonomy}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{p{0.18\textwidth} X X}
+    \toprule
+    \textbf{Category} & \textbf{What changes} & \textbf{Representative evidence and limitation} \\
+    \midrule
+    Session-level dynamics & An EV plugs in, disconnects, changes requested energy, or changes state while a charger/controller slot remains fixed. & Common in EV scheduling; Puech et al. and Hermans et al. explicitly represent changing sessions over fixed infrastructures \parencite{puech2024evcs,hermans2024mpc}. \\
+    Asset availability & An asset becomes usable or unavailable inside a pre-existing building or agent. & Useful for masks and local fallbacks, but it does not create a new controller identity or interface. \\
+    Variable instance size & The same method is evaluated with a different number of chargers, vehicles, or buildings between runs. & Sadeghianpourhamami et al. use a size-independent aggregate state, while GNN-DT transfers one graph-compatible architecture across charger counts \parencite{sadeghianpourhamami2020ev,orfanoudakis2025gnndt}. \\
+    Dynamic participation & A participant or controller joins or leaves during the modelled process. & Wu et al. explicitly model buildings joining and departing a VPP and adapt a Multi-Agent Transformer within a predefined family of building representations \parencite{wu2024dynamicvpp}. \\
+    Agent loss & A previously active controller fails or disappears during an episode. & Stronger evidence was found in robotics than in the energy literature; it tests continuity after failure rather than only planned session completion. \\
+    True open population & Controllers can be instantiated or removed online, potentially with new capabilities and interfaces, without redesigning or retraining for that exact composition. & No retained REC/EV study demonstrates this complete case. Recent graph methods approach variable scale and heterogeneous node types, but preserve a known feature and action grammar. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The distinction changes how evidence should be interpreted. Sadeghianpourhamami et al. avoid a state representation that grows directly with the number of charging stations and demonstrate generalisation to larger station sets, but the policy still controls an aggregate problem with known semantics \parencite{sadeghianpourhamami2020ev}. GNN-DT uses graph embeddings so that a model trained at one charger count can be evaluated at other counts; this is size generalisation, not online creation of a new controller interface \parencite{orfanoudakis2025gnndt}. HetGPS represents three EV types in a parameter-shared graph controller and evaluates 200--3218 EVs, but its formal agent index set remains fixed for each problem instance even though session arrival and departure are part of the exogenous process \parencite{wang2026hetgps}. As a recent preprint, it is a strong design counterexample but not yet peer-reviewed or physically deployed.
+
+Wu et al. provide the clearest energy-domain counterexample to a claim that dynamic participation has not been studied. Their Multi-Agent Transformer with an adaptation module handles buildings that join or depart a virtual power plant and is evaluated across configurations with three to nine buildings of different types and regions \parencite{wu2024dynamicvpp}. The result narrows the thesis gap. It does not remove the harder operational question of accepting agents with previously unseen observation fields, actions, roles, timing, or hardware requirements.
+
+The vehicle can also participate at different architectural levels. It may be controlled as an individual agent, as one asset within a building agent, or as part of a central charging-site controller. Each choice changes the number of agents, the information available to the controller, and the meaning of coordination. Chapter~\ref{chap:control-benchmark} compares several such formulations rather than assuming that an EV must always correspond to one MARL agent.
+
+Vehicle-to-grid operation adds another degree of freedom by allowing discharge to the building or grid. It can increase community flexibility, but it also introduces degradation, user acceptance, availability, market, and safety considerations. The presence of a technically possible action does not mean that it is contractually or operationally admissible.
+
+\subsection{Individual and Community Objectives and Physical Constraints}
+\label{sec:ch2-rec-objectives}
+
+A community contains objectives at several levels.
+
+At participant level, common objectives include electricity cost, comfort, mobility readiness, battery usage, self-consumption, and preservation of local autonomy. At community level, objectives can include aggregate cost, peak reduction, renewable self-consumption, emissions, energy sharing, and compliance with a shared import or export limit. Network and service operators may introduce additional objectives related to stability, congestion, or quality of service.
+
+These objectives are not always contradictory. Charging a vehicle when local photovoltaic production is high can reduce both individual cost and community import. Conflict appears when several participants prefer the same limited period or when one participant must sacrifice local benefit to improve a community metric.
+
+The formulation therefore needs more than one aggregate score. A community can achieve a low peak while one vehicle repeatedly misses its target. It can minimise total cost while allocating benefits unevenly. It can reduce emissions by shifting demand into a period that increases an individual bill. Reporting only the global objective can hide these effects.
+
+There are several possible responses:
+
+\begin{itemize}
+  \item combine local and community terms in each reward;
+  \item use separate rewards and study the resulting general-sum interaction;
+  \item impose participant requirements as constraints;
+  \item coordinate local controllers through prices, incentives, budgets, or shared signals;
+  \item use hierarchical control in which local and community decisions have different responsibilities.
+\end{itemize}
+
+A single reward cannot resolve the social and economic governance of a REC. The control formulations represent local and community objectives and report their measured effects, while broader questions of fairness and governance require evidence beyond aggregate control performance.
+
+\paragraph{Cooperative and competitive interactions.}
+\label{sec:ch2-rec-interactions}
+
+The interaction between participants changes over time. During a period of abundant local renewable production, several participants can consume without conflict. During an evening peak or under a community import limit, the same participants may compete for available capacity. They still cooperate by accepting a shared coordination mechanism, but their preferred local actions are no longer simultaneously feasible.
+
+A simple example illustrates the mixed motive. Suppose three EVs need energy before morning and the installation can safely supply only two at full power. All drivers benefit from reliable operation of the site, which is a cooperative objective. Each driver also prefers their own vehicle to charge first, which creates competition. A policy that ignores the shared limit is unsafe. A policy that always prioritises the same vehicle may be operationally unfair. A policy that divides power equally may be inefficient when departure times differ.
+
+This example shows why ``cooperative'' and ``competitive'' should not be treated as fixed labels attached to the complete system. The relationship depends on the objective, resource, and time. Agents can share one reward component and retain different local reward components. They can cooperate during training through shared information while executing individual policies. They can also use a central coordinator for a constrained resource while retaining local control elsewhere.
+
+The energy domain therefore motivates general-sum formulations and hierarchical architectures. It also provides interpretable metrics for analysing the outcome: missed energy requirements, individual cost, community peak, renewable use, and distribution of benefits. These metrics make the mixed interaction more visible than a single game score.
+
+\paragraph{Physical constraints and mapping to general CPS properties.}
+\label{sec:ch2-rec-constraints}
+
+Energy control is bounded by physical constraints. Batteries and EVs have minimum and maximum \gls{soc}, charge and discharge power, efficiency, and possibly degradation limits. Chargers have rated current and connection states. Buildings have thermal dynamics and comfort limits. Electrical installations have import, export, phase, and equipment limits.
+
+Operational constraints add deadlines, preferences, contracts, and service requirements. An EV target may be expressed as a minimum departure energy. A participant may allow a heat pump to be interrupted only within a comfort band. A charger operator may limit how often a session can be modulated. A community may have an agreed peak or sharing rule.
+
+Constraints can be handled at different layers:
+
+\begin{itemize}
+  \item the environment can clip or reject invalid actions;
+  \item the policy can be constructed to output only admissible actions;
+  \item an optimisation or safety layer can project proposed actions into a feasible set;
+  \item a fallback controller can replace a learned policy under selected conditions;
+  \item validation gates can reject a policy before deployment if violations exceed a threshold;
+  \item lower-level physical protections can remain independent of the learning system.
+\end{itemize}
+
+Safety mechanisms provide different levels of evidence. Action clipping protects the physical model but can hide frequent invalid proposals. A fallback improves operational safety while changing the controller that is effectively executed. Formal guarantees are stronger than empirical tests but may depend on restrictive models. Each later experiment therefore identifies whether its evidence concerns policy behaviour, runtime enforcement, empirical stress testing, or a formal property.
+
+\paragraph{Mapping REC characteristics to general CPS properties.}
+\label{sec:ch2-rec-mapping}
+
+Table~\ref{tab:rec-cps-mapping} consolidates the role of energy communities in the thesis. Each REC characteristic is connected to a more general CPS property and to the resulting research concern.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Mapping from renewable-energy-community characteristics to general CPS properties.}
+  \label{tab:rec-cps-mapping}
+  \begin{tabularx}{\textwidth}{p{0.24\textwidth} X X}
+    \toprule
+    \textbf{REC characteristic} & \textbf{General CPS property} & \textbf{Research implication} \\
+    \midrule
+    Buildings and assets are geographically distributed & Distributed sensing, actuation, and control & Decide which information and responsibilities remain local or are coordinated \\
+    Batteries, EVs, PV, heat pumps, and loads expose different interfaces & Heterogeneous agents and assets & Represent capabilities explicitly and support compatible policies \\
+    EV sessions begin and end; assets become unavailable; selected participants may join or leave & Session dynamics, availability, and possible population reconfiguration & Distinguish state change from controller membership and test whether interfaces remain compatible \\
+    Individual cost and comfort coexist with community objectives & Mixed cooperative--competitive interaction & Evaluate both local and global outcomes \\
+    Decisions affect later flexibility & Sequential and temporally coupled control & Use models or learning that account for long-term consequences \\
+    Forecasts and measurements are imperfect & Partial observability and uncertainty & Assess robustness to error, delay, and missing data \\
+    Power, energy, comfort, and network limits are mandatory & Safety-critical physical constraints & Prevent or quantify invalid and unacceptable actions \\
+    Policies may run on local controllers & Edge and lifecycle constraints & Consider inference resources, packaging, updates, monitoring, and recovery \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The mapping establishes RECs as a representative real-world CPS while keeping the empirical scope explicit. It also prepares the comparison of control approaches: the relevant issue is how MARL compares with established alternatives and what evidence each family provides.
+
+The domain therefore provides more than an application example. It exposes a compact combination of the properties that motivate the thesis: heterogeneous capabilities, temporal coupling, dynamic availability, mixed objectives, partial information, and non-negotiable physical limits. The later experiments use these properties to test the research questions without claiming that results measured in energy automatically generalise to unrelated CPS domains.
+
+\section{Control Approaches for Distributed Energy Systems and Related CPS}
+\label{sec:ch2-control-approaches}
+
+The preceding sections establish the control problem but do not determine the controller that should solve it. Energy systems already use successful rule-based, optimisation-based, predictive, learning-based, and hybrid approaches. The relevant comparison is therefore between the assumptions, capabilities, and operational costs of these families, rather than between ``traditional'' and ``intelligent'' control as if one necessarily replaced the other.
+
+The discussion introduces RL and MARL at the level needed to compare them with credible alternatives. Their formal foundations are developed in Section~\ref{sec:ch2-foundations}, after the motivation for using them has been established. This order keeps the state of the art centred on the control problem rather than turning the chapter into a general tutorial on reinforcement learning.
+
+The useful question is therefore not ``why replace traditional control with MARL?'' It is ``which controller fits which assumptions, and what additional value justifies its complexity?'' A well-modelled charging site may be controlled effectively through MPC. A geographically distributed community with private observations and repeated local decisions may benefit from decentralised learning. A safety-critical action may still be projected through an optimisation or physics layer even when a learned policy proposes it.
+
+\subsection{Explicit Control: Rules, Optimisation, and Predictive Control}
+\label{sec:ch2-rbc-mas}
+
+A \gls{rbc} selects actions through predefined conditions. Examples include charging when a tariff falls below a threshold, reducing charger power when a site limit is approached, or activating a heat pump when temperature leaves a comfort band. Rules can be local or coordinated through a \gls{mas}, in which software agents exchange information and follow designed protocols.
+
+Rule-based control is sometimes treated as a weak baseline because it does not learn. This is misleading. A small set of carefully designed rules can be reliable, inexpensive, easy to inspect, and suitable for constrained hardware. It can also provide a safe fallback when a learned controller is unavailable. Fonseca et al., for example, represent heterogeneous flexible loads through a common FlexOffer abstraction and compare explicit scheduling mechanisms in a REC without requiring RL \parencite{fonseca2022flexloads}. The result is a useful reminder that a common interface can solve part of the heterogeneity problem before learning is introduced.
+
+The limitation is that rules express the situations anticipated by their designers. As the number of assets, contexts, and interactions grows, the rule set can become difficult to maintain. Rules that are reasonable independently can conflict when combined, and a threshold selected for one participant may be inappropriate for another. RBCs therefore remain important as transparent baselines, operational fallbacks, and lower-level protections, but they should not be assumed to provide long-horizon adaptation or coordination in every setting.
+
+\paragraph{Mathematical optimisation and multi-agent optimisation.}
+\label{sec:ch2-centralised-optimisation}
+
+Mathematical optimisation expresses the task through decision variables, an objective, and constraints. In an energy community, decision variables can represent charger power, battery operation, flexible-load schedules, or energy exchanges. Constraints encode energy balances, device limits, deadlines, comfort, and network limits. When models and forecasts are adequate, the result is explicit and interpretable: feasibility can be checked and the effect of a new constraint can be inspected directly.
+
+Optimisation is not inherently centralised. Decomposition and agent-based structures can distribute a problem while retaining mathematical solvers. Faia et al. organise an energy community as local agents and a coordinator, formulate the scheduling problem as mixed-integer linear optimisation, and report a large reduction in solution time relative to a centralised implementation for their high-EV-penetration case \parencite{faia2023energycommunity}. This is a direct counterexample to the idea that a multi-agent architecture must be learning-based.
+
+The practical burden lies in maintaining models, constraints, forecasts, and solver performance as the system changes. A new asset type may require new variables and equations. Integer decisions, network constraints, uncertainty, and participant-specific models can increase computation. These are problem-dependent limitations rather than universal reasons to prefer RL. If a model can be maintained and solved within the decision interval, a learning-based alternative must justify itself through adaptation, local autonomy, privacy, transfer, or lower online optimisation cost.
+
+\paragraph{Model predictive and stochastic control.}
+\label{sec:ch2-mpc}
+
+\Gls{mpc} repeatedly solves a finite-horizon optimisation problem using the latest measurements and predictions. Only the first action is applied; the horizon then moves forward. This receding-horizon structure is well suited to energy systems because prices, photovoltaic production, occupancy, and charging requests change during the day.
+
+Srithapon and M\r{a}nsson combine home-level MPC with community coordination and AC optimal power flow for EVs, heat pumps, thermal storage, photovoltaic generation, and network constraints \parencite{srithapon2023predictive}. Puech et al. use MPC and two-stage stochastic programming to represent uncertain session starts, ends, requested energy, and early disconnections over 32 charging slots \parencite{puech2024evcs}. These studies demonstrate that heterogeneous assets and dynamic EV sessions can be treated explicitly without MARL.
+
+The strongest operational counterexample in the energy literature is the implementation by Hermans et al. A quadratic-programming MPC controller was integrated into a corporate microgrid with photovoltaic production and 174 EV chargers. Over three weeks, it achieved a reported 59\% average daily reduction in grid peak power \parencite{hermans2024mpc}. The system uses charger-occupancy and photovoltaic forecasts while the charger infrastructure remains fixed. This result prevents two overstatements: large EV populations do not intrinsically require MARL, and operational intelligent charging is not absent from the literature.
+
+MPC and stochastic control require models, forecasts, and repeated solver execution. Their value is strongest when constraints must be explicit and the optimisation remains tractable. Learning and MPC are also complementary. A learned model can support prediction; a policy can supply a warm start; an optimiser can project a learned action into a feasible set; and an MPC or rule-based controller can remain as fallback.
+
+\subsection{Reinforcement Learning and Multi-Agent Control}
+\label{sec:ch2-single-agent-rl}
+
+Single-agent RL can act locally or centrally. A local agent may control one battery or building. A central agent may observe an entire charging site and produce a joint or aggregate action. Both are single-agent formulations even when many physical assets are affected.
+
+Sadeghianpourhamami et al. use fitted Q-iteration to coordinate EV charging through a state representation designed not to grow directly with the number of charging stations. Simulations based on real charging data test generalisation to larger station sets \parencite{sadeghianpourhamami2020ev}. This is important for the thesis because it shows that variable session availability and size-independent coordination can sometimes be achieved without modelling every EV as a separate MARL agent.
+
+Aggregate representations reduce dimensional growth, but they can remove information that matters to individual participants or to network constraints. A central policy also concentrates computation and may become difficult to deploy when actions must be produced by several local systems. Conversely, a local single-agent policy can be easy to deploy but may ignore shared limits. Single-agent RL is therefore a valid controller family and a necessary comparison, not merely an incomplete version of MARL.
+
+\paragraph{Multi-agent, federated, and CTDE learning.}
+\label{sec:ch2-marl-energy}
+
+MARL represents decision makers separately and models their interaction during learning. Agents can correspond to buildings, participants, charging sites, EVs, or selected assets. The representation enables local observations and actions while coordination is learned through shared rewards, centralised critics, communication, markets, or community signals.
+
+The retained studies demonstrate several forms of coordination. GridLearn combines building energy models with distribution-network power flow and uses MARL to pursue building and voltage objectives \parencite{pigott2022gridlearn}. Zhu et al. use centralised training with decentralised execution, soft actor--critic, attention, a counterfactual baseline, and a Lagrangian reward for multi-energy industrial-park management \parencite{zhu2022industrialpark}. Shojaeighadikolaei et al. compare centralised and decentralised critics for cooperative EV charging under \gls{ctde} \parencite{shojaeighadikolaei2024ev}. EnergAIze uses MADDPG for local prosumer objectives and community-level V2G and flexibility management \parencite{fonseca2024energAIze}. Wilk et al. reduce data exchange by sharing strategic information during training and using local information during execution \parencite{wilk2024smartcommunity}.
+
+Federated RL offers another decentralisation mechanism. Chu et al. coordinate a residential EV fleet while retaining local experiences and aggregating learned parameters \parencite{chu2022federatedev}. This can reduce raw-data centralisation, but compatible model and interface structures are still required. Federated averaging does not by itself solve the case in which one agent observes temperatures, another controls charger current, and a third has a different action frequency.
+
+These examples show why the label MARL is not enough. A method can be multi-agent while retaining a fixed population, homogeneous policy interfaces, ideal communication, or centralised deployment. The scientific comparison must state what is local, what is shared, how the agents differ, and what happens when composition or communication changes.
+
+\subsection{Structured, Federated, Transfer, Hybrid, and Hierarchical Approaches}
+\label{sec:ch2-advanced-learning}
+
+Recent work introduces mechanisms that address selected limitations of fixed-vector and fixed-population controllers.
+
+MERLIN trains independent offline policies in a digital twin of a real 17-building community and transfers policies between buildings with different occupant behaviour, reducing training effort while retaining comparable performance in the reported cases \parencite{nweye2023merlin}. Wu et al. use a Multi-Agent Transformer and adaptation modules for buildings that dynamically join or leave a VPP \parencite{wu2024dynamicvpp}. GNN-DT combines a graph encoder with a Decision Transformer so that one architecture can process different charger counts and unseen action-space sizes \parencite{orfanoudakis2025gnndt}.
+
+Graph and set representations remove the need to concatenate every participant into one fixed vector, but they normally preserve a feature and action grammar. A new node can be added only if its attributes and actions can be expressed in the representation expected by the model. This is more flexible than fixed padding, but it is not arbitrary interface discovery.
+
+HetGPS provides a particularly strong recent counterexample to simple scalability and safety claims. The August 2026 preprint combines parameter-shared heterogeneous-graph soft actor--critic with a learned risk model and a physics-anchored action projection. It evaluates 200--3218 EVs across nested distribution networks and keeps the learned parameter count constant across fleet sizes \parencite{wang2026hetgps}. It also demonstrates zero-shot topology transfer and runtime voltage protection. At the same time, graph computation and topology data still grow with system size, agent identities are fixed within each problem instance, and the work is not yet peer-reviewed or physically deployed.
+
+The broader lesson is that modern energy control is increasingly hybrid. Learning can provide adaptive decisions, while explicit models, masks, optimisation, and runtime filters protect constraints or make the policy deployable. The complete control stack, rather than only the neural network, should be the unit of evaluation.
+
+\paragraph{Centralised, decentralised, and hierarchical structures.}
+\label{sec:ch2-control-structures}
+
+Controller family and control structure are related but different. Optimisation can be centralised or distributed. Rules can be local or coordinated. RL can use one central policy, independent local policies, federated learning, or CTDE. A useful comparison therefore asks both how the action is computed and where information, computation, constraints, and responsibility reside.
+
+Centralised control can exploit global information and coordinate shared constraints directly. It is often appropriate when communication is reliable, privacy constraints are manageable, and the global problem remains tractable. Decentralised control places decisions near assets, potentially reducing communication and preserving local operation, but local actions can collectively violate a shared limit. Hierarchical control combines both: local controllers preserve device and user requirements, while a community level allocates shared capacity or objectives.
+
+Controller families can also be combined. A community optimiser can send budgets to local policies, a learned controller can propose an action checked by a physics layer, and a rule-based fallback can take over when monitoring rejects a policy. MARL is therefore one part of a hybrid control stack, not a synonym for complete decentralisation.
+
+\subsection{When MARL Adds Value across CPS Domains}
+\label{sec:ch2-when-marl}
+
+The energy literature supports a more demanding standard for claims about the need for MARL. Beating uncontrolled charging or a simple threshold rule is not sufficient when a realistic optimisation or MPC baseline is feasible. The deployed 174-charger MPC study is especially important because it shows that a conventional model-based controller can operate at substantial physical scale \parencite{hermans2024mpc}.
+
+MARL is most strongly motivated when several conditions occur together: decisions are naturally distributed; participants possess local or private information; models are difficult to maintain; interactions repeat often enough to support learning; online solver budgets are restrictive; local and community objectives must coexist; and the controller must adapt across configurations. Even then, MARL must demonstrate value relative to the engineering and assurance cost it introduces.
+
+A simpler method can remain preferable when the system is small and stable, a trusted model is available, constraints require transparent guarantees, operational data are limited, or the optimiser meets the decision deadline. The later algorithm chapter will therefore compare controller families and will not present MARL as the default winner.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Evidence-backed comparison of controller families in REC and EV control.}
+  \label{tab:control-family-comparison}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{p{0.16\textwidth} X X X}
+    \toprule
+    \textbf{Family} & \textbf{Representative evidence} & \textbf{Where it is strong} & \textbf{What must be justified or maintained} \\
+    \midrule
+    Rules and explicit scheduling & FlexOffer-based scheduling of heterogeneous flexible loads \parencite{fonseca2022flexloads}. & Transparency, low runtime cost, fallback, and known operating logic. & Rule coverage, conflicts, maintenance, and long-horizon adaptation. \\
+    Optimisation and agent-based optimisation & Multi-agent MILP for high-EV REC scheduling \parencite{faia2023energycommunity}. & Explicit objectives, feasibility, interpretable constraints, and strong baselines. & Model and formulation maintenance, solver time, and uncertain inputs. \\
+    MPC and stochastic control & Heterogeneous REC MPC/OPF, uncertain 32-slot charging, and operational control of 174 chargers \parencite{srithapon2023predictive,puech2024evcs,hermans2024mpc}. & Feedback planning, explicit constraints, and uncertainty modelling. & Forecasts, models, repeated computation, and infeasibility handling. \\
+    Aggregate or single-agent RL & Size-independent EV coordination and central/community policies \parencite{sadeghianpourhamami2020ev}. & Model-free adaptation and avoidance of repeated online optimisation. & Information loss through aggregation, central action growth, and training data. \\
+    MARL, CTDE, and federated RL & GridLearn, industrial-park MARL, EV CTDE, federated charging, EnergAIze, and smart-community MARL \parencite{pigott2022gridlearn,zhu2022industrialpark,chu2022federatedev,fonseca2024energAIze,wilk2024smartcommunity}. & Local autonomy, coordination, privacy-aware execution, and mixed objectives. & Non-stationarity, compatible interfaces, communication, scale, and policy lifecycle. \\
+    Transfer, graph, and hybrid learning & MERLIN, dynamic-participation Transformer, GNN-DT, and HetGPS \parencite{nweye2023merlin,wu2024dynamicvpp,orfanoudakis2025gnndt,wang2026hetgps}. & Reuse, variable-size representations, topology generalisation, and runtime protection. & Stable feature/action grammar, graph computation, evidence beyond simulation, and safety guarantees. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\paragraph{Evidence from other CPS domains.}
+\label{sec:ch2-control-other-cps}
+
+The same controller families appear in other CPS, although physical models and metrics differ. Robot teams combine trajectory optimisation, local rules, learned policies, and MARL. Traffic systems use model-based scheduling, independent signal agents, coordinated learning, masks, and operational guards. Industrial systems combine production optimisation with local machine controllers and fault-handling logic.
+
+These comparisons support the generality of the design questions, not direct policy transfer. A policy trained for EV charging cannot control a robot by changing a label. What can transfer are abstractions and questions: how capabilities are represented, how information is shared, how a changing population is processed, how constraints are enforced, and how policies are validated and deployed.
+
+This comparison sets the standard used throughout the thesis. RQ1 cannot be answered simply by showing that MARL can coordinate several agents; the formulation must justify why separate decision makers and changing interfaces matter. RQ2 requires resource and performance evidence rather than agent count alone. RQ3 requires explicit treatment of constraints and disturbances, including mechanisms outside the learned policy when appropriate. RQ4 requires the resulting controller to remain identifiable, compatible, and governable after training. These requirements motivate the formal concepts introduced next.
+
+\section{Foundations of Reinforcement Learning and MARL Used in This Thesis}
+\label{sec:ch2-foundations}
+
+The controller comparison above motivates the use of reinforcement learning and MARL in selected parts of the thesis. This section introduces only the formal concepts and notation needed to understand those formulations and the later TI-MARL method. It is not intended as a comprehensive treatment of reinforcement learning, game theory, or multi-agent systems; broader introductions and surveys are available in \textcite{sutton2018rl}, \textcite{oliehoek2016decpomdp}, \textcite{hernandezleal2019survey}, \textcite{gronauer2022survey}, and \textcite{albrecht2024marl}.
+
+The common starting point is sequential decision-making. An action changes not only the present state but also the decisions available later. Charging a battery now can reduce a local electricity bill while leaving less storage capacity for later photovoltaic production; delaying an EV charge can avoid a community peak only while sufficient time remains before departure. The concepts below provide the formal language used to represent those long-term effects, partial information, interacting agents, and centralised-training/decentralised-execution structures.
+
+\subsection{Sequential Decision-Making and Partial Observability}
+\paragraph{Markov processes and Markov decision processes.}
+\label{sec:ch2-mdp}
+
+A Markov process describes a system that moves between states according to transition probabilities. Its defining idea is the Markov property: once the current state is known, the probability of the next state does not depend on the complete sequence of earlier states. This does not mean that the past is irrelevant. It means that the state representation is assumed to contain the information from the past that is needed for future prediction.
+
+A simple battery example helps clarify this point. If the state contains only the current electricity price, it is not sufficient for deciding whether to charge. The decision also depends on the battery's current \gls{soc}, its power limits, and possibly the expected future demand. If these relevant quantities are included in the state, the controller no longer needs the entire history of earlier charging actions to understand the immediate consequences of the next action. The quality of the Markov assumption therefore depends on the quality of the state representation.
+
+An \gls{mdp} adds decisions and rewards to this process. A discounted MDP is commonly represented by the tuple
+
+\begin{equation}
+  \mathcal{M} = \langle \mathcal{S}, \mathcal{A}, P, R, \gamma \rangle,
+  \label{eq:mdp}
+\end{equation}
+
+where $\mathcal{S}$ is the state space, $\mathcal{A}$ is the action space, $P(s'\mid s,a)$ is the probability of reaching state $s'$ after action $a$ is selected in state $s$, $R(s,a,s')$ defines the immediate reward, and $\gamma \in [0,1]$ discounts rewards obtained further in the future \parencite{sutton2018rl}.
+
+At each decision step $t$, the agent observes a state $S_t$, selects an action $A_t$, receives a reward $R_{t+1}$, and the environment moves to $S_{t+1}$. A policy $\pi(a\mid s)$ specifies the probability of selecting action $a$ in state $s$. The objective is usually expressed through the expected return
+
+\begin{equation}
+  G_t = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1}.
+  \label{eq:return}
+\end{equation}
+
+The state-value function $V^{\pi}(s)$ and action-value function $Q^{\pi}(s,a)$ describe the expected return obtained by following policy $\pi$ from a state or state--action pair. These functions connect local decisions to long-term consequences. A charging action with a small immediate cost can still be valuable if it prevents a larger cost later.
+
+The MDP model is useful because it separates the elements of the decision problem. States describe what the controller knows, actions describe what it can change, transitions describe the environment dynamics, and rewards describe the objective. This separation is also useful when a control problem is implemented in software: observation and action interfaces can be checked independently from the learning algorithm.
+
+The same separation exposes several modelling risks. A reward is not the complete physical objective of the system. It is a numerical signal designed to guide behaviour. If a community reward penalises electricity cost but ignores a charger's minimum departure requirement, an agent can obtain a good reward by leaving the vehicle insufficiently charged. The missing requirement should be represented as a constraint or included explicitly in the objective. Similarly, a state that omits a relevant variable can make the problem appear unpredictable even when the underlying physical system is not.
+
+Finally, the standard MDP contains one decision-making agent. Other actors can be hidden inside the transition dynamics, but their behaviour is then treated as part of the environment. This becomes problematic when several actors are learning and adapting at the same time. Markov games, introduced in Section~\ref{sec:ch2-markov-games}, extend the model to that setting.
+
+\paragraph{Partial observability and sequential decision-making.}
+\label{sec:ch2-pomdp}
+
+The state of a physical system is rarely available to a controller in full. Sensors cover only selected variables, measurements contain noise, data may arrive late, and some information is intentionally kept local. A charger can observe the connected vehicle and the power available at its installation, but it may not know the exact flexibility of every other participant in the community. A local building controller can measure indoor temperature without knowing the complete thermal state of the building envelope.
+
+A \gls{pomdp} separates the underlying state from the observation available to the agent. It extends the MDP with an observation space $\mathcal{O}$ and an observation model $O(o\mid s)$, or a related formulation in which the observation also depends on the previous action. The agent selects actions from observations or from an internal representation of their history rather than from the true state directly \parencite{kaelbling1998pomdp}.
+
+In the classical formulation, a belief state represents a probability distribution over possible underlying states. The belief is updated when a new action and observation are received. In practical deep reinforcement learning, recurrent networks, finite observation windows, learned latent states, or explicit forecasts may serve a similar purpose without maintaining an exact probability distribution.
+
+Partial observability matters for two reasons. First, the same observation can correspond to different physical situations. A household consuming \SI{3}{\kilo\watt} may be close to a local limit or may still have considerable spare capacity, depending on other unobserved loads. Second, information sharing changes the decision problem. Providing every agent with the complete community state can improve coordination during an experiment, but it may be unrealistic in deployment because of communication, privacy, latency, or ownership constraints.
+
+When several agents act under partial observability, the formal problem can be represented as a \gls{decpomdp}. In a Dec-POMDP, agents cooperate under a common objective but receive local observations and select actions using decentralised policies \parencite{oliehoek2016decpomdp}. Markov games are more general with respect to individual rewards, while Dec-POMDPs are particularly useful for cooperative planning under uncertainty. The two perspectives overlap in many practical MARL systems: training may use global information, while execution relies on local observations.
+
+Execution-time information is an architectural and algorithmic choice. A policy that requires every global variable may perform well in simulation but be difficult to deploy; a policy based only on local observations is easier to place near the asset but may require stronger coordination mechanisms. This information boundary later affects scalability, deployability, safety, and robustness.
+
+\subsection{Reinforcement Learning and Actor--Critic Methods}
+\label{sec:ch2-rl}
+
+\Gls{rl} addresses sequential decision-making through interaction. Rather than receiving a labelled correct action for every state, an agent acts, observes consequences, and adjusts its policy to increase expected return \parencite{sutton2018rl}. This is attractive when a useful control strategy is difficult to write as a complete set of rules, when decisions have delayed consequences, or when the environment contains uncertainty that is difficult to model exactly.
+
+The interaction loop is simple to describe:
+
+\begin{enumerate}
+  \item the agent receives an observation;
+  \item the policy selects an action;
+  \item the environment changes;
+  \item a reward and a new observation are produced;
+  \item the agent updates its estimates or policy during training.
+\end{enumerate}
+
+The difficulty is hidden inside each step. The observation may be incomplete, exploration may be unsafe, useful rewards may be delayed, and the data collected by the current policy may differ from the data that will be seen after deployment.
+
+RL methods are often grouped according to what they learn. Value-based methods estimate the expected return of states or actions and derive a policy from those estimates. Policy-based methods optimise a parameterised policy directly. Actor--critic methods combine a policy, the actor, with a value estimate, the critic. Model-free methods learn without an explicit transition model, while model-based methods learn or use a model to plan. On-policy methods learn primarily from data generated by the current policy; off-policy methods can reuse data generated by other behaviour policies.
+
+These distinctions are useful, but they do not by themselves determine whether a method is appropriate for a CPS. An off-policy method may improve data reuse, but stale experience can be difficult to interpret when other agents are also changing. A policy-gradient method may support continuous actions, but it still needs mechanisms for constraint satisfaction. A model-based controller can use physical knowledge, but the learned or specified model may be inaccurate outside the training distribution.
+
+Energy management illustrates both the attraction and the risk of RL. The controller can learn to shift consumption without requiring an exact closed-form model of every user and device. It can also account for future prices, renewable production, and vehicle departures. Reviews have consequently reported extensive interest in RL for demand response, buildings, and power systems \parencite{vazquezcanteli2019demandresponse,cao2020rlpower,chen2022rlpower}. At the same time, the cost of exploration, the need for large amounts of interaction data, and the consequences of invalid actions make direct learning on physical infrastructure difficult. Simulation therefore becomes central, but it also introduces a gap between the environment used for learning and the system used for operation.
+
+Real-world RL research identifies additional conditions that are often simplified in benchmarks, including delays, constraints, changing objectives, non-stationarity, limited data, explainability requirements, and the need to act safely while learning \parencite{dulacarnold2021realworld}. These conditions become more difficult when several learning agents share the environment.
+
+\subsection{Markov Games, MARL, and CTDE}
+\label{sec:ch2-markov-games}
+
+Stochastic games extend sequential decision-making to several players whose actions jointly influence the state and rewards. The model was introduced by \textcite{shapley1953stochastic} and later adopted as a foundation for multi-agent reinforcement learning by \textcite{littman1994markovgames}. A Markov game can be represented by
+
+\begin{equation}
+  \mathcal{G} = \left\langle
+  \mathcal{N}, \mathcal{S}, \{\mathcal{A}_i\}_{i\in\mathcal{N}},
+  P, \{R_i\}_{i\in\mathcal{N}}, \gamma
+  \right\rangle,
+  \label{eq:markov-game}
+\end{equation}
+
+where $\mathcal{N}=\{1,\ldots,N\}$ is the set of agents, $\mathcal{S}$ is the state space, $\mathcal{A}_i$ is the action space of agent $i$, $P$ defines transitions from the current state and joint action, and $R_i$ defines the reward of each agent. The joint action is
+
+\begin{equation}
+  \bm{a} = (a_1, a_2, \ldots, a_N) \in
+  \mathcal{A}_1 \times \mathcal{A}_2 \times \cdots \times \mathcal{A}_N.
+\end{equation}
+
+The transition depends on the combined decisions. A household may reduce charging, but the resulting community peak also depends on what every other participant does. Each agent can therefore affect the experience and learning signal of the others.
+
+This creates the central difficulty of MARL: from the perspective of one learning agent, the environment is no longer stationary because the policies of the other agents change during training. In a single-agent MDP, the transition model is assumed to be stable. In MARL, an identical local action can produce different outcomes as other agents learn new behaviours. The agent is effectively trying to learn while part of the environment is learning back.
+
+Early MARL work compared independent learners, which treat other agents as part of the environment, with cooperative agents that exchange information, experience, or policies \parencite{tan1993independent}. Other foundational work distinguished agents that learn individual action values from agents that model joint actions, showing how exploration and game structure can lead to different equilibria even under a shared reward \parencite{claus1998dynamics}. Modern deep MARL extends these ideas with neural policies, centralised critics, value factorisation, learned communication, role representations, and other mechanisms \parencite{hernandezleal2019survey,gronauer2022survey,albrecht2024marl}.
+
+A standard Markov game normally assumes a fixed set of agents and defined action spaces. Real systems can violate both assumptions. If an electric vehicle leaves, an action that previously existed may disappear. If a new type of charger is added, its admissible actions and observations may differ from those of existing agents. These changes are not fully represented by simply changing the numerical state. They motivate explicit attention to dynamic populations, heterogeneous interfaces, and policy compatibility.
+
+\paragraph{Cooperative, competitive, and mixed-motive settings.}
+\label{sec:ch2-mixed-motive}
+
+Multi-agent problems are often described as cooperative or competitive. In a fully cooperative setting, agents share a common reward or optimise the same team objective. In a two-player zero-sum setting, one agent's gain is the other's loss. Many real systems lie between these extremes and are better described as general-sum or mixed-motive games \parencite{wang2022coopcompetitive,lowe2017maddpg}.
+
+An energy community provides a useful example. Participants may cooperate to increase collective self-consumption, reduce a peak, or avoid carbon-intensive electricity. At the same time, each participant may seek to minimise an individual bill, preserve comfort, and keep enough flexibility for personal needs. Two households can therefore cooperate on a community objective while competing indirectly for a limited shared capacity. The word \emph{competitive} does not imply malicious behaviour; it means that individual objectives are not always perfectly aligned.
+
+The distinction affects problem formulation. If every agent receives only the same global reward, individual disadvantages can be hidden. A policy might reduce the community peak by repeatedly curtailing one participant. Conversely, if every agent optimises only its own cost, the community may experience synchronised behaviour, such as many vehicles charging at the beginning of a cheap tariff period. Mixed objectives require an explicit design choice regarding how local and collective terms are represented, weighted, constrained, or negotiated.
+
+A higher total reward does not automatically imply a fair or acceptable outcome for all participants. Community-level and individual-level metrics are therefore reported together. Where relevant, distributional measures and participation constraints expose outcomes hidden by an aggregate reward; a complete fairness analysis remains an adjacent research problem.
+
+\paragraph{Centralised training and decentralised execution.}
+\label{sec:ch2-ctde}
+
+\Gls{ctde} is a common response to the tension between coordination and deployment. During training, a critic or learning process may access the global state, joint actions, or information from several agents. During execution, each agent selects actions using only its local policy and the observations available at its deployment location. This pattern was used in mixed cooperative--competitive actor--critic learning by \textcite{lowe2017maddpg} and in cooperative methods such as COMA and QMIX \parencite{foerster2018coma,rashid2018qmix}.
+
+The appeal of CTDE is easy to see in an energy community. Historical data from all participants may be available in a secure training environment. A centralised critic can use this information to learn how local actions affect the community. The resulting actor policies can then be deployed to local controllers, where they operate without continuous access to every participant's raw data.
+
+CTDE does not remove the deployment problem. The decentralised policies still need compatible observation and action interfaces, sufficiently small inference cost, appropriate packaging, and a process for coordinated updates. Training may also rely on agent identities, a fixed population, or global variables that are not stable over time. A method can therefore satisfy decentralised execution in an algorithmic sense while remaining difficult to install and maintain across heterogeneous devices.
+
+The distinction between training information and execution information must also be respected experimentally. A decentralised policy should not be evaluated with observations that are only available to the training critic. Otherwise, the experiment measures a more informed controller than the one that can be deployed. This thesis treats the information boundary as part of the system architecture rather than as a minor implementation detail.
+
+\subsection{MARL Challenges Relevant to This Thesis}
+\label{sec:ch2-marl-challenges}
+
+Several challenges recur across MARL research \parencite{hernandezleal2019survey,gronauer2022survey,albrecht2024marl}. They are introduced here because later sections show how CPS conditions make them more severe.
+
+\paragraph{Non-stationarity.}
+Each agent changes its policy during learning, altering the effective environment experienced by the others. Experience collected earlier can become less representative of the current joint behaviour.
+
+\paragraph{Credit assignment.}
+When a community reward improves, it may be unclear which agent actions caused the improvement. Poor credit assignment can slow learning or encourage agents to rely on the efforts of others. Methods such as counterfactual baselines and value factorisation were developed partly to address this problem \parencite{foerster2018coma,rashid2018qmix}.
+
+\paragraph{Combinatorial growth.}
+The joint action space grows as the product of individual action spaces. Ten agents with five actions each already produce $5^{10}$ possible joint actions. Continuous actions and heterogeneous interfaces make the problem more complex still.
+
+\paragraph{Partial observability.}
+Local policies act with incomplete information. Communication can reduce uncertainty, but it introduces bandwidth, latency, reliability, and privacy considerations.
+
+\paragraph{Exploration and sample efficiency.}
+The number of possible joint behaviours is large, useful coordination may be rare, and physical systems cannot support arbitrary trial and error. Training often requires extensive simulated interaction.
+
+\paragraph{Heterogeneity.}
+Parameter sharing is effective when agents are sufficiently similar, but agents controlling batteries, chargers, and heat pumps do not necessarily share observations, actions, dynamics, or objectives. A shared policy may need explicit type or role information, while separate policies increase training and lifecycle complexity.
+
+\paragraph{Dynamic populations and generalisation.}
+Policies trained for a fixed group may fail when agents join, leave, or change capabilities. Generalisation across team size, topology, asset type, or operating distribution becomes part of robustness rather than an optional extension.
+
+\paragraph{Evaluation.}
+A high average return can hide unstable training, unequal individual outcomes, constraint violations, or excessive communication. Reliable evaluation requires repeated runs, appropriate baselines, uncertainty reporting, and metrics that reflect the physical task.
+
+Table~\ref{tab:marl-challenges} connects these challenges to the recurring energy example and to later thesis concerns.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Recurring MARL challenges and their manifestation in energy communities.}
+  \label{tab:marl-challenges}
+  \begin{tabularx}{\textwidth}{p{0.20\textwidth} X X}
+    \toprule
+    \textbf{Challenge} & \textbf{Example in an energy community} & \textbf{Later concern} \\
+    \midrule
+    Non-stationarity & The value of delaying one vehicle depends on how other charging policies are changing & Learning stability and robustness \\
+    Credit assignment & A reduced peak results from several participants shifting load at different times & Individual and community objectives \\
+    Combinatorial growth & More buildings and assets increase joint observations and actions & Algorithmic and computational scalability \\
+    Partial observability & A local controller does not observe every community asset or user preference & Information architecture and communication \\
+    Sample efficiency & Unsafe or inconvenient actions cannot be explored freely on physical assets & Simulation, safety, and sim-to-real transfer \\
+    Heterogeneity & Batteries, chargers, and heat pumps expose different interfaces and dynamics & Policy representation and deployability \\
+    Dynamic population & Vehicles and participants can appear, disappear, or become unavailable & Reconfiguration and generalisation \\
+    Evaluation & Average reward can hide missed departures or local constraint violations & Multi-level evidence and validation \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+These challenges do not by themselves establish the thesis gaps. They are properties of the learning problem, and many have mature solution families. The critical question for RQ1--RQ4 is which assumptions remain when these mechanisms are placed back into the distributed, heterogeneous, physically constrained, and operational setting already established in Sections~\ref{sec:ch2-cps}--\ref{sec:ch2-control-approaches}. The critical synthesis in Section~\ref{sec:ch2-critical-analysis} makes that distinction explicit.
+
+\section{From Simulation to Operational Evidence}
+\label{sec:ch2-simulation}
+
+Learning-based control requires experience, but physical systems cannot safely or economically provide unlimited trial and error. Simulation is therefore a central experimental instrument for this thesis: it supports training, controlled comparison, scaling studies, deliberate disturbance injection, and experiments with configurations that would be unsafe, expensive, or unavailable in a physical demonstrator. The same strength can also hide the assumptions that matter most in operation. Perfect observations, fixed populations, instant communication, deterministic devices, and unconstrained compute can make an algorithm appear more operationally mature than the evidence supports.
+
+Simulation quality must therefore be interpreted relative to the claim being tested. A simplified environment can be entirely appropriate for isolating a learning mechanism, while a deployment claim requires stronger evidence about interfaces, timing, physical limits, hardware, communication, and recovery. Fidelity is not the number of equations in a model; it is the extent to which the mechanisms that could change the conclusion are represented with sufficient accuracy. Reproducibility is equally important: a result should identify the scenario, environment version, data, randomisation, controller configuration, and evaluation procedure needed to reproduce it.
+
+The detailed state of the art in energy, EV-charging, grid-aware, building-physics, and co-simulation environments is presented in Chapter~\ref{chap:simulator}, where it directly positions the extended CityLearn-derived environment developed in this thesis. That comparison includes platforms such as CityLearn, SustainGym, EV2Gym, PowerGridworld, CommonPower, BOPTEST, PowerGym, Chargax, and HELICS, but their capabilities are interpreted according to the claims they can support rather than treated as interchangeable benchmarks.
+
+The empirical chapters use the evidence levels in Table~\ref{tab:ch2-evidence-levels} to keep this distinction explicit. The levels are descriptive rather than a maturity ranking: an experiment does not become invalid because it remains in simulation, but its conclusions must remain commensurate with that evidence.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Evidence levels used throughout the thesis for real-world-oriented control studies.}
+  \label{tab:ch2-evidence-levels}
+  \begin{tabularx}{\textwidth}{p{0.21\textwidth} X}
+    \toprule
+    \textbf{Evidence level} & \textbf{Interpretation used in this thesis} \\
+    \midrule
+    Domain simulation & The task represents a physical domain, but sensing, actuation, communication, and timing remain simulated. \\
+    High-fidelity simulation or digital replica & The environment is calibrated or physically detailed, but the controller does not close the loop with physical assets. \\
+    Hardware-in-the-loop or mixed reality & Some physical controllers, devices, or agents interact with simulated components. \\
+    Physical testbed & The controller acts on physical assets in an experimental setting, without a claim of sustained operational service. \\
+    Shadow operation & The controller receives operational data and produces decisions, but another controller remains responsible for actuation. \\
+    Operational closed-loop deployment & The controller participates in sustained operation under real interfaces and constraints. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+This evidence distinction supports all four research questions. RQ1 and RQ2 rely heavily on simulation because controlled heterogeneity, population change, and scale are difficult to reproduce physically. RQ3 requires disturbance and failure injection that would often be irresponsible to create on operational assets. RQ4 requires progressively stronger evidence as policies move from reproducible experiments to packaging, edge execution, monitoring, updates, and recovery. Simulation is therefore part of the path to real-world control, but it is never used as a synonym for it.
+
+\section{Critical Analysis of the State of the Art}
+\label{sec:ch2-critical}
+\label{sec:ch2-critical-analysis}
+
+The preceding sections establish the system class, the principal energy-domain instantiation, the available controller families, the formal MARL concepts used by the thesis, and the distinction between simulated and operational evidence. The remaining task is to determine what the literature leaves unresolved after the strongest counterexamples are taken seriously. This synthesis is organised directly around RQ1--RQ4 so that the gaps retained here correspond to the questions stated in Chapter~\ref{chap:introduction}.
+
+The evidence does not support claims that dynamic populations, large-scale control, safety mechanisms, sim-to-real transfer, or operational deployment are absent from MARL and related control research. Strong examples exist in each category. The residual problem is narrower: these capabilities are usually demonstrated under different assumptions, interfaces, scales, and evidence levels. Table~\ref{tab:ch2-overclaims} records several broad claims that are rejected and the scoped conclusions that replace them.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Overly broad claims, counterevidence, and defensible replacements.}
+  \label{tab:ch2-overclaims}
+  \small
+  \begin{tabularx}{\textwidth}{p{0.22\textwidth} p{0.13\textwidth} X X}
+    \toprule
+    \textbf{Tempting claim} & \textbf{Assessment} & \textbf{Counterevidence} & \textbf{Defensible replacement} \\
+    \midrule
+    MARL has not been deployed in real-world CPS. & False & The I-24 programme used 67 operational VSL controllers \parencite{zhang2024fieldvsl,zhang2025realworldvsl}. & Operational deployment is possible, but remains exceptional and concentrated in very few documented programmes. \\
+    Dynamic MARL populations have not been studied. & False & Varying vehicle populations, robot loss, changing team size, and time-varying graphs have been studied \parencite{su2020dynamicqueuejump,yu2023asynchronous,shibata2023eventtriggered,sebastian2025physicsmarl}. & Persistent operation with heterogeneous capabilities and online entry, exit, or role change remains weakly demonstrated. \\
+    MARL does not scale. & Too broad & Studies report 2--64 buildings, teams larger than training, and 67 field controllers \parencite{almilaify2023scalex,sebastian2025physicsmarl,zhang2024fieldvsl}. & Scale is demonstrated along individual dimensions; multi-dimensional scalability remains less established. \\
+    Safety is ignored in MARL. & False & Constrained learning, physics shields, action masks, and runtime guards already exist \parencite{gu2023safemarl,zhang2021safemicrogrids,chen2023physicsshielded,zhang2024fieldvsl}. & Safety mechanisms exist, but are rarely assessed jointly with faults, reconfiguration, communication imperfections, and deployment shift. \\
+    Sim-to-real MARL has not been demonstrated. & False & Physical autonomous-driving, robot, and heating studies exist \parencite{candela2022simtoreal,yu2023asynchronous,blad2023laboratory}. & Physical transfer exists, but testbed evidence must not be conflated with sustained operational deployment. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The simulation literature requires the same restraint. Chapter~\ref{chap:simulator} shows that current environments already provide EV session dynamics, V2G, grid constraints, large physical networks, accelerated simulation, safeguards, and dynamic co-simulation. The relevant limitation is therefore not the absence of these individual capabilities, but the difficulty of evaluating dynamic composition, heterogeneous interfaces, physical validity, safety, scale, and reproducibility together under a common control contract.
+
+\subsection{RQ1: Dynamic and Heterogeneous Multi-Agent Control}
+\label{sec:ch2-critical-dynamic}
+
+Dynamic and heterogeneous control combines several changes that are often studied separately. An agent population can vary while all agents remain identical. Agents can be heterogeneous while the population remains fixed. A communication graph can change while observation and action interfaces remain unchanged. EV sessions can begin and end while every charger remains a permanent controller slot. Each relaxation is useful, but none alone represents the complete problem of an operational CPS.
+
+The cross-domain literature contains clear counterexamples to a claim that dynamic teams are unexplored. Su et al. formulate traffic coordination with a varying number of connected vehicles and a random proportion of connected participants \parencite{su2020dynamicqueuejump}. Yu et al. design an asynchronous, team-size-invariant exploration policy partly to accommodate unequal action duration and robot loss \parencite{yu2023asynchronous}. Shibata et al. consider cooperative transport with event-triggered communication and agent counts that differ from training \parencite{shibata2023eventtriggered}. Sebasti\'an et al. use a policy representation for time-varying robot interaction graphs and demonstrate teams substantially larger than those seen during training \parencite{sebastian2025physicsmarl}.
+
+The mechanisms used in these studies are not interchangeable. Table~\ref{tab:variable-population-mechanisms} separates four representative approaches. The first preserves a fixed neural-network shape by padding absent agents. The second learns a representation that can aggregate a variable set and explicitly tests agent loss during an episode. The third combines local consensus with event-triggered communication so that execution can use a different number of robots from training. The fourth embeds the interaction graph directly in a shared attention-based policy. Each approach solves a real part of the problem, but each also keeps part of the agent--system contract stable.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Representative MARL mechanisms for varying team size, agent loss, or changing interaction graphs.}
+  \label{tab:variable-population-mechanisms}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{p{0.15\textwidth} p{0.20\textwidth} X X}
+    \toprule
+    \textbf{Study} & \textbf{MARL basis} & \textbf{Mechanism used} & \textbf{What it demonstrates and retains fixed} \\
+    \midrule
+    \textcite{su2020dynamicqueuejump} & Multi-agent actor--critic with decentralised actors and centralised critics & A fixed local observation uses the closest neighbouring vehicles; artificial entries pad missing observations and a fixed maximum number of actor--critic pairs pads the population. & Supports varying traffic population and connected-vehicle penetration in simulation. The maximum slots, feature meanings, vehicle actions, and controller architecture remain fixed. \\
+    \textcite{yu2023asynchronous} & ACE, extending MAPPO to asynchronous execution & Action-delay randomisation; team-size-invariant feature extraction; attention-based fusion of a variable set; low-dimensional feature exchange; explicit robot-loss experiments. & Demonstrates loss of agents during an episode and real-robot asynchronous execution. Robots remain largely homogeneous and expose the same observation and action semantics. \\
+    \textcite{shibata2023eventtriggered} & Event-triggered communication and consensus-based MARL & Each robot estimates resultant force and torque through local consensus and jointly decides control and when to communicate. & Demonstrates execution with robot counts different from training and real cooperative transport. The task, payload-control semantics, and minimum communication structure remain predefined. \\
+    \textcite{sebastian2025physicsmarl} & Soft actor--critic with a self-attention port-Hamiltonian policy & A shared physics-informed policy represents interactions through a time-varying graph; self-attention aggregates a variable neighbourhood without a fixed joint vector. & Demonstrates larger teams and changing interaction graphs. Robot roles, node features, and action meanings remain compatible with the learned policy. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+The energy review sharpens this distinction. Most EV studies represent \emph{session-level dynamics}: users connect and disconnect while charger or agent slots remain fixed \parencite{puech2024evcs,hermans2024mpc}. Sadeghianpourhamami et al. and GNN-DT address \emph{variable instance size} through aggregate or graph-compatible representations, but the change occurs between evaluated configurations rather than through arbitrary controller creation during one operational episode \parencite{sadeghianpourhamami2020ev,orfanoudakis2025gnndt}. HetGPS combines heterogeneous EV types, graph coordination, and session availability at very large simulated scales, but retains a fixed agent set within each instance \parencite{wang2026hetgps}.
+
+Wu et al. are the strongest direct energy-domain counterexample. Their Multi-Agent Transformer with adaptation modules explicitly represents buildings that join or leave a VPP and is evaluated across dynamic configurations of three to nine buildings \parencite{wu2024dynamicvpp}. This study means that the thesis cannot claim that dynamic energy participants are absent from MARL research. It also helps define the remaining boundary: the participating buildings still belong to a predefined family of representations, actions, and roles.
+
+The environment literature, developed in detail in Chapter~\ref{chap:simulator}, reaches the same conclusion from a different direction. SustainGym contains realistic EV arrivals and departures while retaining a fixed EVSE-agent set \parencite{yeh2023sustaingym}. EV2Gym and CityLearn/EVLearn can instantiate different system sizes and represent connection states, but this normally occurs over predefined asset and interface schemas \parencite{orfanoudakis2025ev2gym,nweye2025citylearnv2,fonseca2025evlearn}. HELICS demonstrates online entry and exit at co-simulation-federate level, yet leaves MARL observation, action, policy, and safety compatibility to the application \parencite{hardy2024helics}. These counterexamples make the policy--environment contract, rather than component creation alone, the central issue.
+
+The residual gap is the joint and persistent case in which agents differ in physical capabilities, observation and action interfaces, objectives, timing, or hardware; their availability changes during operation; and joining, leaving, failing, recovering, or changing role does not require rebuilding the complete controller. Targeted studies solve important pieces, but the cited literature provides little mature operational evidence for this combined setting.
+
+This residual gap is classified as \textbf{strong when stated jointly}. Targeted studies solve important pieces, but the cited literature does not provide a mature body of operational evidence for open heterogeneous agent populations. The gap motivates RQ1 and constrains RQ2: population scaling must be tested together with composition and reconfiguration, not only by increasing a fixed set of homogeneous agents.
+
+\subsection{RQ2: Multi-Dimensional Scalability of Learning and Coordination}
+\label{sec:ch2-critical-scale}
+
+Scalability is not a binary property. A method can scale in agent count while requiring global communication. It can reduce communication while increasing training time. It can keep the number of learned parameters fixed while graph processing and environment simulation continue to grow. It can run a large experiment on a cluster but exceed the memory or latency budget of an edge device. A useful assessment must therefore identify what grows, what remains fixed, and which outcome is preserved.
+
+Meaningful counterexamples already exist across CPS domains. SCALEX explicitly compares building-control configurations from 2 to 64 buildings \parencite{almilaify2023scalex}. Charbonnier et al. design distributed residential coordination to avoid the growth and information-sharing requirements of a fully centralised controller \parencite{charbonnier2022scalable}. PowerNet exploits locality and learned neighbour communication for distributed grid control \parencite{chen2022powernet}. Large-scale traffic-signal control has been evaluated with local information structures \parencite{chu2020trafficsignal}. Sebasti\'an et al. test robot teams larger than those used during training and physical experiments with up to 16 robots \parencite{sebastian2025physicsmarl}. The I-24 deployment provides operational evidence from 67 field controllers \parencite{zhang2024fieldvsl}.
+
+The energy literature adds several stronger population-scale counterexamples. Sadeghianpourhamami et al. design a state representation independent of charger count and evaluate generalisation to larger station sets \parencite{sadeghianpourhamami2020ev}. GNN-DT is evaluated at changing charger counts, including a 250-charger case, by combining graph embeddings with an offline Decision Transformer \parencite{orfanoudakis2025gnndt}. The recent HetGPS preprint evaluates 200--3218 EVs, retains a constant learned parameter count through parameter sharing, and transfers a policy to larger distribution-network topologies \parencite{wang2026hetgps}. Hermans et al. provide a different form of scale: 174 physical chargers controlled operationally through MPC rather than MARL \parencite{hermans2024mpc}. These studies make population count alone an indefensible research gap.
+
+None of the results proves general scalability, nor should it be expected to. Each demonstrates selected dimensions while holding others sufficiently controlled. In GNN-DT, the feature and action grammar remains graph-compatible. In HetGPS, learned parameter count remains fixed, but node-wise computation, topology data, and simulation burden still grow. In the deployed MPC study, the infrastructure is large but predeclared and centrally modelled. The residual problem is therefore \emph{multi-dimensional scalability}: whether acceptable control performance and resource use persist when agent count, interface heterogeneity, observation and action complexity, communication demand, computational limits, environment complexity, and reconfiguration increase together.
+
+The evidence supports a \textbf{moderate residual gap}. RQ2 asks under which conditions algorithmic, computational, and communication mechanisms maintain acceptable performance and resource use as several dimensions grow together. The empirical evaluation therefore separates simulator throughput, training and sample cost, communication, inference latency, orchestration, deployment resources, and reconfiguration behaviour before combining them into a scalability envelope.
+
+The environment literature adds a further warning against collapsing these dimensions. Chargax reports very large simulator-throughput gains in its evaluated JAX configurations \parencite{ponse2025chargax}. PowerGym includes an 8500-node feeder, demonstrating physical network scale \parencite{fan2022powergym}. BOPTEST provides standard high-fidelity building emulators and has evolved toward vectorised experiment execution \parencite{blum2021boptest}. EV2Gym exposes configurable EV, charger, and transformer topology \parencite{orfanoudakis2025ev2gym}. These are all scalability results, but they measure different resources and preserve different assumptions. Chapter~\ref{chap:simulator} and Chapter~\ref{chap:lifecycle} must therefore report environment, learning, communication, orchestration, and deployment scale separately before discussing their interaction.
+
+\subsection{RQ3: Safe and Robust Operation}
+\label{sec:ch2-critical-safe}
+
+Safety and Robustness answer different questions. Safety concerns unacceptable states or actions. Robustness concerns how behaviour changes when assumptions are violated. A controller may satisfy voltage limits under nominal communication and still fail when observations are delayed. Conversely, a controller may tolerate noise while occasionally violating a mobility or physical requirement.
+
+Safety is already an explicit MARL research area. Safe policy learning for networked microgrids incorporates AC power-flow and operational constraints \parencite{zhang2021safemicrogrids}. Physics-shielded voltage control constrains learned actions using a model-based safety layer \parencite{chen2023physicsshielded}. Constrained multi-agent policy optimisation has been evaluated for safe multi-robot control \parencite{gu2023safemarl}. Zhu et al. include storage constraints through a Lagrangian reward in multi-energy MARL \parencite{zhu2022industrialpark}. The I-24 operational stack combines the learned policy with invalid-action masking and runtime guards \parencite{zhang2024fieldvsl,zhang2025realworldvsl}. These examples show that Safety can belong to the complete control stack rather than to the learned policy alone.
+
+The energy literature also contains robustness mechanisms outside MARL. Puech et al. model uncertain charging-session start and end times, requested energy, and early disconnection through MPC and stochastic programming \parencite{puech2024evcs}. Hermans et al. integrate occupancy and photovoltaic forecasting in an operational MPC system \parencite{hermans2024mpc}. HetGPS separates a learned task policy from a graph risk model and a physics-anchored action projection, reducing voltage violations across large simulated networks \parencite{wang2026hetgps}. As a recent preprint, this is important counterevidence but not a formal guarantee or deployment result.
+
+Simulation frameworks also encode safety at different layers. CommonPower provides symbolic models, MPC baselines, and automatically synthesised safeguards around RL and MARL controllers \parencite{eichelbeck2026commonpower}. PowerGridworld and PowerGym expose grid variables and voltage-related physical constraints through power-flow models \parencite{biagioni2022powergridworld,fan2022powergym}. These environments show that constraint-aware experimentation is already possible. They do not remove the need to test whether a safety mechanism remains valid under missing observations, communication faults, changing interfaces, or online reconfiguration.
+
+Robustness has likewise been studied against selected disturbances in other CPS. Asynchronous robot exploration introduces action-delay randomisation and robot-loss handling \parencite{yu2023asynchronous}. Sim-to-real autonomous driving uses domain randomisation \parencite{candela2022simtoreal}. Physics-informed multi-robot policies are evaluated under imperfect communication and changing team sizes \parencite{sebastian2025physicsmarl}. Real REC work reports a different set of problems: incomplete and noisy measurements, missing EV state of charge, heterogeneous subsystem integration, and synchronisation difficulties \parencite{fonseca2025realworldrec}. These observations are operationally important even when they are not yet part of a complete controlled stress-test campaign.
+
+The residual gap is not the absence of safe or robust methods. It is the limited systematic evidence for safe operation under the \emph{combination} of uncertainty, missing or delayed information, communication failures, agent or device faults, dynamic reconfiguration, unseen configurations, and train-to-operation shift. A paper may demonstrate voltage constraints but not agent loss; robustness to early disconnection but not interface change; or physical transfer without a defined fault campaign.
+
+This residual gap is classified as \textbf{moderate}. RQ3 is defensible as an integration and evaluation question: how constraints are incorporated and how acceptable operation is assessed when several real-world disturbances occur, with the evidence level and protection layer stated explicitly.
+
+\subsection{RQ4: Governed and Deployable MARL Lifecycle}
+\label{sec:ch2-critical-deploy}
+
+The literature does not support the claim that RL lacks lifecycle tooling or that MARL has never reached an operational CPS. Physical testbeds exist in autonomous driving, multi-robot systems, and building control \parencite{blad2023laboratory,candela2022simtoreal,shibata2023eventtriggered,yu2023asynchronous}. The I-24 programme provides the strongest counterexample: a simulation-trained MARL controller was integrated with real traffic-management infrastructure, deployed over 67 variable-speed-limit controllers, protected by invalid-action masking and independent runtime safety guards, and assessed over millions of decisions and several months of operation \parencite{zhang2024fieldvsl,zhang2025realworldvsl}.
+
+Operational intelligent energy control also exists, although the controller is not always MARL. Hermans et al. deploy MPC over 174 chargers \parencite{hermans2024mpc}. Patr\'{i}cio et al. deploy a non-learning multi-agent community energy-management system with second-life batteries in a Portuguese REC \parencite{patricio2026recmas}. Gon\c{c}alves et al. describe an RL-based MLaaS architecture with parallel training and an autoscalable inference service \parencite{goncalves2025mlaas}. Fonseca et al. report preliminary evidence from an operational four-building REC and document practical data and integration problems \parencite{fonseca2025realworldrec}. These examples reject an absolute claim that intelligent REC, EV, or MARL control has not reached real systems.
+
+The lifecycle review further shows that the missing capability is not generic MLOps. An explicit \gls{rlops} lifecycle already covers specification, development, validation, production serving, monitoring, reproducibility, and safety/security for RL \parencite{li2022rlops}. MLflow provides a general precedent for experiment lineage, reproducibility, and deployment-oriented model management \parencite{zaharia2018mlflow}. Distributed RL frameworks such as RLlib and Acme support scalable actor--learner execution, while MARLlib and MALib provide flexible agent--policy mappings and policy-population orchestration \parencite{liang2018rllib,hoffman2020acme,hu2023marllib,zhou2023malib}. Pearl is explicitly designed as a production-oriented RL library that treats dynamic action spaces and safety as engineering concerns rather than benchmark details \parencite{zhu2024pearl}.
+
+These systems are important counterexamples, but they govern different objects. A distributed training framework can execute several policies. A registry can version a model artefact. A container platform can deploy and roll back software. None of those facts, by itself, establishes that an interdependent \gls{policyset} is represented, validated, promoted, deployed, observed, and recovered as one governed unit. The difference can be seen through five boundaries summarised in Table~\ref{tab:ch2-lifecycle-boundaries}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Lifecycle capabilities that should not be conflated in a MARL deployment.}
+  \label{tab:ch2-lifecycle-boundaries}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{p{0.23\textwidth} p{0.31\textwidth} X}
+    \toprule
+    \textbf{Existing capability} & \textbf{What it establishes} & \textbf{Additional requirement for coordinated MARL operation} \\
+    \midrule
+    Experiment tracking & Parameters, metrics, artefacts, code revisions, and run history are recorded. & The environment, scenario, reward, constraints, observation/action schemas, seeds, agent--policy mapping, dependencies, and runtime must be recoverable as one experiment contract. \\
+    Model storage or registry & A model version has identity, lineage, metadata, and lifecycle state. & A policy-set registry must also represent member policies, roles, interface compatibility, communication and safety dependencies, allowed combinations, and rollback predecessors. \\
+    Serialisation or packaging & Weights, code, and dependencies can be moved to a target runtime. & The package must preserve preprocessing, schemas, communication adapters, safety layers, target requirements, configuration, and the identity of the complete policy set. \\
+    Multiple-model serving & Several independent models can be loaded and served. & The system must coordinate agent--policy assignment, mixed-version behaviour, atomic or staged policy-set updates, and compatibility checks across dependent policies. \\
+    Infrastructure monitoring & Processes, devices, resources, and communications appear operational. & Monitoring must also detect data-quality, control-performance, safety, and coordination failures, including incompatible versions, oscillation, unfair resource use, or loss of community-level performance. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+A simple energy example illustrates why this distinction matters. Suppose a community deploys one policy for batteries, another for EV charging, and a third for community-level coordination. Each container may be healthy and each policy may work in isolation. Nevertheless, replacing only the EV policy can alter its action range, message schema, or response timing. The remaining policies may then operate with assumptions that are no longer valid. A generic rolling update has succeeded from a software perspective, while the coordinated controller has entered an unevaluated mixed-version state.
+
+Dynamic composition narrows the gap further without closing it. HELICS supports federates that join after a co-simulation begins and explicitly documents EV federates joining and leaving a running federation \parencite{hardy2024helics}. This proves that online component composition is feasible at the infrastructure layer. It does not decide which learned policy is compatible with the new component, whether its observation and action schemas match, which safety constraints apply, or how the other active policies should respond. Likewise, MALib's changing policy population is a training abstraction rather than evidence that a previously unknown physical controller can join an operational CPS safely \parencite{zhou2023malib}.
+
+The residual gap is therefore a \emph{governance and integration gap}. Existing research and production systems provide substantial lifecycle pieces independently: distributed training, experiment tracking, registries, packaging, scalable serving, progressive deployment, rollback, edge orchestration, runtime safety mechanisms, and sustained operational MARL. The available evidence provides much less support for a reusable lifecycle in which coordinated policy sets, agent--policy compatibility, environment--policy lineage, dynamic heterogeneous participation, validation gates, coordination-aware monitoring, staged edge deployment, rollback, and recovery are managed together.
+
+This residual gap is classified as \textbf{strong}. RQ4 concerns the reproducibility, governance, validation, deployment, monitoring, updating, and recovery of changing collections of interdependent policies across heterogeneous edge targets. Chapter~\ref{chap:lifecycle} develops the detailed platform comparison and evaluates the EnergAIze lifecycle. A trained model, a deployable package, and an operational multi-agent control service are treated as distinct research objects.
+
+\section{Adjacent Challenges and Scope Boundaries}
+\label{sec:ch2-additional-gaps}
+
+The critical analysis in Section~\ref{sec:ch2-critical-analysis} isolates the four residual problems that motivate RQ1--RQ4. The same literature also identifies concerns that influence the design, evaluation, or eventual operation of a real-world control system without constituting independent contributions of this dissertation. Distinguishing these roles is necessary because an issue can be operationally important without being a research gap that the thesis claims to close.
+
+The boundary adopted here is evidence-based. A concern is treated as a supporting requirement when it directly shapes the methods or evaluation developed later in the thesis. It remains outside the central scope when answering it would require a separate scientific formulation, dedicated methods, or an evidence base that is not provided by the present work. These boundaries are revisited in Chapter~\ref{chap:discussion} when the final claims and limitations are assessed.
+
+\subsection{Supporting Requirements and Evaluation Conditions}
+\label{sec:ch2-direct-gaps}
+
+Several concerns identified in the literature are incorporated into the thesis because they affect how the four research questions can be answered, even though they are not formulated as additional RQs.
+
+\paragraph{Traceability, reproducibility, and interoperability.}
+The lifecycle contribution depends on being able to relate a result to the environment, scenario, reward, observation and action interfaces, source revision, dependencies, policies, and policy-set configuration that produced it. Existing platforms already provide strong experiment-tracking and lineage primitives; the relevant requirement here is to keep those identities coupled when a learned controller is validated, packaged, deployed, updated, and reconstructed. This becomes a supporting element of RQ4 rather than a claim to solve reproducibility in machine learning as a whole. The same principle applies to interoperability: the thesis defines and tests explicit interfaces between selected components, but it does not propose a universal standard for energy or CPS control software.
+
+The experimental substrate introduces a related requirement. Reproducible comparison depends on explicit scenario semantics, randomisation, physical assumptions, and controller interfaces. Existing environments provide many of these mechanisms individually, as discussed further in Chapter~\ref{chap:simulator}; the thesis therefore makes its own environment and scenario contracts explicit instead of claiming a general cross-platform benchmark standard.
+
+\paragraph{Data quality, monitoring, and human oversight.}
+Missing, delayed, noisy, or inconsistent information affects both the behaviour of a learned controller and the meaning of the evidence collected from it. Data-quality disturbances are therefore part of the robustness analysis under RQ3, while runtime monitoring of control performance, safety events, compatibility, and multi-agent coordination supports RQ4. Validation gates, fallback behaviour, and observable runtime state also preserve a meaningful role for human oversight. The thesis does not, however, conduct a human-factors study of trust, workload, or decision support, nor does it develop a general-purpose data-governance platform.
+
+\paragraph{Privacy and data sovereignty.}
+Distributed and edge execution can reduce the movement of raw data and can support local autonomy during communication loss, but these properties are not equivalent to a complete privacy method. Access control, retention, inference attacks, privacy-preserving learning, and data-governance policy require separate treatment. Privacy therefore constrains architectural choices and deployment assumptions without becoming an independent thesis claim.
+
+\paragraph{Mixed objectives and baseline discipline.}
+Personalised and community-level objectives are central characteristics of the control problem rather than evidence of an unaddressed literature gap. Prior work already contains local and collective objectives, hierarchical coordination, and market-based interaction \parencite{fonseca2024energAIze,srithapon2023predictive,faia2023energycommunity}. The thesis consequently evaluates both participant and community outcomes without claiming that mixed objectives are absent from prior work. The same evidence leads to an important evaluation condition: MARL must be compared with credible rule-based, optimisation, or MPC alternatives whenever the corresponding model and computational assumptions make those alternatives feasible. Otherwise, apparent gains can result from a weak baseline rather than from the multi-agent learning formulation itself.
+
+\subsection{Important Challenges Beyond the Central Scope}
+\label{sec:ch2-outside-gaps}
+
+Other concerns remain outside the central scientific claims of the dissertation. They are acknowledged because they matter to operational CPSs, but resolving them would require methods and evidence beyond those developed here.
+
+\paragraph{Security, assurance, and regulation.}
+Adversarial security requires explicit threat models and evidence against malicious access, data manipulation, compromised communication, or attacks on software and devices. This is distinct from the operational meaning of safety and robustness adopted in the thesis. Formal verification and certification present a related but separate assurance problem: empirical constraint satisfaction and runtime safeguards do not constitute a formal safety certificate. Regulation and market design likewise shape which energy-community actions are legally and economically admissible, but the thesis treats these as operating conditions rather than proposing new regulation, tariff structures, or market mechanisms.
+
+\paragraph{Explainability, fairness, and long-term adoption.}
+Operators and participants may require understandable reasons for actions, but explaining a multi-agent policy and its interactions is a research problem in its own right. Similarly, reporting individual outcomes can reveal unequal effects without providing a normative definition of fair benefit allocation. Long-term acceptance introduces further questions of trust, incentives, usability, and behaviour that cannot be established from controller performance or short-duration demonstrators alone. These topics remain relevant to the deployment of intelligent energy systems, but they require dedicated human, social, economic, or longitudinal evaluation and are therefore retained as limitations and future research directions rather than central claims.
+
+The resulting scope is deliberately narrower than the full set of challenges associated with real-world intelligent control. RQ1--RQ4 address the residual problems for which the thesis provides a connected methodological and empirical response; the concerns above either constrain that response or define important work that remains beyond it.
+
+\section{Synthesis of Residual Gaps and Thesis Requirements}
+\label{sec:ch2-gap-synthesis}
+
+The state of the art supports a narrower conclusion than the initial motivation alone might suggest. Dynamic populations, heterogeneous agents, large-scale MARL, constraint-aware control, robustness mechanisms, operational deployment, experiment tracking, registries, rollback, and edge orchestration have all been demonstrated in some form. The residual problem is not the absence of these capabilities. It is the limited evidence that they remain coherent when heterogeneous agents, observation and action interfaces, physical constraints, information quality, computational resources, and deployed policies change within the same distributed CPS.
+
+The four research questions therefore carry forward requirements that are explicitly conditioned by what prior work already establishes. Table~\ref{tab:gap-rq-synthesis} summarises this transition from state-of-the-art evidence to the evidence required from the thesis.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Residual requirements derived from the state of the art and their connection to the research questions.}
+  \label{tab:gap-rq-synthesis}
+  \scriptsize
+  \setlength{\tabcolsep}{4pt}
+  \renewcommand{\arraystretch}{1.02}
+  \begin{tabularx}{\textwidth}{p{0.07\textwidth} X X X}
+    \toprule
+    \textbf{RQ} & \textbf{What prior work already establishes} & \textbf{Residual requirement carried into the thesis} & \textbf{Principal evidence required} \\
+    \midrule
+    RQ1 & Session dynamics, variable problem sizes, agent loss, changing graphs, dynamic participation, and reconfigurable co-simulation components have all been demonstrated \parencite{yu2023asynchronous,wu2024dynamicvpp,orfanoudakis2025gnndt,yeh2023sustaingym,hardy2024helics}. & Control must remain meaningful when runtime membership changes coincide with heterogeneous capabilities, observation and action interfaces, local constraints, and compatible policy operation. & Typed and changing scenarios; controller comparisons across populations and capabilities; reconfiguration tests; integrated operational evidence. \\
+    RQ2 & Prior work demonstrates scaling in population size, physical-network size, topology, simulator throughput, parallel execution, and operational controller count \parencite{almilaify2023scalex,orfanoudakis2025ev2gym,ponse2025chargax,fan2022powergym,blum2021boptest}. & Scalability must be evaluated across interacting dimensions rather than inferred from agent count alone, including heterogeneity, representation size, computation, communication, experimentation, reconfiguration, and edge execution. & Simulator and runtime benchmarks; repeated learning runs; compute, memory, communication, inference, orchestration, and control-quality measurements. \\
+    RQ3 & Constraint-aware learning, stochastic control, shielding, masking, runtime projection, safe-control environments, and selected disturbance tests are established techniques \parencite{puech2024evcs,chen2023physicsshielded,eichelbeck2026commonpower,yu2023asynchronous}. & Safety and useful control behaviour must be assessed together across physical constraints, uncertain or degraded information, faults, dynamic reconfiguration, communication imperfections, and shifts between training and operation. & Constraint and service metrics; controlled disturbance campaigns; health and reconfiguration tests; fallback and recovery behaviour; evidence separated by simulation, testbed, and operational level. \\
+    RQ4 & Operational MARL, RLOps proposals, distributed RL/MARL frameworks, flexible policy mapping, registries, packaging, rollback, edge orchestration, and dynamic co-simulation show that the individual lifecycle mechanisms exist \parencite{li2022rlops,liang2018rllib,hu2023marllib,zhou2023malib,zaharia2018mlflow,zhang2024fieldvsl,hardy2024helics}. & Interdependent policies must be governed as compatible policy sets with coupled environment--policy lineage, validation and promotion, staged distributed deployment, coordination-aware monitoring, rollback, and recovery. & Experiment reconstruction; compatibility tests; policy-set manifests; deployment and mixed-version tests; monitoring, rollback, disconnected-edge, recovery, and sustained-operation evidence. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Two evaluation principles cut across all four questions. First, MARL is treated as one controller family among several rather than as the default solution. Where rule-based control, optimisation, or MPC can operate under credible modelling and computational assumptions, they remain relevant comparisons or complementary mechanisms. Second, evidence levels are kept distinct. A simulator capability, an algorithmic result, successful execution on target hardware, shadow operation, a physical testbed, and sustained closed-loop operation support different claims and are reported accordingly.
+
+The requirements are also interdependent. Dynamic heterogeneity changes representation and coordination cost, complicates safety assessment, and creates new deployment compatibility conditions. Safety mechanisms can alter performance and runtime cost. Monitoring and rollback support Deployability while also contributing to Robustness and recovery. Scalability must therefore be demonstrated through control quality and resource use across the layers at which growth actually occurs, not through a single population-size result.
+
+These requirements define the hand-off from the state of the art to the remainder of the dissertation without prescribing the solutions in advance. Chapter~\ref{chap:energAIze} assigns them to architectural responsibilities; Chapter~\ref{chap:simulator} establishes the data, scenario, and simulation evidence needed to test them; Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} develop and evaluate the control methods; Chapter~\ref{chap:lifecycle} addresses governance and distributed operation; and Chapter~\ref{chap:real-world} examines their interaction in integrated energy settings. Chapter~\ref{chap:discussion} then returns to RQ1--RQ4 and answers them against the complete body of evidence.
+
+\clearpage
+\section{Chapter Summary}
+\label{sec:ch2-summary}
+
+This chapter established the state-of-the-art basis for the thesis by moving from distributed and dynamically reconfigurable CPSs to their concrete expression in Renewable Energy Communities, the control approaches available for those systems, and the RL and MARL concepts needed by the remainder of the dissertation. It also distinguished the levels of experimental evidence used later, from controlled simulation to operational closed-loop control.
+
+The literature shows that many of the capabilities relevant to real-world MARL already exist individually. The contribution of the synthesis is therefore to identify the residual requirements that remain when heterogeneity, reconfiguration, scale, safety, robustness, and policy lifecycle constraints must be handled together. Section~\ref{sec:ch2-gap-synthesis} carries those requirements forward through RQ1--RQ4, while Section~\ref{sec:ch2-additional-gaps} keeps adjacent challenges and the limits of the thesis explicit.
+
+Chapter~\ref{chap:energAIze} now translates these requirements into the architectural responsibilities of EnergAIze, establishing the common structure for the simulation, control, learning, lifecycle, and operational contributions developed in the following chapters.

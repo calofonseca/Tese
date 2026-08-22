@@ -1,0 +1,237 @@
+\chapter{Experiment and MARL Policy-Set Lifecycle Orchestration and Distributed Edge Deployment}
+\label{chap:lifecycle}
+\markboth{MARL Policy-Set Lifecycle and Edge Deployment}{MARL Policy-Set Lifecycle and Edge Deployment}
+
+The preceding chapters established a progression of controllers and then brought the selected capabilities together in TI-MARL. That still does not produce an operational control service. A method becomes usable only when the experiment that created it can be reconstructed, the resulting policy can be validated against its intended interfaces and physical conditions, and the approved runtime can be installed, observed, updated, and recovered on the target system.
+
+CityLearn v3 remains part of this transition rather than disappearing after a policy has been trained. Its environment, scenario, data, event, interface, reward, constraint, baseline, and evaluation versions form part of the experiment and validation record. The simulator provides controlled regression and disturbance cases before promotion and a route for replaying selected field observations or incidents after deployment. It does not perform edge deployment itself; it supplies the reproducible evidence and compatibility contracts consumed by the lifecycle mechanisms developed in this chapter.
+
+For MARL, this transition is more demanding than copying one checkpoint. The deployed object can be a set of behaviourally interdependent policies. A partial update may succeed from a software perspective while placing the control system in a combination that was never evaluated. A new agent may be technically reachable while lacking a compatible policy or safety adapter. A rollback may restore model files without restoring the policy-set version and interface contract that were known to work together.
+
+The EnergAIze lifecycle integrates established MLOps, RLOps, distributed RL, registry, container, edge-orchestration, and deployment mechanisms around RL- and MARL-specific operational objects \parencite{li2022rlops,liang2018rllib,hu2023marllib,zhou2023malib,zaharia2018mlflow,hoffman2020acme,zhang2024marvel,zhang2024fieldvsl,hardy2024helics}. Environment and scenario versions, rewards, observation and action schemas, policy sets, agent-role mappings, safety dependencies, validation evidence, edge targets, and coordination-aware telemetry remain linked throughout the lifecycle. The same machinery can govern TI-MARL, MATD3, MADDPG, hierarchical controllers, and deterministic fallbacks.
+
+\draftnote{This chapter is written as a full target chapter and evaluation plan. The final text must be aligned with the actual backend, worker, algorithms, inference, infrastructure, UI, and simulated-assets repositories. Features that are currently partial or manual should be described honestly and must not be upgraded to automated lifecycle claims without code and test evidence.}
+
+\section{Lifecycle Problem, Core Entities, and State Model}
+\label{sec:lifecycle-core}
+\label{sec:lifecycle-gap}
+
+Generic MLOps already provides experiment tracking, artefact lineage, registries, packaging, serving, progressive rollout, and monitoring \parencite{sculley2015debt,kreuzberger2023mlops,zaharia2018mlflow}. RLOps adds the coupling between a learned policy and an environment, interaction data, evaluation, and safety \parencite{li2022rlops}. Distributed RL frameworks provide workers, actors, learners, replay, and multi-policy mappings \parencite{liang2018rllib,hoffman2020acme,hu2023marllib,zhou2023malib}.
+
+Semantic integration is the remaining problem. Reproducibility requires the source revision, environment, scenario, data, reward, constraints, observation and action schemas, seeds, algorithm configuration, dependencies, and runtime to be recoverable as one experiment contract.
+
+A model store answers where the bytes are. A registry adds identity, version, lineage, status, and metadata. A MARL policy-set registry must additionally answer which policies may operate together, which agents and roles they serve, which interfaces they expect, which communication and safety dependencies apply, and which predecessor should be restored during rollback.
+
+Serialisation stores weights. Packaging preserves the executable semantics around them: preprocessing, adapters, dependencies, schemas, safety layers, target requirements, and the identity of the complete policy set. Multiple-model serving loads several independent models. Coordinated MARL deployment governs the relationships between them.
+
+\label{sec:lifecycle-entities}
+
+\paragraph{Experiment Manifest.}
+The experiment manifest is the reproducibility anchor and contains:
+
+\begin{itemize}
+  \item experiment and parent identifiers;
+  \item source repository and commit;
+  \item environment package and version;
+  \item scenario, data, and event versions;
+  \item observation, action, and entity schemas;
+  \item reward and constraint configuration;
+  \item algorithm and network configuration;
+  \item seeds and training/evaluation windows;
+  \item dependencies and container image;
+  \item requested compute resources;
+  \item produced checkpoints, metrics, logs, and reports; and
+  \item completion, cancellation, and failure status.
+\end{itemize}
+
+The manifest is immutable after run completion. Corrections create a new experiment or an explicit derived record rather than silently changing the provenance of an existing policy.
+
+\paragraph{Policy and Policy-Set Manifest.}
+A policy record links model artefacts to role, schemas, preprocessing, evaluation, and target constraints. A policy-set manifest lists member policies, agent-role mappings, allowed versions, compatibility relations, required communication schemas, safety layers, and a shared set version.
+
+For homogeneous parameter sharing, one policy can map to many agents. For heterogeneous control, several policies can coexist. The manifest permits both while preserving the distinction between a shared policy and a set of independent files.
+
+\paragraph{Deployment and Operational Record.}
+A deployment record identifies package, policy set, target group, rollout strategy, activation time, previous version, and observed state. An operational record links runtime telemetry and significant events to that deployment. This makes it possible to answer which policy version produced an action during an incident.
+
+\Cref{fig:lifecycle-entity-model} identifies the lifecycle entities and immutable provenance relations required to reconstruct an experiment and its deployed policy set.
+
+\plannedfigure[0.16\textheight]{fig:lifecycle-entity-model}{Lifecycle entity and provenance model.}{\textbf{Type:} entity-relation/UML diagram. Include experiment specification, source revision, environment, scenario/data, reward/constraint/interface versions, run/job, checkpoint/policy, policy set, validation result, package, target profile, deployment, and operational record. Show cardinalities and immutable lineage links. \textbf{Purpose:} distinguish tracking, storage, registry, policy-set governance, and deployment records. \textbf{Source needed:} actual database/domain models and manifest formats.}
+
+\paragraph{Lifecycle States and Invariants.}
+Candidate artefacts move through states such as:
+
+\begin{equation}
+\begin{aligned}
+\texttt{trained} &\rightarrow \texttt{evaluated} \rightarrow \texttt{validated}
+\rightarrow \texttt{approved} \\
+&\rightarrow \texttt{packaged} \rightarrow \texttt{deployed}
+\rightarrow \texttt{active}.
+\end{aligned}
+\end{equation}
+
+Alternative states include rejected, failed, superseded, rolled back, and archived. Invariants include complete provenance, schema compatibility, policy-set completeness, passing validation gates, and target compatibility. State transitions are recorded with actor, reason, and evidence.
+
+\Cref{fig:lifecycle-state-machine} defines the states and evidence gates that separate a stored checkpoint from a validated and deployable policy set.
+
+\plannedfigure[0.145\textheight]{fig:lifecycle-state-machine}{Policy and policy-set lifecycle states, gates, and rollback relations.}{\textbf{Type:} state machine. Candidate states may include registered, training, evaluated, rejected, validated, promoted, packaged, staged, active, degraded, superseded, and rolled back. Label performance, compatibility, safety, robustness, and resource gates. \textbf{Purpose:} make clear that a checkpoint is not automatically deployable. \textbf{Source needed:} implemented statuses/transitions; use dashed transitions for planned or manual operations.}
+
+\section{EnergAIze Lifecycle Architecture and Experiment Orchestration}
+\label{sec:lifecycle-architecture}
+
+The implementation can be understood through four planes.
+
+The \emph{experiment plane} receives configurations, creates jobs, assigns workers, collects metrics, and stores artefacts. The \emph{governance plane} maintains experiments, policies, policy sets, validation, aliases, and promotion states. The \emph{deployment plane} builds packages, resolves target profiles, distributes versions, and tracks desired versus actual state. The \emph{observation and assurance plane} receives logs and telemetry, evaluates runtime health and control behaviour, and initiates alerts, fallback, rollback, or retraining.
+
+The repository ecosystem comprises a CityLearn-derived simulator, algorithm-training package, backend API, remote workers, an inference service, a web interface, infrastructure definitions, and simulated-asset services. Workers execute containerised jobs on local and remote/HPC resources, while message brokers and shared storage decouple execution from the control plane.
+
+\Cref{fig:lifecycle-four-planes} presents the lifecycle through experiment, governance, deployment, and observation/assurance responsibilities.
+
+\plannedfigure[0.18\textheight]{fig:lifecycle-four-planes}{Four-plane EnergAIze lifecycle architecture.}{\textbf{Type:} layered architecture diagram: experiment plane, governance plane, deployment plane, and observation/assurance plane. Show services, stores, workers, brokers/APIs, and the policy-set manifest crossing the planes. \textbf{Purpose:} present the scientific lifecycle abstraction while keeping technology names secondary. \textbf{Source needed:} as-built architecture and deployment diagrams; label failure boundaries and manual approval points.}
+
+\paragraph{Experiment and training orchestration.}
+\label{sec:orchestration}
+
+A job begins with validation of its manifest and resource request. The backend creates a persistent record, places or assigns the job, and exposes status to the UI. Workers advertise capability and heartbeat state, retrieve the job, prepare the environment, execute training or analysis, publish progress, and return artefacts.
+
+The orchestration layer supports training, evaluation, model comparison, missing-data robustness, segment analysis, and hyperparameter search. Cancellation is cooperative: a cancellation flag is checked at defined iteration boundaries, and incomplete training is not promoted automatically. Atomic state writes and explicit terminal statuses reduce ambiguity after crashes.
+
+The worker model supports scaling the number of concurrent jobs. Evaluation must distinguish throughput from scientific scalability. Relevant metrics include queue wait, startup, execution overhead, worker utilisation, failure and retry rates, artefact-transfer time, and reproducibility across workers.
+
+\section{Policy-Set Governance and Coordinated Edge Deployment}
+\label{sec:lifecycle-governance}
+\label{sec:policy-registry}
+
+Candidate policies are registered with their experiment lineage. Validation combines controller KPIs, seed statistics, constraint and robustness evidence, runtime-resource measurements, and schema compatibility.
+
+A reusable MARL promotion gate can be expressed as a set of target-scoped predicates:
+
+\begin{equation}
+G_{\mathrm{target}}(P)=G_J(P)\land G_S(P)\land G_R(P)\land G_C(P)\land G_H(P),
+\end{equation}
+
+where $G_J$ represents control performance, $G_S$ safety, $G_R$ robustness, $G_C$ compatibility and policy-set completeness, and $G_H$ hardware/resource suitability.
+
+The gate does not require one universal threshold. A shadow deployment can use a different threshold from closed-loop actuation. Every approved state records the target and evidence.
+
+Policy-set validation detects missing members, incompatible observation or action schemas, invalid role mappings, communication-version mismatch, and safety-layer mismatch. A policy that is individually valid can still be rejected as part of an unevaluated combination.
+
+\paragraph{Packaging and coordinated distributed edge deployment.}
+\label{sec:edge-deploy}
+
+A package contains or references weights, code, dependencies, manifests, preprocessing, adapters, schemas, safety logic, configuration, and checksums. ONNX or another portable model format can reduce runtime dependence, while rule-based controllers can be packaged through the same interface.
+
+Deployment associates the package with target profiles describing architecture, CPU/GPU, memory, operating system, container support, connectivity, sensors, actuators, and permitted control roles. Pre-activation checks verify package integrity and interface availability.
+
+A coordinated policy-set rollout can be atomic where infrastructure permits, staged through a canary target, or explicitly mixed-version compatible. The architecture does not assume atomic fleet updates over intermittent networks. It records stale targets and blocks activation when required partners are not ready.
+
+Edge inference remains available during temporary central disconnection according to local policy and cache rules. The runtime retains the last approved version and a fallback. Updates are downloaded and verified before replacing the active controller. A failed activation restores the previous version.
+
+\Cref{fig:lifecycle-deployment-sequence} shows the coordinated rollout semantics required when several interdependent policies and edge targets must become ready together.
+
+\plannedfigure[0.17\textheight]{fig:lifecycle-deployment-sequence}{Coordinated policy-set packaging, staged edge deployment, activation, and rollback sequence.}{\textbf{Type:} sequence/swimlane diagram for orchestrator, registry, package store, edge devices/agents, runtime adapters, safety layer, and monitoring service. Include compatibility validation, download, local verification, readiness barrier, activation, mixed-version prevention/handling, failure, and rollback. \textbf{Purpose:} distinguish multi-model delivery from coordinated multi-agent deployment. \textbf{Source needed:} actual protocol and logs from at least one successful and one interrupted deployment test.}
+
+\section{Coordination-Aware Monitoring, Updating, Rollback, and Recovery}
+\label{sec:lifecycle-monitoring}
+
+Infrastructure health answers whether processes, devices, resources, and communication are available. Data monitoring answers whether observations are complete, current, and plausible. Control monitoring answers whether the system meets performance objectives. Safety monitoring answers whether constraints or guards are being approached or activated. Coordination monitoring answers whether the active policy set behaves coherently.
+
+Examples of coordination failure include incompatible versions, oscillating charge requests, repeated competition for the same site headroom, unfair allocation, stale community messages, and loss of aggregate performance despite healthy individual processes.
+
+Monitoring events can trigger:
+
+\begin{itemize}
+  \item a warning without control change;
+  \item local data substitution or action masking;
+  \item activation of guarded or fallback mode;
+  \item policy or policy-set rollback;
+  \item target isolation;
+  \item a new validation run; or
+  \item a retraining request linked to the observed operating period.
+\end{itemize}
+
+Rollback is evaluated as an operational sequence, not only a Kubernetes feature. The test verifies that the previous policy set, adapters, schemas, and safety dependencies are restored and that control performance recovers.
+
+\Cref{fig:lifecycle-monitor-recovery} connects infrastructure, data, control, safety, and coordination monitoring to the corresponding operational response.
+
+\plannedfigure[0.17\textheight]{fig:lifecycle-monitor-recovery}{Coordination-aware monitoring and recovery loop.}{\textbf{Type:} closed-loop diagram. Separate infrastructure health, observation/data quality, control performance, safety/constraint events, and coordination failures. Show possible responses: continue, contract interface, fallback, quarantine policy, rollback, retrain, or request operator action. \textbf{Purpose:} show why CPU/device dashboards are insufficient evidence of a healthy policy set. \textbf{Source needed:} final telemetry/event schema and actual trigger/action mappings.}
+
+\section{Empirical Systems Evaluation}
+\label{sec:lifecycle-evaluation}
+\label{sec:lifecycle-eval}
+
+\paragraph{Experiment Reconstruction.}
+Historical experiments are reconstructed from their identifiers in a clean environment. The evaluation checks source, dependencies, scenario, reward, schemas, seeds, and resulting metrics. Reproduction tolerance is stated for deterministic and stochastic components.
+
+\paragraph{Compatibility and Policy-Set Completeness.}
+Negative tests deliberately submit missing members, incompatible schemas, invalid roles, and mismatched safety dependencies. The expected result is rejection before activation. The false-acceptance and false-rejection rates of compatibility rules are reported where automatic inference is used.
+
+\paragraph{Orchestration Throughput and Worker Scaling.}
+The benchmark varies job count, worker count, job duration, artefact size, and failure rate. It reports queue time, throughput, overhead, resource use, retry success, and scaling efficiency. Separate experiments use local containers and remote/HPC execution where supported.
+
+\paragraph{Packaging, Deployment, and Runtime Resources.}
+Measurements include package size, build time, transfer time, install time, activation time, inference latency, memory, CPU, and network use. Results are reported by target class rather than averaged across dissimilar devices.
+
+\paragraph{Staged Rollout and Mixed Versions.}
+A policy-set update is deployed to a subset of targets. The experiment measures convergence to the desired fleet state, duration of mixed-version operation, compatibility behaviour, KPI change, and rollback latency. A network interruption during rollout tests disconnected-edge semantics.
+
+\paragraph{Join, Leave, and Failure.}
+A controller joins with a known or unknown schema, an active agent leaves, communication is lost, and a device restarts. The system must identify the role and capabilities, select or reject a compatible policy, restore state, activate a fallback where required, and monitor the effect on the remaining policy set.
+
+\paragraph{Soak Testing.}
+Long-duration operation records decisions, outages, restarts, manual interventions, safety interventions, promotions, rollbacks, active agents, resource use, and data-quality incidents. A stable 24-hour or multi-day run provides stronger operational evidence than a brief inference demonstration.
+
+\begin{draftonly}
+\begin{table}[p]
+\centering
+\caption{Lifecycle evaluation ledger.}
+\label{tab:lifecycle-ledger}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Experiment} & \textbf{Success criterion} & \textbf{Latency} & \textbf{Resource/traffic} & \textbf{Control impact} & \textbf{Recovery} & \textbf{Evidence level} \\
+\midrule
+Reconstruct run & Manifest-complete reproduction & \evidencepending & \evidencepending & n/a & n/a & clean-room replay \\
+Reject incompatible policy & no activation & \evidencepending & \evidencepending & none & n/a & system test \\
+Scale workers & target throughput & \evidencepending & \evidencepending & n/a & retry \evidencepending & systems benchmark \\
+Package/deploy edge & valid active package & \evidencepending & \evidencepending & KPI \evidencepending & rollback \evidencepending & target test \\
+Interrupted rollout & bounded mixed-version state & \evidencepending & \evidencepending & degradation \evidencepending & \evidencepending & fault injection \\
+Agent join/leave & compatible admission or safe rejection & \evidencepending & \evidencepending & stabilisation \evidencepending & \evidencepending & integration test \\
+Soak test & continuous safe service & duration \evidencepending & \evidencepending & KPI/event log & \evidencepending & operational/testbed \\
+\bottomrule
+\end{tabular}}
+\end{table}
+\end{draftonly}
+
+\section{Availability, Limitations, and Contribution to RQ4}
+\label{sec:lifecycle-discussion}
+\paragraph{Implementation and open-source availability.}
+\label{sec:lifecycle-open}
+
+The implementation is distributed across repositories with distinct responsibilities. An architecture manifest records each repository, release, role, licence, contribution ownership, and archived DOI or commit. Internal project services that cannot be released are documented through their interfaces and reproducible test artefacts.
+
+Software size and commit counts can contextualise the engineering effort but are not scientific results. The contribution is supported by lifecycle abstractions, failure semantics, compatibility rules, and empirical evaluation.
+
+\paragraph{Discussion, limitations, and RQ4 contribution.}
+
+The chapter is the primary response to RQ4. It moves the unit of deployment from an isolated checkpoint to a governed policy set linked to the world in which it was trained and the interfaces through which it acts.
+
+The architecture inherits mature mechanisms rather than recreating them. Distributed training, generic registries, containers, and edge module management already exist. The residual contribution is the MARL-specific semantic layer and its evaluation in a changing CPS.
+
+The demonstrated lifecycle includes manual steps, incomplete atomicity across disconnected targets, target-specific adapters, and limited long-duration operational evidence where those conditions apply. The state model and evaluation expose these boundaries instead of presenting them as automated guarantees.
+
+\begin{draftonly}
+The numbered lifecycle findings are instantiated from the verified systems evaluation:
+
+\begin{itemize}
+  \item \textbf{F7.1:} Reproducibility requires one contract linking policy, environment, scenario, reward, interfaces, code, dependencies, and runtime.
+  \item \textbf{F7.2:} Compatibility and completeness checks prevent software-valid policy combinations that have not been evaluated as a coordinated controller.
+  \item \textbf{F7.3:} Staged edge rollout and rollback can be evaluated through both fleet-state and control-performance metrics.
+  \item \textbf{F7.4:} Coordination-aware monitoring detects failure modes that infrastructure health alone cannot reveal.
+\end{itemize}
+\end{draftonly}
+
+\section{Chapter Summary}
+The EnergAIze lifecycle turns experiments into governed distributed control. It defines experiment, policy, policy-set, package, deployment, and operational records; separates experiment, governance, deployment, and assurance planes; and links orchestration, validation, packaging, monitoring, rollback, and recovery through explicit state transitions and evidence.
+
+Coordinated MARL policy sets require additional lineage, compatibility, update, and monitoring semantics when agents and edge targets are heterogeneous and dynamically reconfigurable. This requirement extends established MLOps and RLOps mechanisms with policy-set and control-interface semantics. The next chapter examines what happened when selected pieces of this architecture interacted with real data, partner platforms, physical controllers, and operational REC and charging contexts.

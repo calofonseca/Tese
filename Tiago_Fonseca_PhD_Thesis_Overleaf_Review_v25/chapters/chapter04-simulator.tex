@@ -1,0 +1,534 @@
+\chapter{CityLearn v3: A Simulation and Evaluation Environment for Renewable Energy Communities}
+\label{chap:simulator}
+\markboth{CityLearn v3 Simulation Environment}{CityLearn v3 Simulation Environment}
+
+A controller can appear successful for the wrong reasons. It can reduce electricity cost by leaving an electric vehicle below its required departure state of charge, postpone a flexible load beyond its deadline, request more charging power than the building connection can supply, or exploit measurements that would be incomplete in operation. These failures are difficult to recognise when an experiment represents a Renewable Energy Community (REC) as a fixed set of buildings, assumes one uniform and perfectly observed clock, and reports only aggregate energy or cost.
+
+The simulator developed in this thesis addresses that methodological problem. Starting from the CityLearn lineage, it extends the environment from a predominantly building-centred benchmark into CityLearn v3: an auditable, dataset-driven simulation and evaluation environment for realistic REC control studies. The extension combines heterogeneous buildings and flexibility assets, explicit temporal and unit semantics, local energy sharing, demand-response services, changing participants and equipment, controlled data and equipment failures, structured controller interfaces, multiple communities, service-aware reference controllers, and traceable evaluation outputs.
+
+The purpose is not to reproduce every physical process at maximum fidelity. It is to represent, with sufficient fidelity and explicitness, the mechanisms that can change the conclusion of a controller experiment. The resulting environment is the experimental substrate for the controller progression in Chapter~\ref{chap:control-benchmark} and the typed-interface methods in Chapter~\ref{chap:ti-marl}. It also provides the controlled counterpart to the OPEVA and DemFlex evidence examined in Chapter~\ref{chap:real-world}.
+
+The central argument of this chapter is therefore methodological: a REC controller should be evaluated against a declared scenario, under the same service and physical rules as its reference controller, with a record that connects what the controller observed, what it requested, what the simulator applied, and what outcome followed.
+
+\section{From Supporting Tool to Research Contribution}
+\label{sec:sim-research-contribution}
+
+At the beginning of this research, the simulator could reasonably have been treated as supporting infrastructure: a means of training a controller and obtaining the results needed elsewhere in the thesis. That interpretation became inadequate as the research moved from conventional building-level demand response towards heterogeneous RECs, EV charging, flexible services, changing system composition, and field-informed operating conditions. Under these conditions, the environment determines which physical and service obligations exist, what information reaches the controller, which actions are feasible, and how success is measured. It is therefore part of the experimental method rather than a neutral implementation detail.
+
+This distinction matters because a missing simulator capability can change the conclusion of an experiment. If mobility requirements are omitted, a controller can reduce cost by withholding energy from an EV. If a short connection peak is averaged into an hourly value, an electrically infeasible action can appear acceptable. If a changing asset population is converted into a fixed vector before it reaches the policy, an experiment no longer evaluates adaptation to online composition change. If requested and applied actions are not separated, a failed command can be misinterpreted as a poor control decision. In each case, the issue is not visual or architectural completeness; it is the construct validity of the reported comparison.
+
+The substantial effort devoted to CityLearn v3 consequently followed from a dependency in the research question. The controllers developed in this thesis could only be assessed under realistic heterogeneity and change if the environment could express those conditions, apply them consistently, and retain enough evidence to explain their effects. Simulator development, controller development, and demonstrator interpretation therefore progressed together. New operating requirements exposed missing environmental semantics; implementing those semantics changed the controller contract; and the revised contract required new baselines, indicators, tests, and documentation.
+
+\subsection{From an Iterative Research Instrument to Public Research Software}
+\label{sec:sim-iterative-instrument}
+
+CityLearn v3 emerged through repeated movement between three contexts. Algorithm development identified what controllers needed to observe and control; OPEVA and DemFlex exposed the timing, integration, asset, and data conditions that occur outside a benchmark; and simulator experiments made those conditions repeatable before a controller was taken to a physical site. This produced a feedback loop rather than a one-way software implementation. A field constraint was formalised as a scenario or service contract, introduced under controlled conditions, evaluated with a reference controller, and then reflected in the interfaces used by the learning and deployment pipeline.
+
+The importance of this loop is visible in several design decisions developed later in the chapter. Absolute measured PV data prevent a normalisation convention from altering the energy balance. Requested and applied actions distinguish policy behaviour from physical enforcement or command failure. Dynamic topology events retain the identity and active period of a changing entity instead of hiding the change through padding alone. Mobility, cycle, and demand-response indicators state whether the requested service was delivered, while participant-level settlement prevents a favourable community total from concealing an unfavourable allocation. These are simulator features, but each was introduced to protect an experimental inference.
+
+The resulting scope is intentionally broader than the minimum needed to run any one controller reported in this thesis. That breadth allowed the same environment to support conventional RBC and optimisation baselines, single-agent and multi-agent learning, entity-structured TI-MARL experiments, robustness studies, and multi-community execution. It also reduced the need to create a separate, weakly documented simulation script for every study. Reuse alone is not a scientific result, but a common and inspectable environment makes differences between controller experiments easier to attribute to the method under study.
+
+\paragraph{Public release and external reuse.}\label{sec:sim-public-release}
+
+The simulator subsequently became a research output in its own right. Throughout this thesis, \emph{CityLearn v3} denotes the generation developed in this work and distributed by the SoftCPS Research Group as \texttt{softcpsrecsimulator}, while retaining the \texttt{citylearn} Python import path for migration. The source identifies it as a research fork that extends, but does not replace, the separate upstream CityLearn codebase \parencite{softcps2026simulatorrepo,citylearn2026upstream}. At the thesis snapshot of 20 August 2026, version 1.7.0 was publicly available through the Python Package Index under the MIT licence, with source and wheel distributions, scenarios, examples, tests, a user interface, migration records, and bilingual documentation \parencite{softcps2026pypi}.
+
+Public release made the environment reusable beyond the experiments reported here and led to technical exchanges with researchers from several universities. These contacts indicate external relevance and initiated reuse and collaboration, but are not treated as a measured adoption rate or independent validation. The contribution is therefore fourfold: CityLearn v3 enabled the thesis experiments, preserved the contracts required by the controller-to-deployment pipeline, provided a methodological and software contribution to credible REC-controller evaluation, and created a public basis for subsequent research.
+
+\subsection{CityLearn v3 Across the Controller Lifecycle}
+\label{sec:sim-deployment-pipeline}
+
+CityLearn v3 connects controller development to deployment by preserving the assumptions under which a policy was produced and challenged. It is not an edge-runtime component and it does not certify a controller for field operation. Its role is to provide the controlled environment, compatibility information, and replay evidence needed before and after a deployment decision. This distinction places the simulator inside the EnergAIze lifecycle without confusing simulation with operation.
+
+During \emph{controller development}, the simulator binds the policy to a declared scenario: data and event versions, timestep and units, active entities, observations, actions, rewards, constraints, reference controllers, seeds, and evaluation outputs. RBC, optimisation, RL, MARL, and TI-MARL methods can therefore be compared under the same physical and service obligations. The result is not merely a model checkpoint; it is a checkpoint accompanied by the experimental conditions that give its reported performance meaning.
+
+During \emph{pre-deployment qualification}, the same contract becomes a source of challenge cases and compatibility checks. Topology changes, missing measurements, forecast deviations, command loss, equipment unavailability, phase limits, mobility deadlines, and demand-response requests are introduced reproducibly. The resulting evidence shows whether a candidate depends on unavailable inputs, assumes a different timestep or asset role, repeatedly requests infeasible actions, or loses required service under the declared disturbances. Chapter~\ref{chap:lifecycle} uses these artefacts as inputs to promotion, packaging, and target-compatibility decisions.
+
+During \emph{operation and recovery}, selected field traces and incidents can be translated back into regression or replay scenarios. A problematic action sequence can then be reconstructed against the relevant software, interface, event, and constraint versions before a policy is updated, rolled back, or returned to service. This feedback path is deliberately asymmetric: field evidence can strengthen the simulator's challenge set, whereas a successful simulation remains only one part of the evidence required for safe operation.
+
+The handoff across these stages is a versioned evidence package rather than an informal claim that the same algorithm ran in two places. It links scenario declaration, controller-visible information, requested and applied actions, service and physical outcomes, software identity, and evaluation records. In this way, the simulator supports continuity between experimentation and deployment while the runtime adapters, monitoring, governance, and physical demonstrators retain their distinct responsibilities.
+
+This lifecycle role connects the simulator to all four research questions without assigning one requirement to one chapter. For RQ1, it represents stable identities, heterogeneous capabilities, and online changes to entity, observation, and action sets. For RQ2, it varies population, community count, temporal resolution, interface payload, and computational workload. For RQ3, it makes physical and service constraints explicit, separates requested from applied actions, and introduces repeatable data, communication, equipment, and topology disturbances. For RQ4, it preserves the scenario, interface, constraint, baseline, software, and result lineage needed for reconstruction, compatibility checks, incident replay, and revalidation.
+
+These mechanisms make scalability measurable, deployability traceable, safety constraints observable, and robustness deviations reproducible. The simulator supplies the controlled conditions and evidence contract; the controller chapters determine algorithmic behaviour, Chapter~\ref{chap:lifecycle} governs transfer and continued operation, and Chapter~\ref{chap:real-world} establishes the available real-world evidence.
+
+\clearpage
+\section{Problem Definition, Requirements, and Positioning}
+\label{sec:sim-motivation}
+
+Consider one plausible operating day. A household joins the community and its photovoltaic (PV) system enters the local balance. An EV arrives at a charger and must receive a specified amount of energy before departure. A dishwasher or industrial process can be shifted, but its full cycle must still finish before a deadline. During the evening peak, a system operator asks the community to reduce import. At the same time, a meter stops reporting and one battery command is lost. None of these conditions is exceptional in isolation; the scientific difficulty lies in representing them together without making the controller interface or the reported result ambiguous.
+
+Three roles follow from this problem. First, the simulator is a \emph{comparative benchmark}: rule-based control (RBC), mathematical optimisation, single-agent reinforcement learning (RL), multi-agent reinforcement learning (MARL), hierarchical control, and TI-MARL can be evaluated under common data, assets, constraints, services, and indicators. Second, it is a platform for \emph{controlled intervention}: topology changes, missing observations, forecast errors, action failures, and demand-response requests can be introduced reproducibly without exposing a physical pilot to experimental risk. Third, it is an \emph{integration rehearsal}: the scenario, entity, observation, and action contracts used during simulation can also inform training services, inference packages, and operational adapters. This third role narrows the simulation-to-operation gap, but does not turn the environment into a fully synchronised digital twin.
+
+\subsection{From the Inherited Environment to the Required Experimental Contract}
+\label{sec:sim-inherited-gap}
+
+CityLearn v2 and EVLearn provided a strong starting point: a common simulation loop, coordinated multi-building control, established energy and cost indicators, storage and thermal assets, and an initial representation of EVs, chargers, connection schedules, and bidirectional charging \parencite{nweye2025citylearnv2,fonseca2025evlearn}. The research developed here, however, required these mechanisms to remain coherent when participants and assets changed during an episode, temporal resolution exposed short power peaks, several devices competed for a building or phase connection, service deadlines became part of the objective, and data, commands, or equipment could become unavailable.
+
+This gap cannot be closed by adding isolated asset classes. Introducing a charger during an episode, for example, also requires persistent identity, an event model, updated observations and actions, electrical headroom enforcement, mobility accounting, stable exports, and compatibility tests. The same dependency extends across scenario definition, physical progression, controller visibility, action feasibility, evaluation, and reproducibility. A plausible trajectory is not sufficient if a baseline receives different information, an infeasible request is silently clipped, or the export omits the event that explains a KPI.
+
+\Cref{tab:sim-requirements} is therefore the single formal summary of the required transition. The first eight requirements define what the simulated REC must represent; the remaining five define the evidence needed to interpret and reproduce a controller comparison. Together they turn the inherited simulation basis and its identified research pressures into an experimental contract.
+
+\begin{table}[htbp]
+\centering
+\caption{Requirements used to develop and evaluate the extended simulation environment.}
+\label{tab:sim-requirements}
+\small
+\begin{tabularx}{\textwidth}{@{}p{0.08\textwidth}p{0.27\textwidth}X@{}}
+\toprule
+\textbf{ID} & \textbf{Requirement} & \textbf{Experimental consequence} \\
+\midrule
+D1 & Multiple communities & Preserve local physics, controllers, and results while also reporting portfolio outcomes. \\
+D2 & Demand-response requests & Declare the issuer, direction, target, window, baseline, delivered response, shortfall, and settlement. \\
+D3 & Local sharing and settlement & Retain participant-level local import/export, residual grid exchange, and economic allocation. \\
+D4 & Changing members and assets & Apply time-stamped additions and removals consistently to state, control interfaces, settlement, and evaluation. \\
+D5 & Flexible-load services & Represent cycle profiles, start windows, completion deadlines, and missed or completed service. \\
+D6 & Data and equipment failures & Introduce repeatable changes to observations, forecasts, actions, and logical equipment availability. \\
+D7 & Time and unit semantics & Declare the timestep and distinguish power, energy per step, price, emissions, and normalised versus measured data. \\
+D8 & Electrical-service limits & Enforce total and per-phase import/export limits while preserving requested and applied power. \\
+S1 & Controller traceability & Record controller-visible inputs, availability, feasible actions, requested actions, and applied actions. \\
+S2 & Multi-criteria evaluation & Report energy, cost, emissions, service, settlement, robustness, and constraint indicators with inspectable trajectories. \\
+S3 & Fair reference operation & Compare controllers against references that face the same services, limits, disturbances, and accounting rules. \\
+S4 & Software and physical checks & Protect temporal, physical, interface, accounting, and export behaviour through repeatable tests and audits. \\
+S5 & Computational practicality & Measure loading, step, memory, export, interface, and multi-community costs under declared workloads. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+These requirements originated in the attempt to translate real REC and charging problems, including those encountered in OPEVA and DemFlex, into repeatable controller studies. They do not imply field validation of every simulator capability. Instead, they identify the operational assumptions that must be made explicit before a simulation result can support a stronger claim.
+
+\subsection{Lineage and position within existing environments}
+\label{sec:sim-lineage}
+\label{sec:sim-sota}
+
+CityLearn introduced a common Gym-compatible environment for demand response and coordinated control across multiple buildings \parencite{vazquezcanteli2019citylearn}. The CityLearn Challenge added shared tasks, data, held-out evaluation, and benchmark governance \parencite{nagy2021citylearnchallenge}. CityLearn v2 broadened the represented assets, occupant and resilience mechanisms, and reference control methods, while EVLearn extended the lineage with EVs, chargers, connection schedules, charging requirements, and grid-to-vehicle/vehicle-to-grid operation \parencite{nweye2025citylearnv2,fonseca2025evlearn}. This lineage provides familiar centralised and decentralised interfaces and established building- and district-level indicators.
+
+It also exposes the limits of a static, building-centred formulation. Fixed flat observation vectors become difficult to interpret when participants or assets change. Hourly data can conceal power--energy mistakes and short peaks. A requested action may differ from physical operation because a vehicle has disconnected, a phase limit is binding, or a command has failed. Finally, aggregate cost and import do not show whether mobility, flexible-load, demand-response, or participant services were delivered.
+
+CityLearn v3 retains compatibility where it remains useful and adds explicit services around the simulation kernel rather than replacing the lineage. The novelty claim is consequently not that EVs, high-fidelity buildings, power-flow simulation, accelerated execution, or dynamic co-simulation were absent from prior work. Representative environments already provide each of those capabilities. The contribution lies in the implemented combination required for auditable REC controller studies and in the evidence retained across scenario declaration, control, and evaluation.
+
+\begin{table}[htbp]
+\centering
+\caption{Role-based positioning against representative energy-control environments.}
+\label{tab:sim-positioning}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.19\textwidth}p{0.32\textwidth}X@{}}
+\toprule
+\textbf{Environment family} & \textbf{Strongest relevant capability} & \textbf{Boundary relevant to this thesis} \\
+\midrule
+CityLearn, its Challenge, and EVLearn & Shared community scenarios, multi-building control, established KPIs, EV charging, and V2G \parencite{nagy2021citylearnchallenge,nweye2025citylearnv2,fonseca2025evlearn} & Direct software lineage; online heterogeneous interface change and its audit trail are not established by asset presence alone. \\
+ACN-Sim, SustainGym, and EV2Gym & Real charging sessions, charging-network constraints, configurable EV/V2G scenarios, and single- or multi-agent interfaces \parencite{lee2021acnsim,yeh2023sustaingym,orfanoudakis2025ev2gym} & EV arrival and departure can occur while the charger-agent roster remains fixed; variable scenario size is not necessarily online agent entry. \\
+Sinergym and BOPTEST & Reproducible, high-fidelity EnergyPlus- or Modelica-based building emulation \parencite{campoy2025sinergym,blum2021boptest} & Stronger references for detailed building physics; their purpose differs from high-throughput heterogeneous REC/MARL studies. \\
+PowerGridworld, CommonPower, and PowerGym & Power-flow-aware objectives, heterogeneous grid devices, safeguards, and large feeder cases \parencite{biagioni2022powergridworld,eichelbeck2026commonpower,fan2022powergym} & Stronger references for network physics and formal safety; site and phase limits in CityLearn v3 do not replace a feeder solver. \\
+HELICS and mosaik & Distributed co-simulation, communication-aware studies, hardware-in-the-loop, and runtime federation changes \parencite{hardy2024helics,gryga2021mosaikdynamic} & Dynamic simulator composition does not itself define policy compatibility, typed observations/actions, or safe MARL adaptation. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This comparison also clarifies the meaning of \emph{dynamic}. An EV session can begin or end while a known charger remains present; different runs can instantiate different numbers of assets; a variable-set policy can consume a changing collection; and an agent or an entirely new interface can appear online. These are distinct levels of change, as established in Chapter~\ref{chap:foundations}. The simulator exposes several of them explicitly so that the controller's response, rather than the environment's terminology, becomes the object of evaluation.
+
+\section{CityLearn v3 Architecture and REC Modelling Capabilities}
+\label{sec:sim-architecture}
+
+\subsection{System Architecture and the Scenario-to-Evidence Path}
+
+CityLearn v3 is organised around one responsibility: converting a declared REC scenario and a controller request into an auditable physical and service outcome. \Cref{fig:sim-architecture} should therefore be read from the scenario boundary towards the evidence boundary. Within each REC, buildings retain their demand, generation, assets, electrical-service limits, services, settlement, and controller-facing identities. An enclosing orchestration layer can advance several independent RECs on a common clock without erasing their local state, policies, or results. Grid exchange, demand-response requests, topology changes, and data or equipment disturbances enter through explicit contracts rather than controller-specific modifications.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{simulator-environment-architecture.pdf}
+\caption{CityLearn v3 representation of one or more Renewable Energy Communities. Each community retains its buildings, assets, controllers, local exchange, events, and KPIs; the enclosing environment synchronises communities and derives combined results. Adapted from the CityLearn v3 simulator manuscript developed alongside this thesis.}
+\label{fig:sim-architecture}
+\end{figure}
+
+The architecture separates four functional layers whose outputs form one continuous execution path. \Cref{tab:sim-architecture-layers} states the responsibility and observable evidence of each layer. The separation is not only a software-engineering choice. It allows a disturbance to be varied without rewriting a policy, an interface to change without altering physical equations, and a KPI to be added without changing the state transition. Consequently, a matched experiment can identify which assumption changed and where its effect entered the result.
+
+\begin{table}[htbp]
+\centering
+\caption{Functional layers of CityLearn v3 and their role in an auditable controller experiment.}
+\label{tab:sim-architecture-layers}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.39\textwidth}X@{}}
+\toprule
+\textbf{Layer} & \textbf{Responsibility} & \textbf{Evidence retained} \\
+\midrule
+Scenario, data, and events & Resolves the clock, units, measured and forecast data, entities, services, topology changes, demand-response requests, and controlled disturbances. & Schema and software versions, source provenance, checksums, seeds, event calendars, active periods, and declared interfaces. \\
+Simulation kernel & Advances building and asset states, energy balances, service progress, electrical limits, local sharing, and settlement. & Physical trajectories, state bounds, balances, feasible headroom, service state, and participant/community exchanges. \\
+Control and evaluation & Constructs flat or entity-structured inputs, receives requested actions, applies feasibility and availability rules, calculates rewards and KPIs, and exports results. & Controller-visible values, masks, requested/applied/rejected actions, reasons, KPI rows, and time-series outputs. \\
+Assurance & Checks schema integrity, physical and accounting invariants, interface stability, regression behaviour, and computational cost. & Test reports, golden cases, audit manifests, performance measurements, and release-linked validation records. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The assurance layer distinguishes four levels of evidence. Software verification covers unit, integration, regression, and export behaviour; physical and accounting checks cover time conversion, energy balance, state bounds, action feasibility, settlement, and KPI identities; behavioural demonstrations confirm that each declared mechanism produces an observable trace; and external validity asks whether the selected abstraction is adequate for the real process behind a claim. The first three levels are reproducible within the simulator and their detailed audits are retained in Appendix~\ref{app:simulator-audit-evidence}. The fourth requires field or specialised-simulator evidence and is therefore addressed through the demonstrators and explicit scope statements. In particular, inherited thermal and HVAC models are preserved for compatibility but are not presented as a new CityLearn v3 physics contribution.
+
+At each timestep, events scheduled for that instant are first resolved; the controller-visible state and available actions are then constructed; the policy returns a requested action; feasibility, availability, command, building, and phase rules determine the applied action; and the simulation kernel advances the physical and service state. In compact form,
+
+\begin{equation}
+\begin{aligned}
+  \tilde{o}_t &= \mathcal{O}(x_t,w_t,e_t),
+  & a_t^{\mathrm{req}} &= \pi(\tilde{o}_t), \\
+  a_t^{\mathrm{app}} &= \Gamma(a_t^{\mathrm{req}},x_t,e_t),
+  & (x_{t+1},y_t) &= F(x_t,a_t^{\mathrm{app}},w_t,e_t),
+\end{aligned}
+\label{eq:sim-step-contract}
+\end{equation}
+where $x_t$ is the physical state, $w_t$ contains exogenous data, $e_t$ contains active topology, service, or failure events, $\tilde{o}_t$ is the information actually exposed to the controller, and $y_t$ contains the step-level physical, service, and accounting outcomes. The feasibility operator $\Gamma$ deliberately separates controller intent from execution: $a_t^{\mathrm{req}}$ remains visible even when availability, equipment, building, phase, or command constraints reduce or reject it.
+
+The complete trace associated with one decision is represented by the following evidence path:
+
+\begin{equation}
+\boxed{
+\mathcal{S}_t
+\longrightarrow \tilde{o}_t
+\xrightarrow{\,\pi\,} a_t^{\mathrm{req}}
+\xrightarrow{\,\Gamma\,} a_t^{\mathrm{app}}
+\xrightarrow{\,F\,} (x_{t+1},y_t)
+\longrightarrow \mathcal{R}_t
+}
+\label{eq:sim-evidence-chain}
+\end{equation}
+Here, $\mathcal{S}_t$ is the resolved scenario state at timestep $t$ and $\mathcal{R}_t$ is the archived evidence record from which rewards, KPIs, service summaries, event logs, and exported trajectories are derived. This formulation makes the causal chain explicit: the result can be traced back to what existed, what was known, what was requested, what was physically applied, and which outcome followed. The remaining subsections explain the capabilities that implement each part of this path.
+
+\subsection{Scenario, Time, Unit, and Data Contracts}
+\label{sec:sim-contracts}
+
+A dataset is not, by itself, a reproducible scenario. A time series does not state whether PV is an absolute measurement or a normalised profile, whether a price applies per kWh, which charger is connected to which building and phase, which services are mandatory, or which disturbances are active. CityLearn v3 therefore defines a scenario through a schema, referenced data and event files, and versioned assumptions. The schema declares the simulation and episode windows, temporal resolution, units, buildings, assets, control mode, observations, actions, services, events, KPI scope, and export settings.
+
+This separation allows the same base data to support controlled interventions without editing simulator code. A nominal scenario can disable disturbances; a robustness scenario can add measurement and command failures; a topology scenario can activate time-stamped additions and removals; and a demand-response scenario can add externally issued service requests. These are different experimental scenarios even when their load and PV files are identical.
+
+The physical contract uses kW for power and instantaneous limits, kWh per simulation step for energy-series columns, currency/kWh for prices, and kgCO$_2$/kWh for carbon intensity. If $P_t$ is an average power measurement in kW and $\Delta t$ is the step duration in seconds, the corresponding energy is
+
+\begin{equation}
+  E_t=P_t\frac{\Delta t}{3600}.
+  \label{eq:sim-power-energy}
+\end{equation}
+
+The conversion is elementary but consequential. A \SI{7.2}{\kilo\watt} charger delivers \SI{7.2}{\kilo\watt\hour} in a one-hour step, \SI{1.8}{\kilo\watt\hour} in a 15-minute step, and \SI{0.03}{\kilo\watt\hour} in a 15-second step. Interpreting each value as \SI{7.2}{\kilo\watt\hour} would overstate the 15-second energy by a factor of 240.
+
+The schema also distinguishes a normalised PV profile from measured production. The former is multiplied by installed capacity; the latter already represents the physical output and is not scaled again. Timestamp spacing, the declared simulation clock, and episode bounds are checked during loading so that a 15-second trace is not silently treated as hourly data. Fixtures exercise 60, 300, 900, and 3600-second operation, while dedicated datasets extend the checks to 15-second power traces.
+
+Temporal resolution changes more than storage requirements. \Cref{fig:sim-high-frequency} replays the same synthetic annual physical trace at three resolutions. Annual load, PV, and EV energy remain unchanged, but the observed peak changes from \SI{96.8}{\kilo\watt} at one hour to \SI{188.2}{\kilo\watt} at 15 minutes and \SI{281.5}{\kilo\watt} at 15 seconds. On the selected day, the hourly view reduces a \SI{231.0}{\kilo\watt} short event to \SI{63.9}{\kilo\watt}. The example is a deterministic trace-replay test rather than field validation, but it demonstrates why the timestep belongs to the scientific claim.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.94\textwidth]{simulator-high-frequency.pdf}
+\caption{Peak visibility when the same physical trace is represented at one-hour, 15-minute, and 15-second resolution. Annual energy is preserved; the observable short-duration peak is not.}
+\label{fig:sim-high-frequency}
+\end{figure}
+
+High-frequency access is implemented through windowed loading and columnar formats. In the evaluated evidence bundle, two 15-second CSV datasets of 2.446 and 2.619 GB were represented as 12.405 and 12.740 MB Parquet files. Initialisation time decreased from 25.37 to 15.61 s and from 28.59 to 18.92 s, respectively, while post-load step time remained similar. These figures characterise those datasets and encodings; they are not a universal compression ratio.
+
+The simulator treats controllable demand as a collection of services embedded in buildings, rather than as one unconstrained aggregate signal. Buildings retain their non-controllable demand, weather-dependent or inherited thermal components, PV generation, and grid exchange. Stationary batteries, EVs, chargers, and deferrable appliances introduce different state, availability, and service semantics. This separation matters because the same energy shift can have different consequences for mobility, comfort, appliance completion, and electrical feasibility.
+
+\subsection{Stationary storage and electrical-service limits}
+
+Stationary storage is represented through energy capacity, charge/discharge power, efficiency, and state-of-charge bounds. The simulator calculates the feasible action from the current state and retains feedback whenever the requested action is clipped or cannot be applied. Storage can therefore support self-consumption, peak reduction, price response, and demand-response headroom without allowing an infeasible request to disappear from the record.
+
+Each building can additionally declare total import/export limits and, for three-phase connections, a separate limit for each phase. In the canonical suite, household and small-service import ceilings use Portuguese normalised contracted-power levels. Single-phase residential connections do not exceed 10.35~kVA; three-phase BTN levels extend to 41.4~kVA; and the larger-consumption scenario class uses representative BTE-level connections of 69, 103.5, or 138~kVA \parencite{ersecontractedpower,eredesconnectionmanual}. Residential chargers use 3.7, 7.4, or 11~kW classes and service chargers use 11 or 22~kW, within the normal and fast charging powers described by ERSE \parencite{erseevcharging}. Single-phase connections and chargers are rotated across the community's L1, L2, and L3 labels; balanced three-phase uncontrollable demand and three-phase assets are divided across all three phases. Equipment therefore carries explicit phase-allocation metadata: a charger may be connected only to L1, while a three-phase battery can distribute its power across L1--L3.
+
+CityLearn currently advances active energy and does not calculate reactive power. The suite therefore maps the numerical kVA connection level to a kW ceiling under an explicit unity-power-factor assumption; a balanced three-phase ceiling is one third of the total on each phase, whereas a single-phase member receives the complete ceiling on its assigned phase. The export ceiling is the smaller of the import ceiling and the installed PV-plus-battery power. These rules produce Portuguese-comparable connection-headroom cases, not an engineering design or certification of a particular installation. They do not model voltage drop, feeder impedance, protection coordination, or phase-specific measured household baselines. With positive power denoting import, an applied state is feasible when
+
+\begin{equation}
+  -X_b^{\max}\leq P_{b,t}\leq I_b^{\max}, \qquad
+  -X_{b,\phi}^{\max}\leq P_{b,\phi,t}\leq I_{b,\phi}^{\max}
+  \quad \forall\phi\in\Phi_b,
+  \label{eq:sim-electrical-limits}
+\end{equation}
+
+where $I$ and $X$ are import and export limits. A building can be below its total contracted limit and still exceed the phase to which a charger is attached. For example, if a house imports \SI{4}{\kilo\watt} on L1 and L1 is limited to \SI{7}{\kilo\watt}, a \SI{7.2}{\kilo\watt} single-phase charging request has only \SI{3}{\kilo\watt} of feasible headroom even if the total building limit would allow more. CityLearn v3 applies the feasible portion and records both the original request and the rejected power. Two KPI families preserve the causal distinction. \emph{Requested pressure} measures the excess implied by the controller request before projection and therefore shows how strongly a policy depends on the safety layer. \emph{Residual violation} is calculated from the applied total and phase trajectories after projection and is the quantity used for the electrical hard gate. If non-controllable demand already violates a limit, that residual remains visible rather than being erased by the constraint layer. The controller-visible constraint signal retains requested-pressure semantics so that an unsafe intention can be penalised even when the applied trajectory is safe.
+
+\subsection{Electric vehicles and chargers}
+
+EV control is both time-coupled and service-constrained. The relevant state includes connection, vehicle and charger identities, arrival state of charge, target or minimum departure state, charging/discharging bounds, expected departure, and vehicle-to-grid capability. From these quantities the environment derives remaining energy, time to departure, average required power, slack, and urgency.
+
+The implementation distinguishes the vehicle session from the charging asset. A charger may remain installed while successive vehicles connect and disconnect; this is session dynamicity, not necessarily a change in agent identity. A topology event can separately install, remove, activate, or deactivate the charger or its controller-facing entity. This distinction allows the experiments in Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} to state precisely which form of reconfiguration they exercise.
+
+Several edge cases are explicitly tested: reproducible initial state of charge, arrival and departure transitions, state progression when the charger action is zero, disconnected behaviour, charging and V2G bounds, terminal-step handling, and required departure service. The KPI layer reports departure counts, target/minimum/tolerance success, energy deficit, charged energy, and V2G energy. It also applies an independent energy-accounting invariant: the positive connected-session increase in stored EV energy cannot exceed metered charger input, apart from numerical tolerance. A positive unexplained shortfall is a hard audit failure. A controller cannot therefore improve a grid metric by silently failing the mobility service, nor can a boundary-state reference introduce unmetered energy.
+
+Episode and topology boundaries receive explicit state semantics. If an experiment starts, a member enters, or a charger is installed while its declared session is already occupied, the runtime initializes the EV from the session's current-SoC boundary reference rather than from an unrelated annual-catalogue initial value. The reference is used once at runtime association; subsequent SoC is determined by the applied actions and battery model. Likewise, a deferrable request whose admissible start window closed before a member or appliance became active is excluded rather than recorded as a controller failure. These rules make partial-window training and dynamic full-year evaluation comparable without inventing decisions in history that the controller never observed.
+
+\subsection{Deferrable appliances}
+
+The earlier appliance-specific representation was generalised into a reusable deferrable-service model. A cycle catalogue defines the energy profile $q_{c,\tau}$ and duration $d_c$; a schedule defines the earliest and latest admissible start, completion deadline, priority, and whether the service is mandatory. The controller selects a start time but does not reshape or truncate the cycle.
+
+For requested cycle $c$, start $s_c$ is feasible when
+
+\begin{equation}
+  t_c^{\mathrm{earliest}}\leq s_c\leq t_c^{\mathrm{latest}},
+  \qquad s_c+d_c-1\leq t_c^{\mathrm{deadline}}.
+  \label{eq:sim-deferrable-feasibility}
+\end{equation}
+
+Once started, the stored profile is applied until completion and remains subject to the building's electrical limits. \Cref{fig:sim-deferrable-cycle} shows the modelling boundary. The simulator does not reproduce the internal physics of every appliance or industrial process; it represents the complete time-shiftable service so that omitted or late demand is visible through completed cycles, missed cycles, start delay, served energy, and unserved energy.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{simulator-deferrable-cycle.pdf}
+\caption{A deferrable service with an admissible start window, fixed cycle profile, and completion deadline. Cost or peak reduction is not credited as successful service when the required cycle is omitted or completed late.}
+\label{fig:sim-deferrable-cycle}
+\end{figure}
+
+\subsection{Local energy sharing and settlement}
+
+REC operation cannot be inferred from district net load alone. If one member exports PV while another imports, aggregation may show a near-zero balance without revealing whether local exchange was permitted, which participant supplied or consumed it, or how value was allocated. CityLearn v3 therefore separates member net demand, local import/export, residual grid exchange, and settlement.
+
+For active members $\mathcal{C}_t$, let $E^{\mathrm{net}}_{b,t}$ be positive for demand and negative for surplus. Community demand, surplus, and locally shared energy are
+
+\begin{align}
+  D_{\mathcal{C},t} &= \sum_{b\in\mathcal{C}_t}\max(E^{\mathrm{net}}_{b,t},0), \\
+  S_{\mathcal{C},t} &= \sum_{b\in\mathcal{C}_t}\max(-E^{\mathrm{net}}_{b,t},0), \\
+  L_{\mathcal{C},t} &= \min(D_{\mathcal{C},t},S_{\mathcal{C},t}).
+  \label{eq:sim-local-sharing}
+\end{align}
+
+Participant weights allocate scarce surplus without exceeding demand, and residual demand or surplus is exchanged with the grid. The current settlement configuration prices local energy as a declared fraction of the retail import price and retains counterfactual cost, savings, and member-level outcomes. It is an experimental accounting model, not a universal legal or market rule.
+
+The historical annual diagnostic in \cref{fig:sim-rec-settlement} uses the same community RBC trajectory in both accounting cases. Under the configured rule, 17.0 MWh is shared locally, annual cost changes from 24.8 to 22.0 kEUR, and all 17 members reduce cost, although savings range from 68.8 to 525.7 EUR. This result predates the canonical suite and is retained for exact reproduction. It demonstrates that participant-level consequences are measurable; it does not establish that the selected rule is equitable or applicable to every REC.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.97\textwidth]{simulator-rec-settlement.pdf}
+\caption{Annual local-energy and settlement accounting for one unchanged controller trajectory. The comparison isolates the configured accounting rule and retains heterogeneous member outcomes.}
+\label{fig:sim-rec-settlement}
+\end{figure}
+
+\label{sec:sim-events}
+Asset models describe what can operate; event layers describe how the conditions of operation change. CityLearn v3 represents these changes as scenario data rather than controller-specific code. The same policy can therefore be run against a nominal scenario and against a matched scenario containing topology, demand-response, or robustness events.
+
+\subsection{Changing community members and assets}
+\label{sec:sim-interfaces}
+
+A member may join or leave, a charger may be installed, or PV and storage may become part of the community only during a defined active period. Each topology event contains a timestep, operation, affected identity, and, where required, replacement data or parameters. Events scheduled at $t$ are applied before the controller acts at $t$, so the physical state, available observations and actions, settlement, and KPI denominators use the same active topology.
+
+Removal does not erase history. A departed member retains its earlier rows but no longer contributes demand, generation, settlement, or actions. Similarly, an installed charger has no action or service denominator before its activation. A reinstalled stateful asset is represented by a new runtime instance initialized at its declared boundary state; it does not silently inherit SoC or pending service from the removed instance, whose earlier trajectory remains available to KPI aggregation. Energy carried at re-entry is therefore an exogenous boundary condition rather than grid energy created inside a control step. The exported topology log identifies which entity changed and why the shape of the controller interface or result set changed.
+
+\Cref{fig:sim-dynamic-topology} shows one executable lifecycle scenario. Building 18 is added at step 1000, a charger is added at 1300, a charger is removed at 1500, and PV is removed at 1600. At the same points, identified controller-input rows change from 67 to 74 and finish at 71; relation rows change from 74 to 84 and finish at 80; and action rows change from 26 to 30 and finish at 29. These figures are interface-propagation evidence, not a claim about controller performance under reconfiguration.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\textwidth]{simulator-dynamic-topology.pdf}
+\caption{Lifecycle of members and assets in one dynamic-topology scenario. The event log, active entity counts, structured observations, relations, and action rows change at the same simulation steps.}
+\label{fig:sim-dynamic-topology}
+\label{fig:sim-topology-timeline}
+\end{figure}
+
+\subsection{Controlled data and equipment failures}
+
+Operational failures enter different parts of the control loop and must not be conflated. A missing measurement or biased forecast changes what the controller knows; an action dropout changes what is actuated; equipment unavailability changes which action is physically possible. CityLearn v3 stores these conditions as time-stamped event records with channel, target, feature, interval, failure mode, and parameters.
+
+Let $\mathcal{E}^{o}_t$, $\mathcal{E}^{f}_t$, $\mathcal{E}^{a}_t$, and $\mathcal{E}^{u}_t$ denote active observation, forecast, action, and availability failures. Their location in the control loop is
+
+\begin{align}
+  \tilde{o}_t &= \rho_o(o_t,\mathcal{E}^{o}_t,\mathcal{E}^{u}_t), &
+  \tilde{f}_t &= \rho_f(f_t,\mathcal{E}^{f}_t), \\
+  a_t^{\mathrm{app}} &= \rho_a(a_t^{\mathrm{req}},\mathcal{E}^{a}_t,\mathcal{E}^{u}_t), &
+  x_{t+1} &= F(x_t,a_t^{\mathrm{app}},w_t).
+  \label{eq:sim-robustness-channels}
+\end{align}
+
+Corrupting observations or forecasts affects controller-facing data without changing the underlying physical state. Action and availability failures preserve the request but alter the applied action. Supported modes include missing, noise, bias, stuck, and clipping for data; dropout, delay, noise, bias, stuck, and clipping for actions; and temporary unavailability for assets. A seed makes stochastic events repeatable, and a missing-value marker remains distinct from physical zero.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.94\textwidth]{simulator-robustness-channels.pdf}
+\caption{Failure channels in the controller loop. Measurement and forecast events alter controller-visible information; command dropout and equipment unavailability create traceable differences between requested and applied actions.}
+\label{fig:sim-robustness-channels}
+\end{figure}
+
+In the diagnostic scenario underlying \cref{fig:sim-robustness-channels}, a missing load measurement, biased price forecast, storage-command dropout, and temporary storage unavailability are activated in separate windows. The resulting export records changed measurements and forecasts, lost commands, unavailable-equipment timesteps, and requested/applied-action differences. The supported claim is that the failure is reproducible and measurable, not that the diagnostic policy is robust to every failure class.
+
+\subsection{Demand-response services}
+
+A demand-response request is represented as an explicit service rather than hidden inside a price or reward. Each request declares an issuer, direction, start and end, target power, tolerance, activation price, shortfall penalty, and baseline method. With positive $P_t$ denoting community import and $B_{r,t}$ the baseline for request $r$, delivered power is
+
+\begin{equation}
+  d_{r,t}=\begin{cases}
+  P_t-B_{r,t}, & \text{up request},\\
+  B_{r,t}-P_t, & \text{down request}.
+  \end{cases}
+  \label{eq:sim-dr-delivery}
+\end{equation}
+
+Positive delivery therefore always means movement in the requested direction. Credited response is non-negative and capped by the target, whereas full delivery remains in the record. Shortfall is calculated after tolerance, and both quantities are converted from power to per-step energy using \cref{eq:sim-power-energy}. An invalid or unavailable baseline is reported rather than scored silently.
+
+The evaluated 180-step scenario contains three non-overlapping requests totalling 190.0 kWh. Relative to reference operation, a diagnostic event-aware dispatch reduced shortfall from 101.1 to 51.6 kWh, increased compliance from 0.43 to 0.70, and reduced cost after settlement from 863.6 to 790.6 EUR. Net demand-response revenue remained negative after penalties. The conclusion is consequently not that every request is profitable or optimally served; it is that request, delivery, credit, shortfall, payment, penalty, and final cost can be interpreted together.
+
+\subsection{Multiple communities}
+
+\texttt{MultiCommunityEnv} advances several independent CityLearn environments in lockstep. Each community retains its scenario, members, assets, events, controller, reward, KPIs, and identifier. Actions and observations are organised by community, enabling local, portfolio, or hierarchical controllers without merging all buildings into one artificial district.
+
+Energy, cost, emissions, payments, and event counts are additive. Ratios are aggregated through declared reporting weights that affect only the combined result, not the simulated physics or local control. Communities in one synchronised run must share timestep, episode length, controller-interface mode, and control setting, whether centralised or decentralised.
+
+In the four-community evidence case, the environments were evaluated over the same 600-step window. Individual import/export trajectories remained visible alongside the portfolio result, and 2.45 MWh of simultaneous export and demand was identified as a potential inter-community match. This was an accounting diagnostic under independent control, not physical power transfer, centralised market clearing, or optimised inter-community exchange.
+
+\subsection{Controller Interfaces and Applied-Action Traceability}
+\label{sec:sim-entity}
+
+The simulator preserves the original CityLearn/Gymnasium interaction pattern: reset the environment, receive an observation, submit an action through \texttt{step}, and receive reward and diagnostic information. Two complementary controller views are available.
+
+The \emph{flat interface} preserves compatibility with existing RBC, optimisation, and RL implementations that expect fixed arrays. The \emph{entity interface} provides tables organised by entity type, stable identifiers, relations, masks, feasible ranges, action ports, and metadata. A newly installed charger is therefore an identified row linked to its building and current EV, rather than an unexplained change in vector position. Entity bundles can expose basic or more detailed feature sets for graph-, set-, or transformer-based policies and for offline datasets.
+
+The structured interface does not itself make a policy capable of handling a new entity or interface. It makes the change explicit and testable. A fixed-head controller can use a compatible fixed view or padding and masks; a variable-set controller can consume active rows; and TI-MARL can be tested against the stronger typed-interface conditions developed in Chapter~\ref{chap:ti-marl}. The environment remains neutral about whether the controller succeeds.
+
+Action tables carry identity, bounds, masks, and feasible capacity. At every step, requested, clipped, applied, or rejected values can be exported with a reason. This prevents a recurrent interpretive error: a policy that repeatedly proposes infeasible power may produce an apparently safe physical trajectory only because the environment intervenes. Controller intent and executed operation must therefore remain separate in learning diagnostics and evaluation.
+
+\section{Datasets Developed to Evaluate REC Controllers}
+\label{sec:sim-annual-dataset-suite}
+
+The simulator capabilities described above require an experimental progression that makes their effects separable. A collection of unrelated scenarios would permit each controller to be tested, but would make it difficult to determine whether a result changed because of the algorithm, the participant set, the data resolution, the service obligations, or an unnoticed change in the physical inputs. CityLearn v3 therefore includes a canonical annual suite constructed as a ladder: a small diagnostic case, a reduced development case, a 30-member reference family with isolated interventions, and a 100-member integrated stress case. The purpose of the ladder is not to make one dataset representative of every REC. It is to preserve a common contract while increasing the dimensions that matter to RQ1--RQ4.
+
+The earlier hourly case with 17 members is retained for historical reproduction of experiments developed before this suite. It remains useful when an exact earlier result must be reconstructed, including the annual settlement diagnostic reported later in this chapter. It is not treated as a member of the new canonical family because its timestep and asset contract differ.
+
+\subsection{Common temporal, provenance, and accounting contract}
+\label{sec:sim-dataset-common-contract}
+
+Every canonical dataset spans the civil year 2023 with 35,040 steps of \SI{15}{\minute} and \path{seconds_per_time_step=900}. The progression uses one continuous UTC timeline from 1 January at 00:00 to 31 December at 23:45. A separate calendar table preserves the corresponding \texttt{Europe/Lisbon} local time, UTC offset, weekday, hour, minute, and daylight-saving status. This choice avoids an artificial duplicate or missing simulator index at the daylight-saving transitions while retaining the local attributes needed by prediction and control.
+
+The canonical files contain exactly 35,040 physical interval rows. Since the environment needs the state at both ends of an action interval, a complete annual rollout uses 35,041 state points to execute 35,040 control transitions. The extra point is an observation-only boundary at 1 January 2024 00:00; it carries no additional demand, generation, price, settlement, or service-energy interval. This distinction is part of the runtime contract and prevents the final 15-minute action, including a departure at midnight, from silently disappearing from evaluation.
+
+The price series is the historical component held common across the suite. It uses the official 2023 Portuguese day-ahead prices distributed by OMIE \parencite{omie2023ptarchive}. The daily source files contain the physical market periods, including the 23- and 25-period daylight-saving days. Concatenating those periods produces 8,760 physical hours. Since the day-ahead market only moved to a 15-minute market time unit in October 2025 \parencite{omie2025mtu15}, each official 2023 hourly price is repeated in the four corresponding simulation steps, without interpolation, and converted from EUR/MWh to EUR/kWh. The generated provenance table retains the daily OMIE filename, published revision, URL, number of periods, and SHA-256 digest. The transformation is consequently inspectable down to the source file used for each day.
+
+The remaining exogenous series are reproducible scenario profiles, but they are not copies of one daily template with independent noise. Each complete member class is stratified over five explicit routine archetypes. Residential members include early, standard, and late commuters, home workers, and predominantly home-day routines. Small services include office, six-day retail, split-day clinic, extended hospitality, and early-workshop schedules; larger consumers include daytime, extended, continuous, morning-intensive, and evening-intensive processes. The archetype changes the operating window, the relative morning, daytime, and evening demand, occupancy, eligible EV visits, and deferrable-service windows. Member-specific peak locations, correlated short-term variation, day-level temporal shifts, reduced-activity days, weekends, holidays, and seasonality then prevent members within one archetype from becoming exact replicas.
+
+Each annual demand trace is scaled to a target drawn from a bounded log-normal scenario distribution, without accumulating observations at clipping limits. Its class centre is anchored to 2023 Portuguese consumption per consumer: approximately 2.49~MWh for residential, 16.58~MWh for non-domestic, and 175.89~MWh for industrial consumption \parencite{dgegconsumption2023,pordataconsumption2023}. These national classes provide an order-of-magnitude anchor; neither the ranges nor the frequency of each routine are presented as a fitted distribution of REC participants. PV capacity is coupled to the host's annual demand and separately varies east/south/west orientation, derating, and reproducible shading. Stationary batteries use several product-like energy and power classes selected from a stratified daily-load-autonomy rule with a host-PV floor; efficiency, initial state of charge, usable depth, standing loss, and degradation coefficient vary by member. Weather and carbon remain constructed scenario series, while weather forecasts include temporally correlated errors that increase with forecast horizon. Load and PV forecast bundles use causal daily persistence: a value at horizon $h$ is based on the observation one day before $t+h$, with the current step used only for cold start. They therefore contain no realised future load or generation. The OMIE price bundles are publication-aware: an official realised price is visible only after the declared 13:00 local day-ahead cut-off; an as-yet unpublished horizon uses causal daily persistence instead. Stored price forecasts cover 1, 6, and 24 hours. The entity interface obtains its additional 15-minute and 3-hour features from an earlier issue of the shortest stored horizon that targets the same delivery step, rather than reading the realised future-price series. The cut-off and alignment rule are conservative benchmark assumptions recorded in the schema and interface metadata.
+
+The resulting datasets are therefore deliberately described as \emph{hybrid}: the price is historical; annual demand has a Portuguese statistical anchor; and PV, weather, carbon, mobility, and deferrable behaviour create controlled heterogeneous operating conditions rather than measurements of one physical community. This boundary prevents the controlled evidence in Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} from being confused with the field-derived data and demonstrator evidence in Chapter~\ref{chap:real-world}. The exact generation ranges, asset parameters, topology calendars, and claim boundaries are fixed in Appendix~\ref{app:annual-suite-contract} and in the machine-readable family manifests.
+
+All families use the same local settlement rule. Surplus and demand are matched within the same 15-minute step; importers receive equal allocation weights; local energy is priced at 80\% of the OMIE value; and any residual export receives no remuneration. A grid-only calculation, with no local matching, is retained as the counterfactual for participant and community results. Retail margins, network tariffs, taxes, and regulated compensation are intentionally excluded. The settlement is therefore an internally consistent experimental accounting rule, not a reconstruction of a Portuguese electricity bill.
+
+\subsection{Composition and the separation of infrastructure from mobility}
+\label{sec:sim-dataset-composition}
+
+\Cref{tab:sim-annual-suite-composition} fixes the installed catalogue for each level. The counts refer to distinct members and physical assets, not to observation rows or EV visits. Core-15-Stripped is a byte-identical physical subset of the first 15 members of Core-30 for the files and assets it retains. This makes it possible to move from debugging to the principal comparison without changing the behaviour of the shared members.
+
+\begin{table}[htbp]
+\centering
+\caption{Installed composition of the canonical 2023 annual dataset suite. Counts are fixed in the full catalogue; the active population and available equipment can change in Dynamic and AllIn scenarios.}
+\label{tab:sim-annual-suite-composition}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Dataset} & \textbf{Members} & \textbf{PV} & \textbf{BESS} & \textbf{Charging members} & \textbf{Chargers} & \textbf{Deferrables} \\
+\midrule
+Micro-4-Q & 4 & 2 & 1 & 2 & 2 & 1 \\
+Core-15-Stripped & 15 & 7 & 3 & 6 & 7 & 4 \\
+Core-30 & 30 & 15 & 6 & 12 & 15 & 8 \\
+Premium-100 & 100 & 55 & 22 & 45 & 80 & 30 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Four identities are kept distinct throughout the suite. A \emph{member} is the participant or building that owns demand, production, and assets. A \emph{charger} is a physical controllable connection attached to that member and to an electrical phase. An \emph{EV} is the mobile energy-storage object whose state of charge and mobility requirement persist beyond one connection interval. A \emph{charging session} associates one EV with one charger over a declared arrival--departure window. The separation is consequential: counting visits as chargers would inflate the control interface, while assigning one permanent EV to every service charger would suppress the shared-infrastructure problem that those buildings are meant to represent. Contract v1.9 propagates all four identities into the executable schedule. A new session is therefore observable even when the same EV reconnects at the exact boundary at which its previous session ends and charger occupancy never changes. Runtime arrival SoC and departure KPIs use the session boundary, rather than inferring it only from charger or vehicle identity.
+
+The smaller datasets already include more than one charger at one household. Core-15-Stripped has five homes with one charger and one with two. Core-30 has nine homes with one and three homes with two. The 80-charger Premium catalogue expands both multiplicity and building type. Thirty equipped homes contain 36 chargers: 24 have one and six have two. Ten small service or commercial members contain 20 chargers, two per member. Five larger office, public-service, or light-process members contain the remaining 24: three have four chargers and two have six. Chargers at one member remain separate action entities and phase-connected loads, so simultaneous requests must satisfy both individual limits and the shared building and phase headroom.
+
+Residential charger--vehicle relations are normally stable. Shared chargers in service and office members instead receive successive EVs during the day. The Premium catalogue consequently contains 212 EV identities and 41,173 annual session identities for 80 physical chargers. Arrival and departure times vary reproducibly by member, charger, day, weekday, building class, and routine archetype; missed residential visits and several daily service-charging windows prevent an artificial all-at-once connection pattern. At the 15-minute clock, Premium uses all 96 possible arrival times and has no more than 10 simultaneous arrivals in the generated year.
+
+The energy requested in each session is sampled by building class and translated into arrival and target state of charge. The generator reserves a 15\% charger-window margin for residential sessions and a 28\% margin for shared service sessions, and caps every request at 72\% of EV capacity. Hence every ordinary session is individually deliverable at the charger's declared power and 95\% efficiency before community constraints are applied. The audit found zero individually infeasible sessions across all four families. This does not make every deadline jointly attainable: simultaneous chargers, non-controllable demand, phase limits, demand-response obligations, outages, or command failures can still create deliberate competition for scarce headroom. The separation is methodologically useful because failure under Safety or AllIn can be attributed to the tested interaction rather than to an impossible mobility request embedded in the clean data. The session distributions are scenario assumptions, not a national mobility survey.
+
+Deferrable services follow the same principle. Each asset has a catalogue of complete cycle profiles with duration and step energy, and a sparse annual request schedule with earliest and latest start, completion deadline, priority, and \texttt{must\_run}. Residential archetypes produce distinct washing-machine, dishwasher, washer--dryer, and domestic-hot-water services. Service and larger-consumption routines introduce cleaning, cold storage, sterilisation, hospitality hot water, compressors, pumping, and batch-process loads. Profile energy is scaled per asset; request occurrence, eligible days, clock window, completion margin, and mandatory-service probability vary by routine and day. Requests for one physical appliance are explicitly non-overlapping. Completion, delay, missed deadline, and unserved-energy indicators allow the later algorithm comparisons to distinguish legitimate load shifting from omission of the requested service.
+
+\subsection{Experimental ladder and matched scenario variants}
+\label{sec:sim-dataset-ladder}
+
+Micro-4-Q is the smallest end-to-end contract. It is used for loader, interface, accounting, and controller smoke tests where a four-member trajectory is easier to inspect manually. Core-15-Stripped retains enough heterogeneity for initial baselines and algorithm development but reduces training and debugging cost. Its clean data and normally non-binding connection limits make an error easier to attribute before the same method is moved to the full reference family.
+
+Core-30 is the principal controlled family. One annual physical base produces the five variants in \cref{tab:sim-core30-variants}. Safety, Health, and Dynamic first introduce one experimental dimension at a time. Combined then asks whether a method that appeared adequate under isolated changes remains adequate when tight limits, faults, topology changes, and demand-response commitments interact. Its dynamic trajectory begins with 26 active members: four previously inactive members join and Members~019 and~008 later leave permanently, producing 26--30 active participants and 28 at year end. A charger, stationary battery, deferrable appliance, and PV system are each removed and later restored independently of their member. A member event separately activates or deactivates all of that participant's assets. Equipment unavailability remains a health event rather than a topology event, preserving the distinction between an entity that no longer exists and an entity that exists but cannot currently be observed or controlled.
+
+The corresponding state semantics are explicit. Re-adding an asset from its catalogue template represents replacement or recommissioning and therefore starts a new runtime instance from the declared initial state; it does not claim continuity of an unobserved SoC, degradation state, or unfinished service across removal. A temporary outage of the same physical instance is instead represented by a robustness event, which retains its identity and accumulated state while blocking the affected observation or action channel. The word ``restored'' in the scenario calendar consequently denotes restoration of the declared capability, not an assumption that hidden physical history has been reconstructed.
+
+\begin{table}[htbp]
+\centering
+\caption{Matched Core-30 variants and the experimental question isolated by each schema. All variants reference the same annual physical time series and asset identities.}
+\label{tab:sim-core30-variants}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.22\textwidth}p{0.31\textwidth}X@{}}
+\toprule
+\textbf{Variant} & \textbf{Added condition} & \textbf{Purpose} \\
+\midrule
+Core-30-Nominal & Static membership, available equipment, and no injected faults & Reference comparison under the complete but undisturbed annual contract. \\
+\addlinespace
+Core-30-Safety & Total and per-phase import/export limits & Tests whether requested actions remain feasible when several assets at one member act simultaneously. \\
+\addlinespace
+Core-30-Health & Missing observations, forecast bias, command delay/dropout, and asset unavailability & Isolates degradation caused by data, communication, and equipment health without changing membership. \\
+\addlinespace
+Core-30-Dynamic & Member entry/exit and independent charger, PV, storage, and deferrable removal/reinstallation & Isolates changes to the active entity, relation, observation, and action sets. \\
+\addlinespace
+Core-30-Combined & Safety, Health, Dynamic, and demand-response requests & Evaluates interacting obligations and disturbances after each mechanism has been examined separately. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Premium-100 is the integrated scale and heterogeneity case. Its complete catalogue contains 70 residential members, 20 small service or commercial members, and 10 larger-consumption members. Each class contains all five of its routine archetypes; the frequencies are stratified scenario choices rather than inferred population proportions. The scenario begins with 70 active participants; 30 first-entry events activate the remaining catalogue and six active members later leave permanently. The active population therefore spans 70--100 and ends at 94. Two chargers and one PV system, stationary battery, and deferrable appliance each undergo independent removal and restoration. PV, stationary batteries, chargers, deferrables, building types, and service patterns are deliberately unevenly distributed, so a policy must handle different capability sets rather than one residential template repeated 100 times.
+
+Two Premium schemas share the same physical files, topology timeline, electrical limits, settlement, and demand-response services. Premium-100-Clean contains that already demanding operational structure without injected health faults. Premium-100-AllIn adds missing and degraded telemetry, forecast error, delayed or dropped actions, charger and storage unavailability, and selected grid-outage intervals, with some events coinciding with safety pressure, mobility deadlines, or demand-response requests. AllIn is reserved for final confirmation rather than routine method selection: repeated tuning on the integrated stress case would turn it into another development set and weaken its value as a held-back challenge.
+
+Service denominators follow the active topology rather than the complete catalogue. An EV departure is an observable controller obligation only when its member and physical charger exist during the final control interval preceding departure. The static Micro, Core-15, and Core-30 variants therefore expose 554, 1,757, and 3,774 departures, respectively. Core-30-Dynamic and Combined expose 3,690; 56 catalogue sessions occur while their member is inactive and 28 while the charger is absent. Each Premium variant exposes 28,108; 13,048 sessions belong to an inactive member at the relevant boundary and 17 to an absent charger. The same audit distinguishes deferrable requests that are fully observable, never acquire a valid start opportunity, or are interrupted by a topology change before their deadline. The dynamic Core case contains 1,657 fully observable, 234 censored, and one potentially interrupted cycle; Premium contains 5,950, 1,409, and one, respectively. These excluded or interrupted services are reported separately, not silently assigned as controller failures. The annual audit independently reconstructs the expected denominators from the schema and requires agreement with the runtime KPI counts.
+
+This ladder assigns a clear role to each evidence level. Core-15 supports fast implementation checks and early controller progression. Matched Core-30 variants support the principal attribution of algorithm effects. Premium-100 tests whether the resulting method and interface remain usable under scale, mixed building roles, several action groups per member, dynamic composition, safety constraints, and health degradation. In this way the datasets provide a common bridge from the RBC and learning progression in Chapter~\ref{chap:control-benchmark} to the typed, variable-set TI-MARL evaluation in Chapter~\ref{chap:ti-marl}. They do not guarantee that an algorithm is representative merely because it performs well on all levels; they make the conditions under which that claim is tested explicit.
+
+The suite connects directly to the thesis-wide research questions without repeating their full mapping. Dynamic members, installed assets, EVs, and sessions expose the representation problem in RQ1; population and asset multiplicity provide controlled RQ2 scale; matched Safety and Health variants provide repeatable RQ3 conditions; and versioned schemas, source provenance, deterministic generation, checksums, and validation reports provide the RQ4 lineage that accompanies a controller into the deployment workflow. The validation protocol and its numerical results are reported in Appendix~\ref{app:annual-suite-contract}. Passing those checks establishes consistency within the declared dataset and simulator contract; it does not establish population-level representativeness, feeder-level electrical validity, or controller effectiveness.
+
+\subsection{Validation protocol and annual baseline execution}
+\label{sec:sim-annual-baseline-audit}
+
+Structural validation cannot by itself show that a controller can traverse every session boundary, topology event, fault, service window, and settlement step without corrupting the experiment contract. The annual execution audit therefore pairs BAU and RBC Smart on every schema, binds both runs to the same dataset and simulator attestations, and independently re-reads the exported KPIs. It checks the terminal-state convention, topology-derived service denominators, causal price interface, finite outputs, event counts, EV energy conservation, and total and per-phase residuals.
+
+BAU uses no stationary-battery action, charges EVs immediately until they enter the declared departure tolerance, and starts each deferrable cycle at its earliest feasible time. RBC Smart uses current and causal forecast information to shift storage and flexible services. The campaign is an execution and interpretability audit, not an algorithm-ranking result: it verifies that the datasets are traversable, the references are matched, required services remain visible, and competing cost, peak, ramping, demand-response, and feasibility outcomes are retained. The complete structural audit, annual scorecards, service diagnostics, and event evidence are reported in Appendix~\ref{app:annual-suite-contract}.
+
+\section{Evaluation Protocol and Controller Scorecard}
+\label{sec:sim-evaluation}
+
+A controller comparison is only meaningful when all policies face the same scenario contract and when performance is interpreted together with service and feasibility. CityLearn v3 therefore separates the optimisation reward, the core thesis scorecard, the extended KPI catalogue, and the exported trajectories. Reward guides a controller during training; it is not treated as sufficient evidence of controller quality.
+
+\subsection{Reference Controllers and Fair Comparisons}
+
+The principal reference is business-as-usual (BAU): normal EV charging, earliest feasible execution of mandatory deferrable services, and no deliberate stationary-battery optimisation. A no-battery variant isolates native service demand, while progressively informed RBCs add stationary storage, current price, PV, peak, or community context. These policies are transparent reference behaviours rather than claims of optimality.
+
+Every comparison binds the evaluated controller and its reference to the same data, topology, services, settlement, limits, disturbances, timestep, information boundary, and KPI definitions. Raw indicators are always retained. Ratios or differences to BAU are reported only when the reference value is valid and the direction of improvement is unambiguous. Missing service, invalid demand-response baselines, and constraint violations remain counts, rates, or gates rather than being hidden inside a normalised aggregate.
+
+\subsection{Core Scorecard and Result Exports}
+
+The thesis uses a compact scorecard rather than one composite reward. Run integrity and scenario-specific obligations, including mandatory deferrable completion and valid demand-response baselines, are checked before the headline indicators are interpreted. The reference is the exported BAU when available and otherwise the simulator baseline declared in the result. Cost saving is $C_{\mathrm{ref}}-C_{\pi}$, so a positive value means that policy $\pi$ is cheaper. Member improvement is reported as both $x/N$ and a percentage, where $x$ is the number of eligible members whose cost is lower than under the matched reference.
+
+\begin{table}[htbp]
+\centering
+\caption{Seventeen headline indicators in the core controller scorecard.}
+\label{tab:sim-core-scorecard}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\textwidth}{@{}p{0.17\textwidth}X p{0.22\textwidth}@{}}
+\toprule
+\textbf{Dimension} & \textbf{Headline indicators} & \textbf{Preferred reading} \\
+\midrule
+Economic & \textbf{Cost saving vs reference} [EUR and \%] & Positive; larger is better. \\
+Service and safety & \textbf{EV minimum feasible service} [\%]; \textbf{EV within tolerance} [\%, declared $\pm5\%$ SoC band]; \textbf{Electrical violations} [kWh] & Service $\uparrow$; violations $=0$. \\
+Flexibility and solar & \textbf{Battery throughput} [kWh]; \textbf{V2G export} [kWh]; \textbf{Solar self-consumption} [\%] & Throughput $\downarrow$ at equal service; V2G contextual; self-consumption $\uparrow$. \\
+Community exchange & \textbf{Community import} [kWh]; \textbf{Community export} [kWh]; \textbf{Community net exchange} [kWh] & Import $\downarrow$; export $\downarrow$ under the declared zero-remuneration rule; net exchange towards zero. \\
+Grid shape & \textbf{Daily peak ratio}; \textbf{All-time peak ratio}; \textbf{Load factor penalty}; \textbf{Ramping} [raw value or reference ratio] & Ratios $<1$; ramping $\downarrow$. \\
+Participant outcomes & \textbf{Members saving vs reference} [$x/N$ and \%] & Larger coverage is better; retain the savings range. \\
+Computation & \textbf{Inference latency} [ms/action]; \textbf{Training time} [h] & Lower under matched hardware, software, and training budget. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Electrical violations use the residual applied total and per-phase trajectory and therefore remain a hard feasibility gate. EV service uses topology-feasible departures as its denominator; the minimum threshold and tolerance band remain separately visible. Battery throughput and V2G export are diagnostic rather than universally monotonic: additional cycling or export is only beneficial when its economic, grid, service, and degradation consequences justify it. The same principle applies to community export whenever the settlement rule changes.
+
+CityLearn v3 retains a wider KPI catalogue covering emissions, local settlement, deferrable and demand-response service, requested electrical pressure, rejected actions, topology, controlled failures, inherited comfort quantities, and multiple communities. Definitions, units, and interpretation boundaries are provided in Appendix~\ref{app:sim-kpi-catalogue}. Exports include these KPI rows together with trajectories, service summaries, event logs, entity relations, masks, and requested, applied, reduced, or rejected actions. The user interface supports comparative inspection, while the archived machine-readable result remains the authoritative record.
+
+Computational evidence is part of the comparison rather than a separate simulator claim. Training time and inference latency are reported with hardware, software, controller, population, timestep, interface, executed steps, training budget, and aggregation convention. Matched smoke benchmarks additionally record initialisation, reset, tail step time, memory, export time, data format, and community count. Their detailed current-checkout results are retained in Appendix~\ref{app:simulator-audit-evidence}; they bound the evaluated workloads rather than establishing linear scaling to arbitrary systems.
+
+\section{Chapter Synthesis}
+\label{sec:sim-discussion}
+\label{sec:sim-open}
+
+CityLearn v3 contributes a coherent simulation and evaluation substrate rather than a collection of isolated features. Its scenario contract binds data, units, services, topology, disturbances, controller interfaces, and evaluation; the annual dataset ladder turns that contract into matched development, attribution, scale, safety, and robustness cases; and the evidence path connects entity identity, controller-visible information, requested action, applied action, and outcome. Together, these mechanisms make heterogeneous and changing REC-controller experiments comparable, traceable, and reusable across the algorithm and deployment lifecycle developed in the following chapters.
+
+The supported claim remains deliberately scoped. The chapter establishes internal consistency, executable mechanisms, and an auditable comparison contract; it does not establish population-level representativeness, detailed feeder physics, controller superiority, universal settlement validity, or field certification. The corresponding technical limits are stated beside the electrical, settlement, robustness, multi-community, and interface mechanisms to which they apply. Real-world evidence remains the role of the demonstrators in Chapter~\ref{chap:real-world}.
+
+\begin{thesisstatement}
+CityLearn v3 provides an auditable and physically checked experimental substrate for REC controller studies in which heterogeneous assets, service obligations, high-frequency data, dynamic topology, external requests, controlled operational failures, and multiple communities remain traceable from scenario declaration to controller-visible input, requested action, applied action, reported outcome, and the versioned validation contract used by the deployment lifecycle.
+\end{thesisstatement}
+
+The next chapter uses this substrate to compare the progression from transparent rules and optimisation to single- and multi-agent learning. The question is no longer only whether a method improves an aggregate metric, but whether it does so under common information, service, physical, and evaluation conditions.

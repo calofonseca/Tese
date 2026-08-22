@@ -1,0 +1,31 @@
+priority,primary_study,domain,evidence,most_useful_for
+1,"Zhang et al., *Field Deployment of MARL Based VSL Controllers* (2024)",Transport,Operational,"Deployability, scale, safety"
+2,"Zhang et al., *Real-World Deployment and Assessment…* (2025)",Transport,Operational,"Sustained operation, evaluation"
+3,"Sebastián et al., *Physics-Informed MARL for Distributed Multi-Robot Problems* (2025)",Robotics,Testbed,"Scale, variable topology, sim-to-real"
+4,"Zhang et al., *MARVEL* (2024)",Transport,Testbed/deployment engineering,"Deployment pipeline, safety"
+5,"Yu et al., *Asynchronous MARL for Multi-Robot Exploration* (2023)",Robotics,Testbed,"Asynchrony, dropout, deployment"
+6,"Candela et al., *Transferring MARL Policies for Autonomous Driving using Sim-to-Real* (2022)",Transport,Testbed,"Sim-to-real, domain randomization"
+7,"Amir et al., *ReCoDe* (2025)",Robotics,Testbed,"Hybrid safety, real robots"
+8,"Shibata et al., *Event-Triggered Communication and Consensus-Based Control* (2023)",Robotics,Testbed,"Communication, variable team size"
+9,"Su et al., *Dynamic Queue-Jump Lane for Emergency Vehicles* (2020)",Transport,Simulation,"Variable population, partial connectivity"
+10,"Gu et al., *Safe MARL for Multi-Robot Control* (2023)",Robotics,Simulation,Explicit constrained MARL
+11,"Zhang et al., *Cooperative MARL for Large Scale VSL Control* (2023)",Transport,Simulation,"Scale, parameter sharing, robustness"
+12,"Chu et al., *Multi-Agent Deep RL for Large-Scale Traffic Signal Control* (2020)",Transport,Simulation,"Large networks, local information"
+13,"Zhang et al., *Safe Policy Learning for Networked Microgrids* (2021)",Energy,Simulation,"Physical constraints, distributed safety"
+14,"Samak et al., *Mixed-Reality Digital Twins for MARL Sim2Real* (2025)",Transport,Testbed,Validation between simulation and reality
+15,"Chen et al., *PowerNet* (2021/2022)",Energy,Simulation,"Locality, communication, scalability"
+16,"Feng et al., *Multi-Agent Loco-Manipulation* (2024/25)",Robotics,Testbed,"Hierarchical MARL, real robots"
+17,"Charbonnier et al., *Scalable MARL for Residential Energy Flexibility* (2022)",Energy,Simulation,"Heterogeneous assets, distributed scale"
+18,"Wang et al., *Cooperative Speed Limit Control using Distributed RL* (2019)",Transport,Simulation,Distributed traffic control
+19,"Vázquez-Canteli et al., *MARLISA* (2020)",Energy,Simulation,"Connected buildings, coordination"
+20,"Chen et al., *Physics-Shielded MARL for Safe Active Voltage Control* (2022/23)",Energy,Simulation,"Physics shield, safety"
+21,"Blad et al., *Laboratory Test of Offline-Trained MARL for Heating Systems* (2023)",Energy,Testbed,Physical energy-control evidence
+22,"Guo et al., *Safe Decentralized Control Considering Communication Delay* (2023)",Energy,Simulation,Safety plus communication delay
+23,"Zeng et al., *Resilience against Adversarial Attacks* (2022)",Energy,Simulation,Robustness/security disturbances
+24,"Xie et al., *Attention-Based MARL for Grid-Responsive Buildings* (2023)",Energy,Simulation,Selective coordination
+25,"Almilaify et al., *SCALEX* (2023)",Energy,Simulation,Explicit 2–64-building scaling
+26,Heterogeneous multi-timescale MARL for industrial microgrids (2026),Energy,Simulation,Heterogeneous roles and timing
+27,"Wu et al., *Heterogeneous MARL for Grid-Interactive Communities* (2023)",Energy,Simulation,Explicit agent heterogeneity
+28,"Zhou et al., *MARL for Online Scheduling in Smart Factories* (2021)",Industrial,Testbed-oriented,Industrial CPS
+29,"Nweye et al., *Offline Training of MARL Agents for Grid-Interactive Buildings* (2022)",Energy,Simulation,"Offline learning, deployment precursor"
+30,"Malus et al., *Real-Time Order Dispatching for Autonomous Mobile Robots* (2020)",Industrial,Simulation,Industrial multi-agent scheduling
