@@ -1,237 +1,352 @@
-\chapter{Experiment and MARL Policy-Set Lifecycle Orchestration and Distributed Edge Deployment}
+\chapter{EnergAIze Policy Lifecycle: Experiment Orchestration and Distributed Inference}
 \label{chap:lifecycle}
-\markboth{MARL Policy-Set Lifecycle and Edge Deployment}{MARL Policy-Set Lifecycle and Edge Deployment}
+\markboth{EnergAIze Policy Lifecycle}{EnergAIze Policy Lifecycle}
 
-The preceding chapters established a progression of controllers and then brought the selected capabilities together in TI-MARL. That still does not produce an operational control service. A method becomes usable only when the experiment that created it can be reconstructed, the resulting policy can be validated against its intended interfaces and physical conditions, and the approved runtime can be installed, observed, updated, and recovered on the target system.
+The preceding chapters establish how controllers are represented, trained, and evaluated. None of those steps alone produces a dependable control service. An experimental result becomes usable only when its origin can be reconstructed, its policy artefacts remain associated with the observations and actions they expect, and an approved runtime can be installed, inspected, changed, and recovered on the intended infrastructure.
 
-CityLearn v3 remains part of this transition rather than disappearing after a policy has been trained. Its environment, scenario, data, event, interface, reward, constraint, baseline, and evaluation versions form part of the experiment and validation record. The simulator provides controlled regression and disturbance cases before promotion and a route for replaying selected field observations or incidents after deployment. It does not perform edge deployment itself; it supplies the reproducible evidence and compatibility contracts consumed by the lifecycle mechanisms developed in this chapter.
+This problem is particularly visible in MARL. The deployable object can contain several policies or one shared policy associated with several agent roles. Loading the model files successfully does not establish that their preprocessing, interfaces, safety dependencies, communication assumptions, and versions remain mutually compatible. A partial update can succeed technically and still create a policy combination that was never evaluated. Governance must cover the policy set and its execution contract, including the checkpoint bytes.
 
-For MARL, this transition is more demanding than copying one checkpoint. The deployed object can be a set of behaviourally interdependent policies. A partial update may succeed from a software perspective while placing the control system in a combination that was never evaluated. A new agent may be technically reachable while lacking a compatible policy or safety adapter. A rollback may restore model files without restoring the policy-set version and interface contract that were known to work together.
+EnergAIze addresses the problem through a connected implementation spanning experiment configuration, the Job Orchestrator, a common Worker Agent, heterogeneous local and remote compute, shared evidence storage, policy export, a deployment catalogue, the energAIze inference service, and an operator-facing web interface. The same pipeline has served Docker workers on a server and personal computer, Slurm and Singularity execution on Deucalion, remote GPU execution through Union INESC TEC, and an NVIDIA Jetson worker with a target-specific runtime image. The output of training is packaged in a bundle that the inference service can load without recreating the model's observation ordering, encoders, action names, or bounds manually.
 
-The EnergAIze lifecycle integrates established MLOps, RLOps, distributed RL, registry, container, edge-orchestration, and deployment mechanisms around RL- and MARL-specific operational objects \parencite{li2022rlops,liang2018rllib,hu2023marllib,zhou2023malib,zaharia2018mlflow,hoffman2020acme,zhang2024marvel,zhang2024fieldvsl,hardy2024helics}. Environment and scenario versions, rewards, observation and action schemas, policy sets, agent-role mappings, safety dependencies, validation evidence, edge targets, and coordination-aware telemetry remain linked throughout the lifecycle. The same machinery can govern TI-MARL, MATD3, MADDPG, hierarchical controllers, and deterministic fallbacks.
+CityLearn v3 remains part of this lifecycle. Its environment, dataset, scenario, event, interface, reward, constraint, baseline, and evaluation versions belong to the experiment record. The simulator supports controlled regression before a controller is selected and replay after field observations expose a new condition. It does not deploy policies itself; it supplies the reproducible world against which policy behaviour and compatibility are assessed.
 
-\draftnote{This chapter is written as a full target chapter and evaluation plan. The final text must be aligned with the actual backend, worker, algorithms, inference, infrastructure, UI, and simulated-assets repositories. Features that are currently partial or manual should be described honestly and must not be upgraded to automated lifecycle claims without code and test evidence.}
+\draftnote{This chapter is aligned with the current Job Orchestrator, Worker Agent, Algorithms, backend deployment service, energAIze inference, UI, and infrastructure repositories. Before submission, freeze repository releases and commits, verify authorship and licences, archive representative cross-target jobs and deployment logs, and replace the remaining evaluation ledger with measured current-release evidence. Automated policy-set promotion, coordinated multi-target rollout, and dynamic TI-MARL serving must not be claimed beyond their verified implementation state.}
 
-\section{Lifecycle Problem, Core Entities, and State Model}
+\section{Deployment Problem and Lifecycle Contract}
 \label{sec:lifecycle-core}
 \label{sec:lifecycle-gap}
 
-Generic MLOps already provides experiment tracking, artefact lineage, registries, packaging, serving, progressive rollout, and monitoring \parencite{sculley2015debt,kreuzberger2023mlops,zaharia2018mlflow}. RLOps adds the coupling between a learned policy and an environment, interaction data, evaluation, and safety \parencite{li2022rlops}. Distributed RL frameworks provide workers, actors, learners, replay, and multi-policy mappings \parencite{liang2018rllib,hoffman2020acme,hu2023marllib,zhou2023malib}.
-
-Semantic integration is the remaining problem. Reproducibility requires the source revision, environment, scenario, data, reward, constraints, observation and action schemas, seeds, algorithm configuration, dependencies, and runtime to be recoverable as one experiment contract.
-
-A model store answers where the bytes are. A registry adds identity, version, lineage, status, and metadata. A MARL policy-set registry must additionally answer which policies may operate together, which agents and roles they serve, which interfaces they expect, which communication and safety dependencies apply, and which predecessor should be restored during rollback.
-
-Serialisation stores weights. Packaging preserves the executable semantics around them: preprocessing, adapters, dependencies, schemas, safety layers, target requirements, and the identity of the complete policy set. Multiple-model serving loads several independent models. Coordinated MARL deployment governs the relationships between them.
+Generic MLOps already provides experiment tracking, artefact lineage, registries, packaging, serving, deployment, and monitoring \parencite{sculley2015debt,kreuzberger2023mlops,zaharia2018mlflow}. RLOps adds the environment, interaction data, policy evaluation, and safety context of reinforcement learning \parencite{li2022rlops}. Distributed RL frameworks provide workers, learners, replay, and multi-policy mappings \parencite{liang2018rllib,hoffman2020acme,hu2023marllib,zhou2023malib}. EnergAIze uses these foundations but must preserve additional energy-control and MARL semantics across independently evolving repositories and heterogeneous execution targets.
 
 \label{sec:lifecycle-entities}
+\paragraph{Experiment contract.}
+A reproducible EnergAIze job binds the source revision and container image to a resolved configuration, simulator and dataset versions, scenario and event definitions, observation and action interfaces, reward and constraint settings, algorithm parameters, random seeds, training and evaluation intervals, and requested compute profile. The resulting record includes logs, progress, KPIs, checkpoints, exported policies, runtime information, and a terminal status. A correction produces a derived run and leaves the provenance of the completed experiment unchanged.
 
-\paragraph{Experiment Manifest.}
-The experiment manifest is the reproducibility anchor and contains:
+\paragraph{Policy bundle and policy set.}
+Serialisation stores model weights. A deployable bundle also preserves the topology, ordered observations, encoders, named actions, bounds, artefact paths, algorithm format, and optional production aliases required to reconstruct inference. For a multi-agent controller, the manifest identifies every per-agent artefact or the mapping of a shared policy to its agents. This structure provides the minimum packaging unit for a policy set even where promotion and compatibility decisions remain operator-controlled.
 
-\begin{itemize}
-  \item experiment and parent identifiers;
-  \item source repository and commit;
-  \item environment package and version;
-  \item scenario, data, and event versions;
-  \item observation, action, and entity schemas;
-  \item reward and constraint configuration;
-  \item algorithm and network configuration;
-  \item seeds and training/evaluation windows;
-  \item dependencies and container image;
-  \item requested compute resources;
-  \item produced checkpoints, metrics, logs, and reports; and
-  \item completion, cancellation, and failure status.
-\end{itemize}
+\paragraph{Deployment and operation.}
+A deployment record connects a bundle to an inference target and records which manifest the target reports as active. Runtime health, structured logs, request identifiers, provider responses, and control KPIs then associate observed behaviour with that deployment. A previous bundle can remain available for an operator-controlled reversal. Coordinated activation across several independent targets requires stronger readiness and compatibility semantics than the current per-target switch. It remains a lifecycle boundary and carries no implicit guarantee.
 
-The manifest is immutable after run completion. Corrections create a new experiment or an explicit derived record rather than silently changing the provenance of an existing policy.
+\Cref{fig:lifecycle-entity-model} summarises the provenance chain. The entities are connected by immutable identities and stored artefacts, while evaluation and approval decisions determine whether a completed job is eligible for deployment.
 
-\paragraph{Policy and Policy-Set Manifest.}
-A policy record links model artefacts to role, schemas, preprocessing, evaluation, and target constraints. A policy-set manifest lists member policies, agent-role mappings, allowed versions, compatibility relations, required communication schemas, safety layers, and a shared set version.
+\begin{figure}[!t]
+\centering
+\resizebox{0.97\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  entity/.style={draw,rounded corners=2mm,align=center,minimum height=16mm,text width=27mm,inner sep=2.5mm,fill=white},
+  experiment/.style={entity,draw=blue!60!black,fill=blue!6},
+  evidence/.style={entity,draw=green!45!black,fill=green!7},
+  policy/.style={entity,draw=engineering,very thick,fill=engineering!9},
+  runtime/.style={entity,draw=red!60!black,fill=red!5},
+  link/.style={-{Latex[length=2.2mm]},thick,draw=engineering!85!black},
+  gate/.style={font=\sffamily\tiny,fill=white,inner sep=1pt,align=center}
+]
+\node[experiment] (spec) at (-7,0) {\textbf{Experiment contract}\\code, image, data, scenario, interfaces, reward, seed};
+\node[experiment] (job) at (-3.5,0) {\textbf{Job execution}\\target, resolved config, runtime state};
+\node[evidence] (results) at (0,0) {\textbf{Evidence record}\\logs, KPIs, checkpoints, resource data};
+\node[policy] (bundle) at (3.5,0) {\textbf{Policy bundle/set}\\manifest, artefacts, encoders, actions, bounds};
+\node[runtime] (deployment) at (7,0) {\textbf{Deployment record}\\target, active version, health, observations};
 
-For homogeneous parameter sharing, one policy can map to many agents. For heterogeneous control, several policies can coexist. The manifest permits both while preserving the distinction between a shared policy and a set of independent files.
+\draw[link] (spec) -- node[gate,above] {dispatch} (job);
+\draw[link] (job) -- node[gate,above] {collect} (results);
+\draw[link] (results) -- node[gate,above] {evaluate} (bundle);
+\draw[link] (bundle) -- node[gate,above] {select and load} (deployment);
 
-\paragraph{Deployment and Operational Record.}
-A deployment record identifies package, policy set, target group, rollout strategy, activation time, previous version, and observed state. An operational record links runtime telemetry and significant events to that deployment. This makes it possible to answer which policy version produced an action during an incident.
+\node[font=\sffamily\scriptsize,align=center,text width=125mm] at (0,-1.55) {The model artefact remains linked to the experimental world and execution contract in which its behaviour was produced and assessed.};
+\end{tikzpicture}%
+}
+\caption{Lifecycle entities and provenance relations connecting an experiment specification to the policy bundle and its observed deployment.}
+\label{fig:lifecycle-entity-model}
+\end{figure}
 
-\Cref{fig:lifecycle-entity-model} identifies the lifecycle entities and immutable provenance relations required to reconstruct an experiment and its deployed policy set.
-
-\plannedfigure[0.16\textheight]{fig:lifecycle-entity-model}{Lifecycle entity and provenance model.}{\textbf{Type:} entity-relation/UML diagram. Include experiment specification, source revision, environment, scenario/data, reward/constraint/interface versions, run/job, checkpoint/policy, policy set, validation result, package, target profile, deployment, and operational record. Show cardinalities and immutable lineage links. \textbf{Purpose:} distinguish tracking, storage, registry, policy-set governance, and deployment records. \textbf{Source needed:} actual database/domain models and manifest formats.}
-
-\paragraph{Lifecycle States and Invariants.}
-Candidate artefacts move through states such as:
-
-\begin{equation}
-\begin{aligned}
-\texttt{trained} &\rightarrow \texttt{evaluated} \rightarrow \texttt{validated}
-\rightarrow \texttt{approved} \\
-&\rightarrow \texttt{packaged} \rightarrow \texttt{deployed}
-\rightarrow \texttt{active}.
-\end{aligned}
-\end{equation}
-
-Alternative states include rejected, failed, superseded, rolled back, and archived. Invariants include complete provenance, schema compatibility, policy-set completeness, passing validation gates, and target compatibility. State transitions are recorded with actor, reason, and evidence.
-
-\Cref{fig:lifecycle-state-machine} defines the states and evidence gates that separate a stored checkpoint from a validated and deployable policy set.
-
-\plannedfigure[0.145\textheight]{fig:lifecycle-state-machine}{Policy and policy-set lifecycle states, gates, and rollback relations.}{\textbf{Type:} state machine. Candidate states may include registered, training, evaluated, rejected, validated, promoted, packaged, staged, active, degraded, superseded, and rolled back. Label performance, compatibility, safety, robustness, and resource gates. \textbf{Purpose:} make clear that a checkpoint is not automatically deployable. \textbf{Source needed:} implemented statuses/transitions; use dashed transitions for planned or manual operations.}
-
-\section{EnergAIze Lifecycle Architecture and Experiment Orchestration}
+\section{End-to-End EnergAIze Lifecycle Architecture}
 \label{sec:lifecycle-architecture}
 
-The implementation can be understood through four planes.
+The implemented architecture contains two connected control paths. The experiment path validates a request, assigns it to a compatible worker, executes Algorithms against a versioned simulator and dataset, and returns evidence and policy artefacts. The deployment path catalogues a self-contained bundle, loads it into a selected inference service, and exposes health and runtime logs. Shared storage, explicit manifests, and the web interface connect both paths without making the UI, worker, or inference service responsible for all lifecycle decisions.
 
-The \emph{experiment plane} receives configurations, creates jobs, assigns workers, collects metrics, and stores artefacts. The \emph{governance plane} maintains experiments, policies, policy sets, validation, aliases, and promotion states. The \emph{deployment plane} builds packages, resolves target profiles, distributes versions, and tracks desired versus actual state. The \emph{observation and assurance plane} receives logs and telemetry, evaluates runtime health and control behaviour, and initiates alerts, fallback, rollback, or retraining.
+The services have distinct responsibilities. The Job Orchestrator owns training and evaluation jobs, worker state, queueing, and result collection. The deployment backend owns the bundle catalogue and communication with configured inference targets. The inference service owns the active policy pipeline and request-time execution. The UI provides a human-facing control and observation surface over these services, without acting as scheduler or policy runtime.
 
-The repository ecosystem comprises a CityLearn-derived simulator, algorithm-training package, backend API, remote workers, an inference service, a web interface, infrastructure definitions, and simulated-asset services. Workers execute containerised jobs on local and remote/HPC resources, while message brokers and shared storage decouple execution from the control plane.
+\Cref{fig:lifecycle-four-planes} presents the concrete architecture. Technology-specific adapters remain behind the Worker Agent and inference boundaries, allowing the same scientific configuration and bundle contract to cross environments with different execution mechanisms.
 
-\Cref{fig:lifecycle-four-planes} presents the lifecycle through experiment, governance, deployment, and observation/assurance responsibilities.
+\begin{figure}[!t]
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  block/.style={draw,rounded corners=2mm,align=center,minimum height=16mm,text width=30mm,inner sep=2.5mm,fill=white},
+  control/.style={block,draw=engineering,very thick,fill=engineering!8,text width=52mm},
+  experiment/.style={block,draw=blue!60!black,fill=blue!6},
+  compute/.style={block,draw=green!45!black,fill=green!7,text width=34mm},
+  store/.style={block,draw=black!60,fill=black!4},
+  deploy/.style={block,draw=engineering!85!black,fill=engineering!7},
+  runtime/.style={block,draw=red!60!black,fill=red!5},
+  flow/.style={-{Latex[length=2.2mm]},thick,draw=engineering!85!black},
+  observe/.style={-{Latex[length=2.0mm]},thick,dashed,draw=black!60},
+  tinylabel/.style={font=\sffamily\tiny,fill=white,inner sep=1pt,align=center}
+]
+\node[control] (ui) at (0,5.8) {\textbf{EnergAIze UI and API clients}\\configure, submit, inspect, compare, select, and recover};
 
-\plannedfigure[0.18\textheight]{fig:lifecycle-four-planes}{Four-plane EnergAIze lifecycle architecture.}{\textbf{Type:} layered architecture diagram: experiment plane, governance plane, deployment plane, and observation/assurance plane. Show services, stores, workers, brokers/APIs, and the policy-set manifest crossing the planes. \textbf{Purpose:} present the scientific lifecycle abstraction while keeping technology names secondary. \textbf{Source needed:} as-built architecture and deployment diagrams; label failure boundaries and manual approval points.}
+\node[experiment] (orchestrator) at (-6.6,2.8) {\textbf{Job Orchestrator}\\validation, queue, assignment, persistent job state};
+\node[experiment] (worker) at (-2.2,2.8) {\textbf{Worker Agent}\\polling, heartbeat, execution, stop, and result contract};
+\node[compute] (targets) at (2.2,2.8) {\textbf{Execution targets}\\server, personal computer, Deucalion, Union, and Jetson};
+\node[store] (evidence) at (6.6,2.8) {\textbf{Shared evidence}\\resolved config, logs, progress, KPIs, checkpoints, MLflow links};
 
-\paragraph{Experiment and training orchestration.}
+\node[deploy] (bundle) at (6.6,0) {\textbf{Validated bundle}\\manifest, ONNX or rule policy, aliases};
+\node[deploy] (catalogue) at (2.2,0) {\textbf{Deployment API and catalogue}\\store, inspect, select, and switch bundles};
+\node[runtime] (inference) at (-2.2,0) {\textbf{energAIze inference}\\preprocess, execute, bound, name, and log actions};
+\node[runtime] (operation) at (-6.6,0) {\textbf{EnergAIze control path}\\Percepta, supervision, external platforms, and assets};
+
+\draw[flow] (orchestrator) -- node[tinylabel,above] {job payload} (worker);
+\draw[flow] (worker) -- node[tinylabel,above] {target adapter} (targets);
+\draw[flow] (targets) -- node[tinylabel,above] {outputs} (evidence);
+\draw[flow] (evidence) -- node[tinylabel,right] {export} (bundle);
+\draw[flow] (bundle) -- node[tinylabel,above] {catalogue} (catalogue);
+\draw[flow] (catalogue) -- node[tinylabel,above] {load} (inference);
+\draw[flow] (inference) -- node[tinylabel,above] {named action} (operation);
+
+\draw[observe] (ui.south west) -- node[tinylabel,above left] {experiment control} (orchestrator.north);
+\draw[observe] (evidence.north) -- node[tinylabel,above right] {results and status} (ui.south east);
+\end{tikzpicture}%
+}
+\caption{Implemented EnergAIze lifecycle architecture. Experiment orchestration and heterogeneous execution produce traceable evidence and a policy bundle; deployment services catalogue and load the bundle into an observable inference target connected to the wider EnergAIze control path.}
+\label{fig:lifecycle-end-to-end}
+\label{fig:lifecycle-four-planes}
+\end{figure}
+
+The architecture contributes to experimental scalability by allowing independent workers to execute jobs concurrently, but worker count is not evidence of controller scalability. It contributes to deployability by preserving common experiment and inference contracts across target-specific adapters. Safety and robustness remain present as validation requirements, action bounds, external supervision, health information, explicit failure states, and recovery behaviour. These connections allow systems evidence to be reported without conflating it with algorithmic performance.
+
+\section{Experiment Orchestration on Heterogeneous Compute}
 \label{sec:orchestration}
 
-A job begins with validation of its manifest and resource request. The backend creates a persistent record, places or assigns the job, and exposes status to the UI. Workers advertise capability and heartbeat state, retrieve the job, prepare the environment, execute training or analysis, publish progress, and return artefacts.
+\subsection{Job Orchestrator and Persistent Job State}
 
-The orchestration layer supports training, evaluation, model comparison, missing-data robustness, segment analysis, and hyperparameter search. Cancellation is cooperative: a cancellation flag is checked at defined iteration boundaries, and incomplete training is not promoted automatically. Atomic state writes and explicit terminal statuses reduce ambiguity after crashes.
+A job begins with a user or API client selecting an experiment configuration, dataset, execution image, and either a specific host or a CPU/GPU worker profile. The Job Orchestrator validates the request, writes a persistent job record, resolves container-visible paths, and places a compact scheduling record in the queue. The dispatched payload contains the image, command, environment, volumes, and resolved configuration path required by the worker; workers do not reinterpret the scientific configuration independently.
 
-The worker model supports scaling the number of concurrent jobs. Evaluation must distinguish throughput from scientific scalability. Relevant metrics include queue wait, startup, execution overhead, worker utilisation, failure and retry rates, artefact-transfer time, and reproducibility across workers.
+The shared storage root is the source of truth for configuration snapshots, job metadata, state, logs, progress, results, and installed artefacts. A completed job directory contains the resolved configuration that was actually executed together with the user's original request. Personal folders and archive metadata organise jobs without moving or rewriting their evidence. The UI can reorganise this metadata while workers and recovery mechanisms retain stable evidence paths.
 
-\section{Policy-Set Governance and Coordinated Edge Deployment}
+The implemented job state machine is shown in \cref{fig:lifecycle-state-machine}. Setup is explicit for remote environments whose container image, input archive, or scheduler request must be prepared before Algorithms starts. Union adds a non-terminal recovering state after successful remote computation because result installation can fail or be delayed independently of training.
+
+\begin{figure}[!t]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  state/.style={draw,rounded corners=2mm,align=center,minimum height=9mm,text width=22mm,inner sep=2mm,fill=white},
+  active/.style={state,draw=blue!60!black,fill=blue!6},
+  terminal/.style={state,draw=black!65,fill=black!4},
+  recovery/.style={state,draw=engineering,very thick,fill=engineering!8},
+  stop/.style={state,draw=red!60!black,fill=red!5},
+  flow/.style={-{Latex[length=2mm]},thick,draw=engineering!85!black},
+  alt/.style={-{Latex[length=2mm]},thick,dashed,draw=black!60}
+]
+\node[active] (launching) at (-6.3,1.3) {launching};
+\node[active] (queued) at (-3.8,1.3) {queued};
+\node[active] (dispatched) at (-1.3,1.3) {dispatched};
+\node[active] (setup) at (1.2,1.3) {setup};
+\node[active] (running) at (3.7,1.3) {running};
+\node[terminal] (finished) at (6.3,1.3) {finished};
+
+\node[terminal] (canceled) at (-3.8,-1.3) {canceled};
+\node[stop] (stoprequested) at (1.2,-1.3) {stop requested};
+\node[terminal] (stopped) at (3.7,-1.3) {stopped};
+\node[terminal] (failed) at (6.3,-1.3) {failed};
+\node[recovery] (recovering) at (6.3,-3.1) {recovering};
+
+\draw[flow] (launching) -- (queued);
+\draw[flow] (queued) -- (dispatched);
+\draw[flow] (dispatched) -- (setup);
+\draw[flow] (setup) -- (running);
+\draw[flow] (running) -- (finished);
+\draw[alt] (queued) -- (canceled);
+\draw[alt] (dispatched) -- (stoprequested);
+\draw[alt] (setup) -- (stoprequested);
+\draw[alt] (running) -- (stoprequested);
+\draw[alt] (stoprequested) -- (stopped);
+\draw[alt] (running) -- (failed);
+\draw[alt] (running.south east) -- (recovering.north);
+\draw[flow] (recovering.north east) -- (finished.south);
+\draw[alt] (recovering.east) -- ++(8mm,0) |- (failed.south);
+\end{tikzpicture}%
+}
+\caption{Implemented job states. Recovery after successful remote Union computation is represented separately from rerunning the experiment, while cancellation, cooperative stop, and failure remain explicit terminal outcomes.}
+\label{fig:lifecycle-state-machine}
+\end{figure}
+
+\subsection{Common Worker Agent Contract}
+
+Every worker advertises an identity, execution mode, capacity, software version, heartbeat time, and relevant resource capabilities. It requests a compatible job, executes the complete payload supplied by the orchestrator, streams or synchronises logs, publishes progress and state, and installs final results under the shared job identity. The shared protocol allows the orchestrator and workers to evolve independently and supports rolling upgrades through capability negotiation.
+
+Attempt fencing prevents a late status from an old execution from changing a requeued job. A capable worker receives an opaque token for one dispatch attempt and returns it with each status update. Requeueing invalidates that token; a stale worker that receives a rejection terminates its superseded Docker container, Slurm job, or Union run. Cooperative stop uses the opposite direction of the same contract: the orchestrator records the stop request, while the worker terminates the execution mechanism it owns and reports the final state.
+
+The common contract hides execution mechanics, not their resource consequences. Container startup, SIF preparation, scheduler wait, input transfer, remote authentication, result download, and edge image compatibility are recorded and evaluated by target class. A run executed on Deucalion or Union must remain scientifically traceable to the same resolved experiment contract while retaining its distinct infrastructure evidence.
+
+\subsection{Execution Target Profiles}
+
+\Cref{tab:lifecycle-targets} summarises the target adapters exercised by the implementation. The table emphasises why one generic remote-worker description would be misleading.
+
+\begin{table}[H]
+\centering
+\caption{Heterogeneous EnergAIze worker targets and target-specific execution requirements.}
+\label{tab:lifecycle-targets}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.16\textwidth}p{0.25\textwidth}p{0.30\textwidth}X@{}}
+\toprule
+\textbf{Target} & \textbf{Execution mechanism} & \textbf{Distinct requirements} & \textbf{Lifecycle role} \\
+\midrule
+Institutional server & Docker worker with shared storage & Persistent service, Docker image, NFS-visible job data, CPU/GPU capability advertisement & Baseline always-available orchestration and container execution \\
+Personal computer & Docker worker started on demand & VPN and NFS preparation, optional local GPU, controlled shutdown without abandoning an active job & Adds opportunistic compute while preserving the central job record \\
+Deucalion & SSH, Slurm, and Singularity/Apptainer adapter & Explicit target selection, partition and wall-time validation, OCI-hosted SIF cache, remote dataset staging, scheduler and SSH monitoring & HPC execution under a batch scheduler and project storage model \\
+Union INESC TEC & Union task with runner and Algorithms sidecar & Remote GPU allocation, object-store transfer, device-flow or API-key authentication, durable remote-run and result-recovery state & Concurrent remote GPU training and recoverable artefact return \\
+Jetson Xavier & Docker worker with NVIDIA L4T image & ARM64 and JetPack-compatible image, NVIDIA runtime, limited local storage, VPN/NFS availability & Edge-class execution and target-specific resource compatibility \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Local Docker workers execute the payload directly against the mounted shared directory. The personal-computer helper coordinates VPN access, NFS mounting, worker startup, graceful completion, and unmounting. This enables the workstation to contribute a GPU without making its intermittent availability invisible to the orchestrator.
+
+The Deucalion adapter translates the same job into a remote workspace, Slurm request, and Singularity/Apptainer invocation. Versioned SIF images are obtained from an OCI repository and cached by tag. Configuration and selected datasets are staged under a job-specific path, logs are synchronised during execution, and final results return to the shared EnergAIze directory. Partition wall-time constraints are validated before submission, preventing an avoidable scheduler rejection.
+
+The Union adapter packages the resolved input and launches a remote task whose runner coordinates an Algorithms sidecar. Temporary object storage carries inputs and results without requiring every Union container to mount the EnergAIze NFS. A successful remote computation enters recovering until its archive is downloaded, checked, installed, and acknowledged. Persisted worker state makes these steps idempotent across bridge restarts and avoids repeating expensive training when only result transfer failed.
+
+The Jetson path exposes a different form of heterogeneity. The job image must match ARM64, the installed JetPack/L4T software, CUDA, and the NVIDIA container runtime. This target shows that deployment and experimental scalability depend on image and hardware compatibility in addition to CPU count.
+
+\section{Experiment Evidence and Operator Supervision}
+
+The EnergAIze UI is the operator-facing surface of the lifecycle. It exposes experiment configurations and datasets, queued and completed jobs, worker health and capacity, execution progress, logs, results, and KPI comparisons. It also links jobs to their MLflow records where tracking is enabled. These views provide one place to inspect the experiment without transferring scheduling or execution authority into the browser.
+
+Job ownership, personal folders, and archive operations separate scientific organisation from physical storage. Moving a job in the UI changes its organisational metadata and leaves the evidence directory in place. Active jobs cannot be deleted; they must first reach a terminal state through completion, cancellation, or cooperative stop. This protects the relationship between an in-flight worker and the job record it is updating.
+
+The UI also reflects target-specific states that a generic job list would hide. Deucalion partition limits inform the submission controls. Union authentication requests expose only the browser verification URL and code, while credentials remain in the worker's persistent authentication store. A result-recovery action can resume an interrupted Union artefact transfer when remote computation has already succeeded; it cannot silently resubmit the training run.
+
+Logs, progress files, result payloads, checkpoints, simulator exports, system metrics, and MLflow are complementary forms of evidence. The UI makes them accessible, but visual availability is not validation. A final scientific result still requires a frozen configuration, comparable baseline, seed protocol, complete output, and an archived analysis that states its evidence level.
+
+\section{Policy Packaging and Distributed Inference}
 \label{sec:lifecycle-governance}
 \label{sec:policy-registry}
 
-Candidate policies are registered with their experiment lineage. Validation combines controller KPIs, seed statistics, constraint and robustness evidence, runtime-resource measurements, and schema compatibility.
+\subsection{Validated Bundle Contract}
 
-A reusable MARL promotion gate can be expressed as a set of target-scoped predicates:
+Algorithms writes a self-contained inference bundle after training or baseline evaluation. Neural controllers export one or more ONNX policy artefacts; deterministic controllers export rule-based JSON policies. The accompanying \texttt{artifact\_manifest.json} records the manifest version, experiment and run identity, topology, per-agent observation and action dimensions, ordered observation names, encoders, action names, action bounds, reward metadata, algorithm format, and relative artefact paths. An optional alias map reconciles production feature names with the canonical training interface.
 
-\begin{equation}
-G_{\mathrm{target}}(P)=G_J(P)\land G_S(P)\land G_R(P)\land G_C(P)\land G_H(P),
-\end{equation}
+The experiment runner includes the export path. Before finalising the job output, the training side validates the manifest structure, supported artefact format, relative paths, presence of all files, per-agent indices, dimensions, and ONNX compatibility. This establishes a concrete hand-off between the Algorithms and inference repositories without a separate manual conversion.
 
-where $G_J$ represents control performance, $G_S$ safety, $G_R$ robustness, $G_C$ compatibility and policy-set completeness, and $G_H$ hardware/resource suitability.
+The bundle preserves more than model portability. Observation ordering and categorical or periodic encoders are reconstructed by the serving process. Per-agent action names and bounds keep heterogeneous controller outputs associated with their physical meanings. Where electrical topology metadata is available, charger and site-limit configuration can accompany the artefact. Full physical safety nevertheless remains outside the neural graph unless the controller explicitly embeds it; action bounds in a manifest do not replace the Fail-Safe Supervisor or device protection.
 
-The gate does not require one universal threshold. A shadow deployment can use a different threshold from closed-loop actuation. Every approved state records the target and evidence.
+\subsection{energAIze Inference Runtime}
 
-Policy-set validation detects missing members, incompatible observation or action schemas, invalid role mappings, communication-version mismatch, and safety-layer mismatch. A policy that is individually valid can still be rejected as part of an unevaluated combination.
+The energAIze inference service exposes a stable HTTP interface for model-backed and rule-based decisions. Loading a bundle first parses its manifest, resolves optional aliases, discovers the available agent artefacts, rebuilds each preprocessing pipeline, and creates the corresponding ONNX Runtime or deterministic policy executor. A default agent can be selected while the complete set of loaded agent indices remains visible through the service state.
 
-\paragraph{Packaging and coordinated distributed edge deployment.}
+Each inference request is flattened into canonical feature keys, remapped through declared aliases, transformed by the training-compatible encoders, and passed to the selected policy. Outputs are mapped back to named actions, clamped to the declared bounds, and rounded according to the runtime contract. Request identifiers and structured logs preserve the execution trace. The health endpoint reports whether a bundle is configured, the active manifest, loaded agents, execution providers, alias file, and GPU availability.
+
+This runtime boundary allows a controller to change without rewriting the API or Percepta integration. It also allows a rule-based controller and an ONNX policy to use the same deployment path, which is useful for baselines, staged authority, and operator-controlled fallback. The current general serving path supports ONNX and rule-based bundles. A TI-MARL controller whose dynamic typed-interface compiler remains part of execution requires that compiler and its state to be packaged and served with the policy; a research PyTorch bundle is not automatically equivalent to the standard inference contract.
+
+\subsection{Inference Targets and Bundle Management}
 \label{sec:edge-deploy}
 
-A package contains or references weights, code, dependencies, manifests, preprocessing, adapters, schemas, safety logic, configuration, and checksums. ONNX or another portable model format can reduce runtime dependence, while rule-based controllers can be packaged through the same interface.
+The deployment backend maintains a content-identified bundle catalogue in shared storage. Uploading a bundle directory preserves its internal files, derives a bundle identity, and records its manifest and artefact location. Operators can inspect the bundle contents through the UI before selecting it. The configured deployment contains distinct inference services for HQ, S\~ao Mamede, and RH01, each exposing its own health and active-manifest state.
 
-Deployment associates the package with target profiles describing architecture, CPU/GPU, memory, operating system, container support, connectivity, sensors, actuators, and permitted control roles. Pre-activation checks verify package integrity and interface availability.
+Selecting a bundle for a target causes the backend to resolve the path visible inside that inference container and call its administrative load endpoint. The inference service constructs the new pipelines and returns the load result; the backend then probes health and reports the active manifest to the UI. A bundle reported as active by a reachable target cannot be deleted from the catalogue. Previous bundles can remain available and be selected again if an operator decides to reverse a change.
 
-A coordinated policy-set rollout can be atomic where infrastructure permits, staged through a canary target, or explicitly mixed-version compatible. The architecture does not assume atomic fleet updates over intermittent networks. It records stale targets and blocks activation when required partners are not ready.
+\Cref{fig:lifecycle-deployment-sequence} shows this implemented sequence. The procedure is per target. It supports explicit version selection and reversal, but it is not yet an atomic policy-set rollout across several disconnected targets.
 
-Edge inference remains available during temporary central disconnection according to local policy and cache rules. The runtime retains the last approved version and a fallback. Updates are downloaded and verified before replacing the active controller. A failed activation restores the previous version.
+\begin{figure}[!t]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\small,
+  lifecyclebox/.style={draw,rounded corners=2mm,align=center,minimum height=14mm,text width=28mm,inner sep=2.5mm,fill=white},
+  source/.style={lifecyclebox,draw=blue!60!black,fill=blue!6},
+  catalogue/.style={lifecyclebox,draw=engineering,very thick,fill=engineering!8},
+  runtime/.style={lifecyclebox,draw=red!60!black,fill=red!5},
+  observe/.style={lifecyclebox,draw=green!45!black,fill=green!7},
+  flow/.style={-{Latex[length=2.2mm]},thick,draw=engineering!85!black},
+  returnflow/.style={-{Latex[length=2mm]},thick,dashed,draw=black!60},
+  tinylabel/.style={font=\sffamily\tiny,fill=white,inner sep=1pt,align=center}
+]
+\node[source] (export) at (-6.3,1.2) {\textbf{Algorithms export}\\manifest, policy files, aliases};
+\node[catalogue] (catalogue) at (-2.1,1.2) {\textbf{Bundle catalogue}\\identify, store, inspect};
+\node[catalogue] (selection) at (2.1,1.2) {\textbf{Target selection}\\resolve container path};
+\node[runtime] (load) at (6.3,1.2) {\textbf{Inference load}\\validate and rebuild pipelines};
+\node[observe,text width=40mm] (health) at (0,-1.6) {\textbf{Observed activation}\\health, active manifest, loaded agents, and logs};
 
-\Cref{fig:lifecycle-deployment-sequence} shows the coordinated rollout semantics required when several interdependent policies and edge targets must become ready together.
+\draw[flow] (export) -- (catalogue);
+\draw[flow] (catalogue) -- (selection);
+\draw[flow] (selection) -- node[tinylabel,below] {\texttt{/admin/load}} (load);
+\draw[returnflow] (load.south) |- (health.east);
+\draw[returnflow] (health.west) -| node[tinylabel,pos=0.82,left] {UI and operator decision} (catalogue.south);
+\end{tikzpicture}%
+}
+\caption{Implemented bundle management and inference activation sequence. Bundle selection is explicit and observable for each configured target; coordinated fleet-wide activation remains a separate lifecycle requirement.}
+\label{fig:lifecycle-deployment-sequence}
+\end{figure}
 
-\plannedfigure[0.17\textheight]{fig:lifecycle-deployment-sequence}{Coordinated policy-set packaging, staged edge deployment, activation, and rollback sequence.}{\textbf{Type:} sequence/swimlane diagram for orchestrator, registry, package store, edge devices/agents, runtime adapters, safety layer, and monitoring service. Include compatibility validation, download, local verification, readiness barrier, activation, mixed-version prevention/handling, failure, and rollback. \textbf{Purpose:} distinguish multi-model delivery from coordinated multi-agent deployment. \textbf{Source needed:} actual protocol and logs from at least one successful and one interrupted deployment test.}
-
-\section{Coordination-Aware Monitoring, Updating, Rollback, and Recovery}
+\section{Monitoring, Failure Handling, and Recovery}
 \label{sec:lifecycle-monitoring}
 
-Infrastructure health answers whether processes, devices, resources, and communication are available. Data monitoring answers whether observations are complete, current, and plausible. Control monitoring answers whether the system meets performance objectives. Safety monitoring answers whether constraints or guards are being approached or activated. Coordination monitoring answers whether the active policy set behaves coherently.
+Lifecycle monitoring separates several questions. Infrastructure monitoring determines whether workers, schedulers, containers, storage, and inference services are reachable. Experiment monitoring determines whether a job is advancing and producing expected outputs. Data monitoring determines whether observations are complete, current, and plausible. Control monitoring evaluates cost, service, peak, ramping, energy exchange, equality, safety interventions, and other domain KPIs. Coordination monitoring determines whether the active policy set remains compatible and behaves coherently.
 
-Examples of coordination failure include incompatible versions, oscillating charge requests, repeated competition for the same site headroom, unfair allocation, stale community messages, and loss of aggregate performance despite healthy individual processes.
+The implemented orchestration path provides heartbeats, worker versions, active-job counts, capability and resource information, explicit status transitions, live logs, progress, terminal results, and stale-worker policies. Dispatched jobs can be requeued when an attempt never starts. Running jobs without durable remote state fail explicitly and are never assumed complete. Attempt fencing prevents the original execution from later overwriting the result of a replacement attempt.
 
-Monitoring events can trigger:
+Remote execution introduces additional recovery semantics. A temporary Deucalion SSH interruption is tolerated for a configured interval before failure. Union persists remote run identity, upload, submission, result installation, cleanup, and terminal acknowledgement as separate steps. A bridge restart resumes the unfinished step. Successful remote compute is not rerun solely because result download, authentication, signed URLs, or local storage temporarily failed.
 
-\begin{itemize}
-  \item a warning without control change;
-  \item local data substitution or action masking;
-  \item activation of guarded or fallback mode;
-  \item policy or policy-set rollback;
-  \item target isolation;
-  \item a new validation run; or
-  \item a retraining request linked to the observed operating period.
-\end{itemize}
+Inference monitoring exposes service readiness, active bundle identity, loaded agents, execution providers, GPU availability, and structured request logs. The deployment UI provides live and historical log inspection and can select an earlier bundle. This is an operator-controlled rollback mechanism. Automatic KPI-triggered rollback, atomic multi-target activation, compatibility barriers across independent inference services, and complete coordination-aware recovery remain to be demonstrated before they can be described as implemented guarantees.
 
-Rollback is evaluated as an operational sequence, not only a Kubernetes feature. The test verifies that the previous policy set, adapters, schemas, and safety dependencies are restored and that control performance recovers.
+The Fail-Safe Supervisor and external device protections remain the authority for physical action safety. Runtime output clamping, an available rule-based bundle, or a healthy inference process are useful mechanisms, but none alone proves that the complete physical control path is safe or robust. Operational evidence must report policy proposals, supervisor interventions, provider acceptance, executed actions, and recovery behaviour separately.
 
-\Cref{fig:lifecycle-monitor-recovery} connects infrastructure, data, control, safety, and coordination monitoring to the corresponding operational response.
-
-\plannedfigure[0.17\textheight]{fig:lifecycle-monitor-recovery}{Coordination-aware monitoring and recovery loop.}{\textbf{Type:} closed-loop diagram. Separate infrastructure health, observation/data quality, control performance, safety/constraint events, and coordination failures. Show possible responses: continue, contract interface, fallback, quarantine policy, rollback, retrain, or request operator action. \textbf{Purpose:} show why CPU/device dashboards are insufficient evidence of a healthy policy set. \textbf{Source needed:} final telemetry/event schema and actual trigger/action mappings.}
-
-\section{Empirical Systems Evaluation}
+\section{Systems Evaluation, Availability, and Contribution to RQ4}
 \label{sec:lifecycle-evaluation}
 \label{sec:lifecycle-eval}
+\label{sec:lifecycle-discussion}
 
-\paragraph{Experiment Reconstruction.}
-Historical experiments are reconstructed from their identifiers in a clean environment. The evaluation checks source, dependencies, scenario, reward, schemas, seeds, and resulting metrics. Reproduction tolerance is stated for deterministic and stochastic components.
+\paragraph{Experiment reconstruction.}
+A completed job is reconstructed from its job identity in a clean environment. The audit compares source and image, resolved configuration, simulator and dataset, scenario, interfaces, reward, seed, runtime target, and resulting metrics. Reproduction tolerances distinguish deterministic environment outputs from stochastic learning outcomes.
 
-\paragraph{Compatibility and Policy-Set Completeness.}
-Negative tests deliberately submit missing members, incompatible schemas, invalid roles, and mismatched safety dependencies. The expected result is rejection before activation. The false-acceptance and false-rejection rates of compatibility rules are reported where automatic inference is used.
+\paragraph{Cross-target execution.}
+Representative jobs are executed through server Docker, the personal-computer worker, Deucalion, Union, and Jetson where algorithm and resource requirements permit. The comparison reports queue and scheduler wait, setup time, orchestration overhead, execution time, resource use, artefact-transfer time, and output completeness. Scientific KPI differences are interpreted only after configuration, precision, image, and seed differences have been excluded.
 
-\paragraph{Orchestration Throughput and Worker Scaling.}
-The benchmark varies job count, worker count, job duration, artefact size, and failure rate. It reports queue time, throughput, overhead, resource use, retry success, and scaling efficiency. Separate experiments use local containers and remote/HPC execution where supported.
+\paragraph{Failure and recovery.}
+Tests cover worker disappearance before and after dispatch, stale attempts, cooperative stop, Deucalion connection loss, Union bridge restart, interrupted result transfer, expired signed URLs, insufficient local recovery space, and inference-target unavailability. The expected outcome records whether work is requeued, failed, stopped, retained for recovery, or completed without duplicate compute.
 
-\paragraph{Packaging, Deployment, and Runtime Resources.}
-Measurements include package size, build time, transfer time, install time, activation time, inference latency, memory, CPU, and network use. Results are reported by target class rather than averaged across dissimilar devices.
+\paragraph{Bundle and inference parity.}
+The exported bundle is loaded in a clean inference service and evaluated against saved observations from the training-side controller. The comparison checks feature ordering, encoders, per-agent selection, named actions, numerical tolerance, bounds, and rule-based behaviour. Target measurements include load time, inference latency, memory, CPU/GPU provider, request rate, and log overhead.
 
-\paragraph{Staged Rollout and Mixed Versions.}
-A policy-set update is deployed to a subset of targets. The experiment measures convergence to the desired fleet state, duration of mixed-version operation, compatibility behaviour, KPI change, and rollback latency. A network interruption during rollout tests disconnected-edge semantics.
-
-\paragraph{Join, Leave, and Failure.}
-A controller joins with a known or unknown schema, an active agent leaves, communication is lost, and a device restarts. The system must identify the role and capabilities, select or reject a compatible policy, restore state, activate a fallback where required, and monitor the effect on the remaining policy set.
-
-\paragraph{Soak Testing.}
-Long-duration operation records decisions, outages, restarts, manual interventions, safety interventions, promotions, rollbacks, active agents, resource use, and data-quality incidents. A stable 24-hour or multi-day run provides stronger operational evidence than a brief inference demonstration.
+\paragraph{Deployment control.}
+Catalogue upload, duplicate handling, file inspection, target selection, health verification, active-bundle deletion protection, and re-selection of a previous bundle are exercised for each configured inference target. A separate experiment is required before claiming coordinated policy-set rollout or automatic rollback across targets.
 
 \begin{draftonly}
 \begin{table}[p]
 \centering
-\caption{Lifecycle evaluation ledger.}
+\caption{Lifecycle evaluation ledger for the final evidence freeze.}
 \label{tab:lifecycle-ledger}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccc}
+\begin{tabular}{lccccc}
 \toprule
-\textbf{Experiment} & \textbf{Success criterion} & \textbf{Latency} & \textbf{Resource/traffic} & \textbf{Control impact} & \textbf{Recovery} & \textbf{Evidence level} \\
+\textbf{Evidence block} & \textbf{Targets/cases} & \textbf{Primary metrics} & \textbf{Failure outcome} & \textbf{Control check} & \textbf{Status} \\
 \midrule
-Reconstruct run & Manifest-complete reproduction & \evidencepending & \evidencepending & n/a & n/a & clean-room replay \\
-Reject incompatible policy & no activation & \evidencepending & \evidencepending & none & n/a & system test \\
-Scale workers & target throughput & \evidencepending & \evidencepending & n/a & retry \evidencepending & systems benchmark \\
-Package/deploy edge & valid active package & \evidencepending & \evidencepending & KPI \evidencepending & rollback \evidencepending & target test \\
-Interrupted rollout & bounded mixed-version state & \evidencepending & \evidencepending & degradation \evidencepending & \evidencepending & fault injection \\
-Agent join/leave & compatible admission or safe rejection & \evidencepending & \evidencepending & stabilisation \evidencepending & \evidencepending & integration test \\
-Soak test & continuous safe service & duration \evidencepending & \evidencepending & KPI/event log & \evidencepending & operational/testbed \\
+Experiment reconstruction & clean local runtime & identity, completeness, KPI tolerance & explicit mismatch & repeated baseline & \evidencepending \\
+Heterogeneous workers & server, PC, Deucalion, Union, Jetson & wait, setup, runtime, resources, transfer & target-specific terminal state & configuration parity & \evidencepending \\
+Worker recovery & stale, stop, restart, transfer failure & recovery time, duplicate count, artefact integrity & requeue/fail/recover & no false result & \evidencepending \\
+Bundle parity & ONNX and rule-based & load, output tolerance, bounds & load rejection & saved-observation parity & \evidencepending \\
+Inference resources & HQ, S\~ao Mamede, RH01 & latency, memory, CPU/GPU, requests & service health/log event & action trace & \evidencepending \\
+Bundle reversal & previous compatible bundle & switch and recovery latency & explicit operator result & post-switch KPI & \evidencepending \\
 \bottomrule
 \end{tabular}}
 \end{table}
 \end{draftonly}
 
-\section{Availability, Limitations, and Contribution to RQ4}
-\label{sec:lifecycle-discussion}
-\paragraph{Implementation and open-source availability.}
+\paragraph{Implementation and availability.}
 \label{sec:lifecycle-open}
+The lifecycle implementation is distributed across the Simulator, Algorithms, Job Orchestrator, Worker Agent, backend API, energAIze inference, EnergAIze UI, and infrastructure repositories. Each repository has a distinct responsibility and test suite. The final reproducibility record must identify release, commit, image, licence, contribution ownership, and archived experiment evidence. Repository size and commit counts can contextualise engineering effort but are not scientific results.
 
-The implementation is distributed across repositories with distinct responsibilities. An architecture manifest records each repository, release, role, licence, contribution ownership, and archived DOI or commit. Internal project services that cannot be released are documented through their interfaces and reproducible test artefacts.
+\paragraph{Contribution to RQ4 and current boundary.}
+The implemented system establishes an end-to-end contract connecting reproducible experiments, heterogeneous execution, evidence return, policy export, bundle cataloguing, target-specific inference, health observation, explicit version switching, and several failure-recovery mechanisms. It demonstrates that heterogeneous compute does not require a separate scientific experiment format for each target and that training and inference can share observation, encoding, action, and topology metadata.
 
-Software size and commit counts can contextualise the engineering effort but are not scientific results. The contribution is supported by lifecycle abstractions, failure semantics, compatibility rules, and empirical evaluation.
-
-\paragraph{Discussion, limitations, and RQ4 contribution.}
-
-The chapter is the primary response to RQ4. It moves the unit of deployment from an isolated checkpoint to a governed policy set linked to the world in which it was trained and the interfaces through which it acts.
-
-The architecture inherits mature mechanisms rather than recreating them. Distributed training, generic registries, containers, and edge module management already exist. The residual contribution is the MARL-specific semantic layer and its evaluation in a changing CPS.
-
-The demonstrated lifecycle includes manual steps, incomplete atomicity across disconnected targets, target-specific adapters, and limited long-duration operational evidence where those conditions apply. The state model and evaluation expose these boundaries instead of presenting them as automated guarantees.
-
-\begin{draftonly}
-The numbered lifecycle findings are instantiated from the verified systems evaluation:
-
-\begin{itemize}
-  \item \textbf{F7.1:} Reproducibility requires one contract linking policy, environment, scenario, reward, interfaces, code, dependencies, and runtime.
-  \item \textbf{F7.2:} Compatibility and completeness checks prevent software-valid policy combinations that have not been evaluated as a coordinated controller.
-  \item \textbf{F7.3:} Staged edge rollout and rollback can be evaluated through both fleet-state and control-performance metrics.
-  \item \textbf{F7.4:} Coordination-aware monitoring detects failure modes that infrastructure health alone cannot reveal.
-\end{itemize}
-\end{draftonly}
+The broader policy-set lifecycle remains only partially automated. Bundle validation is structural and target loading is explicit; final controller promotion still requires scientific judgement. Coordinated readiness barriers, automatic compatibility decisions across independently deployed policy sets, KPI-triggered rollback, and dynamic TI-MARL serving require additional implementation and evidence. The current answer to RQ4 combines the concrete lifecycle achieved here with the MARL-specific semantics that future automation must preserve.
 
 \section{Chapter Summary}
-The EnergAIze lifecycle turns experiments into governed distributed control. It defines experiment, policy, policy-set, package, deployment, and operational records; separates experiment, governance, deployment, and assurance planes; and links orchestration, validation, packaging, monitoring, rollback, and recovery through explicit state transitions and evidence.
 
-Coordinated MARL policy sets require additional lineage, compatibility, update, and monitoring semantics when agents and edge targets are heterogeneous and dynamically reconfigurable. This requirement extends established MLOps and RLOps mechanisms with policy-set and control-interface semantics. The next chapter examines what happened when selected pieces of this architecture interacted with real data, partner platforms, physical controllers, and operational REC and charging contexts.
+The EnergAIze lifecycle connects controller development to distributed execution through explicit, inspectable contracts. The Job Orchestrator preserves job identity and state; the Worker Agent adapts a common payload to server, personal-computer, Deucalion, Union, and Jetson execution; shared storage and MLflow retain evidence; Algorithms exports self-contained policy bundles; the deployment backend catalogues and selects those bundles; energAIze inference reconstructs and executes the policy pipeline; and the UI exposes the resulting jobs, workers, artefacts, targets, health, and recovery actions to the operator.
+
+This infrastructure makes deployability testable through the execution path, evidence, and target behaviour associated with a checkpoint. It also exposes its present limits: physical safety remains supervised outside the model, worker recovery is more mature than automatic policy-set recovery, and per-target bundle switching is not atomic distributed rollout. The next chapter examines how the architecture, controllers, lifecycle services, external platforms, and physical assets were combined at the evidence levels achieved in OPEVA and DemFlex.

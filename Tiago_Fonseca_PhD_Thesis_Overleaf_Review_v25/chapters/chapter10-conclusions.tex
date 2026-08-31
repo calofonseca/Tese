@@ -2,115 +2,119 @@
 \label{chap:conclusions}
 \markboth{Conclusions and Future Research}{Conclusions and Future Research}
 
-This thesis investigated how multi-agent reinforcement learning can move from controlled experiments towards the operation of distributed, heterogeneous, and dynamically reconfigurable cyber-physical systems. Renewable Energy Communities and EV charging provided the principal empirical setting because they combine local and community objectives, heterogeneous physical assets, temporal flexibility, changing availability, incomplete data, operational constraints, and edge deployment.
+This thesis investigated how multi-agent reinforcement learning can move from controlled experiments towards use in distributed, heterogeneous, and dynamically reconfigurable cyber-physical systems. Renewable Energy Communities and electric-vehicle charging provided a demanding empirical setting: local assets interact through shared infrastructure; participants expose different information and flexibility; chargers, vehicles, and sessions change independently; physical and service limits cannot be ignored; and the controller must eventually run through real software, devices, and organisations.
 
-The research followed a cumulative path in which each stage solved a concrete problem and exposed the assumptions that remained. TI-MARL provides the principal algorithmic contribution, while EnergAIze provides the architecture, simulation, lifecycle, and operational context needed to develop and evaluate it.
+The research did not produce one isolated algorithm followed by an application. It produced a connected path. EnergAIze defined the architecture and responsibilities. The simulator made the relevant conditions reproducible. A progression of controllers established which problems could be solved with transparent rules, explicit optimisation, single-agent learning, conventional MARL, data-efficient learning, and hierarchy. TI-MARL addressed the remaining fixed-interface assumption. Experiment orchestration and distributed inference carried controller artefacts across heterogeneous computing environments. OPEVA and DemFlex then provided distinct real-world contexts for testing the resulting claims.
 
-\draftnote{This conclusion is a full narrative draft. Replace provisional statements with final numbered findings and verified evidence once Chapters 4--8 are frozen. The submitted conclusion should remain concise and should not introduce results that were not already analysed in Chapter 9.}
+\draftnote{The prose is intentionally written in final form. Before submission, replace only the remaining quantitative result slots, update the claim--evidence links, and reconcile the DemFlex and lifecycle evidence. No number or stronger claim should be introduced here unless it already appears with its method and boundary in Chapters~4--9.}
 
-\section{Thesis Recap}
+\section{What the Research Established}
 \label{sec:conclusion-recap}
-The state-of-the-art review first established that the research gap is not the absence of scalable MARL, safe RL, dynamic teams, physical testbeds, or deployment tooling. Strong counterexamples exist for each. The residual problem is their composition: real systems require heterogeneous and changing agents, multi-dimensional scale, physical and user constraints, robustness to imperfect information and faults, and a governed lifecycle at the same time.
-
-EnergAIze made this complete path explicit. It connected data collection and validation, scenario construction, simulation, controller development, experiment orchestration, policy-set governance, edge deployment, monitoring, fail-safe operation, and recovery. The architecture did not replace the contributions of the later chapters; it showed where their responsibilities and evidence belonged.
-
-The CityLearn-derived simulator provided the experimental foundation. It introduced or consolidated explicit time and unit contracts, high-frequency data support, heterogeneous flexibility assets, EV and charger behaviour, electrical-service and community mechanisms, dynamic topology and operational events, structured observation and action interfaces, multiple communities, diagnostics, automated tests, physical audits, and performance benchmarks. This made the real-world requirements observable and reproducible before policies were placed near physical assets.
-
-The algorithmic progression then established what different controller families could achieve. Passive operation provided a denominator. Five RBC levels solved feasibility, transparency, progressively richer context, and fallback behaviour. MILP made objectives and constraints explicit and provided operational or oracle references. PPO, SAC, and TD3 established model-free adaptation at asset or community level. MADDPG introduced decentralised continuous multi-agent control, and MATD3 addressed part of the observed stability and overestimation problem. Guided exploration, behaviour cloning, prioritised replay, offline learning, distillation, and hierarchical coordination solved further problems of data use, reuse, training, and local--community decomposition.
-
-The significance of this progression is not only the final ranking. It provides an empirical account of what was solved, under which conditions, and what remained. More stable learning did not automatically support changing action semantics. Better data efficiency did not automatically provide physical feasibility. Hierarchy did not automatically admit a new type of local controller. These non-composable assumptions led to TI-MARL.
-
-TI-MARL is the principal algorithmic contribution. It represents each active agent through a versioned capability schema, entity-bound runtime interface, and explicit health state. The compiler creates local typed observations and dynamic action-group instances for the modules and controlled entities that currently exist. Each local policy uses one shared local representation and type-conditioned decoders to produce a coherent action bundle across those groups. Local hard constraints are incorporated into bundle construction, while community coordination is learned through aggregate observations, coupled outcomes, and centralised set or graph critics during training. Runtime assurance handles exceptional incompatibility, critical failure, and fallback. The learning optimiser remains replaceable, allowing TI-MAPPO, TI-MATD3, and future backbones to share the same interface semantics.
-
-The lifecycle contribution then addressed the path after training. Experiments, environments, scenarios, rewards, schemas, policies, policy sets, packages, targets, and operational records were treated as related governed entities. Compatibility, validation, promotion, staged deployment, monitoring, rollback, and recovery were made explicit. The real-world chapter finally examined which assumptions survived integration with operational data, external APIs, edge devices, charging infrastructure, and REC demonstrators.
-
-\section{Main Findings}
 \label{sec:conclusion-findings}
-The combined evidence supports the following high-level conclusions.
 
-\paragraph{Real-world MARL readiness is an integration problem.}
-Individual mechanisms already exist, but their evidence does not automatically compose when the system contract changes. Interface, safety, runtime, and lifecycle assumptions must be visible and tested together.
+The state-of-the-art review showed that scalable MARL, dynamic teams, safe learning, physical testbeds, deployment tooling, and long-running intelligent systems already contain strong individual solutions. The residual problem was their composition. The assumptions that make one mechanism effective often remain implicit and can fail when the system interface, physical constraints, population, information quality, or runtime changes.
 
-\paragraph{Progressive methods solve real subproblems and remain part of the contribution.}
-RBC, optimisation, single-agent RL, MADDPG, MATD3, data-efficient learning, and hierarchy are not discarded preliminaries. They provide strong controllers, reusable mechanisms, baselines, teachers, fallbacks, and empirical knowledge. Their conditions and limitations motivate the integrated method.
+The first conclusion is that the experimental world is part of the method. The simulator is not a neutral source of reward. Its identities, timebase, units, assets, events, constraints, observations, actions, settlement, and data-quality rules determine what a controller can learn and what a result means. The annual dataset suite and the CityLearn v3 extensions make heterogeneous members, multiple chargers, EV sessions, deferrable services, phase limits, health problems, and topology changes available under repeatable conditions. This foundation permits the later algorithmic claims to be tested instead of assumed.
 
-\paragraph{Controller complexity must be justified.}
-MARL is not the default winner. A strong RBC, MILP, MPC, or single-agent method can be preferable when the system is stable, well modelled, small enough, or safety-critical. MARL adds value when local autonomy, distributed information, mixed objectives, adaptation, or repeated coordination justify its learning and lifecycle cost.
+The second conclusion is that controller complexity must be justified by the control problem. Rule-based control remains valuable for transparency, feasibility, development, and fallback. Optimisation remains valuable when the model and horizon are available and an explicit bound or operational schedule is needed. Single-agent methods isolate adaptation from coordination. Conventional MARL becomes useful when distributed information and repeated interaction matter. MATD3, guided exploration, behaviour cloning, replay strategies, offline learning, distillation, and hierarchy address specific problems of stability, data use, runtime cost, and local--community decomposition. Their value does not disappear when TI-MARL is introduced.
 
-\paragraph{Scalability is conditional and multi-dimensional.}
-Population size, heterogeneity, reconfiguration, representation, communication, training, simulator throughput, orchestration, and edge resources must be measured separately. A successful result defines an envelope and a bottleneck rather than a universal label.
+The third conclusion concerns the object presented to the policy. Fixed observation and action arrays are appropriate while all relevant entities and meanings are known in advance. They become fragile when one building gains a second charger, an EV session moves, a device loses a capability, or a measurement failure changes which action remains defensible. TI-MARL represents the active local interface as a versioned, entity-bound object. A deterministic compiler derives typed observations, dynamic groups, health-dependent validity, bounds, dependencies, and local constraints. A shared actor produces one coherent hybrid bundle for the groups that currently exist. TI-PPO and TI-MAPPO use the same actor and execution path, differing in whether value estimation is local or conditioned on the active population.
 
-\paragraph{Interfaces and physical constraints are part of the decision problem.}
-When capabilities, observations, valid actions, or bounds change, the policy must know more than the current physical state. TI-MARL treats the current entity-bound interface as a policy-facing object and separates deterministic interface compilation, learned local bundle construction, training-time joint value estimation, and exceptional runtime assurance.
+The fourth conclusion is that learned actions and feasible actions must remain distinguishable. The actor produces a raw bundle; the analytic projector applies local service and electrical requirements; the device or simulator returns the applied outcome. Keeping these stages in the trace reveals whether good physical behaviour came from the policy, the feasibility layer, external protection, or a combination. The current guarantee is local and model-dependent. Shared limits remain an empirical multi-agent outcome because the evaluated TI-MARL version contains no cross-member hard corrector.
 
-\paragraph{Safety and robustness require layers and explicit evidence.}
-Reward penalties alone are insufficient. Physical constraints, action construction, validation, interface health, fail-safe modes, fallback, stress tests, and runtime monitoring provide different forms of evidence and must not be conflated.
+The fifth conclusion is that scale has several independent costs. Parameter sharing can keep model size stable while token processing, critic work, communication, simulation, or sample demand grows. Distributed workers can shorten a campaign without making the algorithm itself more scalable. A policy can train on a GPU and still fail an edge latency or compatibility requirement. Population, heterogeneity, topology events, memory, throughput, communication, training time, inference time, and control quality must be reported together.
 
-\paragraph{Deployment is a governed lifecycle rather than a model-copy operation.}
-Reproducibility, policy-set compatibility, packaging, target profiles, staged updates, monitoring, rollback, and recovery are part of operational control. Process health alone cannot show that a coordinated policy set remains valid.
+The sixth conclusion is that deployment starts before a model file is copied and continues after it is loaded. The experiment, source, image, simulator, dataset, interface, reward, seed, checkpoint, package, target, active version, and observed actions form one evidence chain. The implemented lifecycle reconstructs jobs across heterogeneous workers, validates general inference bundles, loads selected versions into target-specific services, exposes health and logs, and permits operator-controlled reversal. Automatic coordinated rollout, KPI-triggered rollback, and production TI-MARL serving remain separate engineering and research steps.
 
-\section{Principal Scientific and System Contributions}
+Finally, the real-world work shows why these distinctions matter. OPEVA connects real participants, corporate charging, local controllers, external platforms, vehicle and flexibility information, historical data, simulation, and bounded actuation. Its reported studies show improvements in cost, peak, grid demand, ramping, and renewable use within their declared settings. They also expose missing SoC, asynchronous data, platform boundaries, site limits, partial scenario implementation, and heterogeneous participant outcomes. DemFlex supplies a second demonstrator whose claims must be derived from its own site, controller, data, authority, and duration.
+
+\begin{draftonly}
+\paragraph{Final quantitative insertion.}
+The submitted version should add one compact paragraph containing only the headline findings already established in Chapters~5--8: [selected Chapter~5 controller and confidence interval]; [TI-PPO/TI-MAPPO gate and reconfiguration result]; [largest validated scale and latency]; [lifecycle reconstruction/parity/recovery result]; and [DemFlex result and evidence level]. The OPEVA values may be retained only with their current real-data simulation and bounded-field qualifications.
+\end{draftonly}
+
+\section{Answers to the Research Questions}
+\label{sec:conclusion-rqs}
+
+\paragraph{RQ1: dynamic and heterogeneous multi-agent control.}
+Changing participants and assets are handled by separating stable agent identity from module, entity, and session identity and by compiling the active control interface at runtime. Known observation and action semantics are reused across new instances, while health and validity determine which groups can act. A shared local actor preserves decentralised execution; aggregate context, coupled outcomes, and the TI-MAPPO set critic support community coordination. Unknown semantic families require explicit admission or fallback instead of an arbitrary embedding.
+
+\paragraph{RQ2: multi-dimensional scalability.}
+Scalability is achieved conditionally through structured simulation, parameter sharing, hierarchical typed encoding, dynamic group heads, a variable-population set critic, cached preparation, distributed experiment workers, and target-specific inference profiles. These mechanisms remove several fixed-size assumptions but do not make computation independent of population or interface size. The answer is the measured envelope that satisfies both control and resource gates, together with the bottleneck that follows it.
+
+\paragraph{RQ3: safe and robust operation.}
+Safety and robustness are incorporated through explicit scenario constraints and faults, health-aware interface compilation, dynamic validity and bounds, local analytic projection, service floors, degraded modes, fallback, device protection, and requested--projected--applied traces. Disturbances are evaluated by type, severity, degradation, intervention, and recovery. The thesis supports conditional local feasibility and empirical shared-constraint assessment, not universal formal certification.
+
+\paragraph{RQ4: governed and deployable lifecycle.}
+Reproducible job identity, heterogeneous worker adapters, persistent remote state, validated policy bundles, target profiles, inference health, active-version records, logs, and operator-controlled reversal connect experiments to serving. TI-MARL adds resolved interface, compiler, compatibility, persistence, and trace contracts to that hand-off. Coordinated atomic rollout and automated policy-set recovery remain beyond the current implementation evidence.
+
+\section{Principal Contributions}
 \label{sec:conclusion-contributions}
-\paragraph{Scientific contributions.}
-The thesis makes the following contribution families:
+
+TI-MARL is the principal algorithmic contribution. Its novelty lies in the executable connection between a versioned, entity-bound control contract and multi-agent learning. The same typed semantics organise what the actor observes and invokes, how health changes validity, how local feasibility is applied, how topology-aware state is restored, and how decisions are traced. This contribution is narrower and more defensible than claiming novelty for PPO, attention, parameter sharing, or action projection separately.
+
+Six supporting contributions make that method meaningful and testable:
 
 \begin{enumerate}
-  \item an evidence-based formulation of the residual real-world MARL problem;
-  \item the EnergAIze integrated research architecture;
-  \item a physically audited and extended simulation environment for REC and EV-control research;
-  \item a progressive empirical body of control and learning solutions, including the conditions and limitations of RBC, optimisation, RL, MADDPG, MATD3, data-efficient learning, and hierarchy;
-  \item TI-MARL, the principal algorithmic contribution for learning over changing entity-bound typed interfaces, jointly decoding variable local action bundles, and coordinating decentralised agents through aggregate context and centralised set or graph critics;
-  \item a governed lifecycle and reference implementation for coordinated MARL policy sets and distributed edge deployment; and
-  \item integrated real-world-oriented evidence and lessons from energy systems.
+  \item an evidence-based formulation of the integrated problem separating simulated performance from real-world readiness;
+  \item the EnergAIze architecture, which assigns responsibilities and contracts across data, simulation, control, experimentation, deployment, and operation;
+  \item the CityLearn v3 simulation and annual scenario foundation for heterogeneous, event-driven, constrained, and reconfigurable REC and EV experiments;
+  \item the progressive body of rule-based, optimisation, RL, MARL, data-efficient, and hierarchical solutions and the conditions under which each remains useful;
+  \item the governed experiment and inference lifecycle spanning heterogeneous compute, reproducible artefacts, general bundle export, target activation, observation, and recovery; and
+  \item real-world-oriented evidence from OPEVA and DemFlex, kept separate by demonstrator and evidence level.
 \end{enumerate}
 
-Each contribution is linked to its publications, software releases, experiments, quantitative findings, limitations, and author contribution. This traceability is particularly important for collaborative software and project demonstrators.
+The software produced during the research includes the simulator, datasets and validation tools, controller implementations, TI-MARL compiler and runtime, orchestration services, worker adapters, inference service, backend and UI support, experiment configurations, and demonstrator integrations. Software volume is evidence of engineering effort, not scientific validity. Tests, comparisons, ablations, systems measurements, releases, and demonstrator records provide the corresponding evidence.
 
-\paragraph{System, software, and open-source contributions.}
-The research produced or extended scenario and data tools, the CityLearn-derived REC simulator, controller implementations, TI-MARL components, experiment workers and backend services, policy and policy-set metadata, forecasting and analysis services, packaging and edge runtimes, monitoring and fail-safe mechanisms, demonstrator integrations, and reproducible configurations. Each releasable artefact is associated with a repository release or archived commit, licence, documentation, and experiment manifest.
+\Cref{fig:thesis-contribution-stack} summarises how the contributions combine without presenting them as independent inventions.
 
-These artefacts support reuse and auditability, but their existence is not used as a substitute for scientific evidence. The simulator is supported by tests and audits. Algorithms are supported by comparisons and ablations. The lifecycle is supported by systems and failure experiments. The operational system is supported by explicitly classified evidence levels.
+\plannedfigure[0.18\textheight]{fig:thesis-contribution-stack}{Contribution stack and cumulative thesis argument.}{\textbf{Type:} one-page synthesis diagram. Base: evidence and simulator; progression: control and learning solutions; principal algorithmic layer: TI-MARL; system layer: experiment and inference lifecycle; integration layer: EnergAIze and demonstrators; top: answers to RQ1--RQ4. \textbf{Purpose:} close the thesis with one traceable visual argument. \textbf{Source needed:} frozen finding identifiers, publications, software releases, and demonstrator evidence.}
 
-\Cref{fig:thesis-contribution-stack} closes the thesis by showing how the simulator, progressive solutions, TI-MARL, lifecycle, EnergAIze integration, and real-world evidence combine into the answers to the research questions.
-
-\plannedfigure[0.18\textheight]{fig:thesis-contribution-stack}{Final contribution stack and cumulative thesis argument.}{\textbf{Type:} one-page synthesis diagram. Base layer: evidence and simulator; progression layer: control and learning solutions; principal algorithmic layer: TI-MARL; operational layer: governed policy-set lifecycle; integration layer: EnergAIze and real-world validation; top: answers to RQ1--RQ4. \textbf{Purpose:} provide the closing visual summary without introducing new evidence. \textbf{Source needed:} final contribution names, numbered findings, publications, and artefact releases.}
-
-\section{Final Assessment of the Central Thesis}
+\section{Assessment of the Central Proposition}
 \label{sec:conclusion-assessment}
-The central thesis statement proposed that operationalising MARL in distributed, heterogeneous, and dynamically reconfigurable CPS requires the integrated co-design of representations and simulation environments, scalable learning and coordination, safe and robust control, and lifecycle-aware deployment infrastructure.
 
-The complete body of work supports this statement within the evaluated energy-domain scope. The simulator alone cannot establish control quality. A strong policy alone cannot preserve its meaning under changing interfaces or guarantee that it belongs on a target. A runtime safety layer alone can hide a poor policy. An edge platform alone can deploy an incompatible policy combination. The contributions become useful together because they preserve the relationship between the physical problem, the experiment, the policy, the operational interface, and the observed result.
+The central proposition stated that operationalising MARL in distributed, heterogeneous, and dynamically reconfigurable cyber-physical systems requires the integrated co-design of system representations and simulation environments, scalable learning and coordination, safe and robust control processes, and lifecycle-aware distributed deployment infrastructure.
 
-The central thesis applies to CPS settings in which distributed information, heterogeneous and changing interfaces, physical constraints, and coordinated deployment make an integrated approach necessary. The evaluated scale, asset types, devices, durations, disturbances, and evidence levels define the reach of the conclusion in RECs and EV charging.
+The body of work supports that proposition within the evaluated energy-domain scope. No individual layer carries the complete claim. A learning result depends on the world and interface against which it was produced. A feasible action depends on the current entities, measurements, bounds, and physical model. A checkpoint remains meaningful only while its preprocessing, compatibility, and execution contracts are preserved. A healthy process does not prove acceptable control, and a successful physical command does not prove seasonal benefit. The integrated design is necessary because a change at one layer can invalidate evidence obtained at another.
+
+The proposition is supported most strongly as a systems and method argument, with different empirical depths across its components. The simulator, progressive controllers, TI-MARL implementation, lifecycle, and OPEVA evidence establish concrete parts of the path. Final multi-seed comparisons, complete cross-target systems measurements, production TI-MARL serving, DemFlex evidence, and long-duration field operation determine the remaining quantitative reach. This boundary narrows the conclusion without weakening its central lesson.
+
+\section{Limits of the Conclusions}
+\label{sec:conclusion-limits}
+
+The empirical evidence is concentrated in Renewable Energy Communities, buildings, batteries, photovoltaic systems, EVs, and charging infrastructure. Mechanism-level transfer to another CPS is plausible where agents have changing known capabilities, entity-bound observations and actions, local and shared constraints, and heterogeneous runtime targets. Performance and safety do not transfer without new domain models and evidence.
+
+The evaluated scenarios cover a wider range of topology, faults, physical pressure, and community size than the original benchmarks, but they remain designed scenarios. Field evidence is bounded by sites, duration, authority, participants, weather, platform access, and manual intervention. The local projector depends on the correctness of the encoded constraints. The central set critic uses a deliberately modest community summary. Unknown asset families, formal shared safety, adversarial security, certification, and fully autonomous fleet-wide updates remain outside the demonstrated contribution.
 
 \section{Future Research Directions}
 \label{sec:conclusion-future}
-\paragraph{Operational Plug-and-Control Energy Assets.}
-The next step is to admit a new energy asset from its declared capabilities and interfaces: identify the asset, compile observations and action ports, select a compatible policy or fallback, validate safety and policy-set compatibility, activate it, and monitor the effect on coordination. This requires broader asset schemas, admission tests, and longer operational evidence.
 
-\paragraph{TI-MARL across Backbones, Domains, and Larger Systems.}
-TI-MARL should be evaluated with alternative learning backbones, larger agent and interface budgets, different communication structures, and additional CPS domains. These studies should preserve the narrow claim discipline used in the thesis: distinguish the value of the interface formulation from the value of a stronger optimiser or encoder.
+\paragraph{Admission of new asset families.}
+A stronger plug-and-control process should identify a new asset, verify its schema and physical model, select a compatible policy or fallback, test local and shared constraints, and monitor its effect after admission. This requires governance for schema evolution as well as more asset types.
 
-\paragraph{Physics under Model Error.}
-Physics-informed features, residuals, action sets, and safety adapters can fail when the physical model or measurements are wrong. Future work should represent model confidence, detect inconsistent physical assumptions, and study when physical priors help or harm learning and transfer.
+\paragraph{Shared physical assurance.}
+Local projection should be complemented by allocation methods for shared feeder, transformer, or community constraints. The allocation rule must expose its consequences for service and fairness; a central corrector is not neutral merely because it restores feasibility.
 
-\paragraph{Formal and Adaptive Runtime Assurance.}
-The current layered fail-safe approach can be extended with formal barrier, reachability, or shield methods where suitable models exist. Assurance must also adapt when observations, ports, bounds, and monitors change, and it must report when its own assumptions are no longer valid.
+\paragraph{Larger and richer TI-MARL structures.}
+Future work should compare TI-PPO and TI-MAPPO with graph and attention-based critics, alternative learning backbones, larger populations, multiple communities, and richer electrical topology. These experiments must separate gains from the typed interface from gains produced by the optimiser or critic.
 
-\paragraph{Continual, Offline, and Federated Policy Improvement.}
-Historical and distributed data can reduce online exploration and support adaptation across communities. Future work should combine offline evaluation, conservative policy improvement, federated or privacy-aware learning, and continual updates without bypassing promotion gates or forgetting previously validated behaviour.
+\paragraph{Assurance under model and data error.}
+The compiler and projector should represent confidence in measurements and physical relations, detect inconsistent assumptions, and report when a guarantee no longer applies. Formal barrier, reachability, or shield methods are relevant where suitable models exist, but must also adapt to interface change.
 
-\paragraph{Policy-Set Consistency over Intermittent Edge Networks.}
-Coordinated updates require stronger semantics for mixed versions, local activation, disconnected operation, atomicity, and rollback. Future work should investigate which policy combinations remain safe during partial rollout and how edge nodes can recover locally while preserving community coordination.
+\paragraph{Continual and distributed learning.}
+Historical, offline, federated, and continual learning can reduce direct exploration and support adaptation across communities. Promotion gates, replayable evidence, privacy constraints, and protection against forgetting must remain part of the update process.
 
-\paragraph{Long-Duration and Replicated Operational Studies.}
-The field needs more replicated, seasonal, and long-duration evidence. Future studies should report decisions, outages, data-quality incidents, interventions, policy promotions, rollbacks, active agents, resource use, and participant outcomes, not only average energy savings.
+\paragraph{Coordinated deployment over intermittent networks.}
+Mixed versions, partial activation, disconnection, local rollback, and recovery need explicit policy-set semantics. The next lifecycle step is to determine which combinations remain admissible while independent targets change at different times.
 
-\paragraph{Fairness, Explainability, Human Oversight, and Governance.}
-Community control affects participants differently. Future research should examine benefit distribution, explanation of interface and policy decisions, operator and participant override, data governance, certification, cybersecurity, and regulatory accountability as dedicated research questions rather than secondary metrics.
+\paragraph{Long-duration and replicated real-world studies.}
+Seasonal and multi-site studies should report energy and cost together with service, participant benefit, data incidents, projection and fallback interventions, rejected commands, resource use, policy changes, and operator actions. Such records are needed to distinguish an effective policy from an effective surrounding assurance system.
+
+\paragraph{Fairness, explanation, security, and governance.}
+Participant-level benefit, explanation of binding and projection decisions, human override, privacy, cybersecurity, certification, and regulatory accountability deserve dedicated research beyond their role as constraints in this thesis.
 
 \section{Closing Remarks}
-The work began with multi-agent learning for energy coordination and expanded because real operation made the hidden assumptions visible. The resulting thesis is not a catalogue of algorithms and not a software-platform report. It is the account of a cumulative research process: feasible control led to explicit optimisation; adaptation led to decentralised coordination; stability and data-efficiency mechanisms improved learning; hierarchy separated local and community decisions; the limits of composing those solutions led to TI-MARL; and operational use led to governed policy sets, fail-safe execution, and lifecycle evidence.
 
-The central lesson is straightforward. Intelligent control becomes credible not when one method achieves the highest simulated return, but when the complete system can explain what it controls, what the policy can currently observe and do, why an action is admissible, how the experiment can be reconstructed, which policies may operate together, what happens when assumptions fail, and what evidence supports continued operation. EnergAIze, TI-MARL, and the accompanying experimental work provide one concrete step towards that goal.
+The work began with learning-based energy coordination and expanded as real systems exposed assumptions that a nominal benchmark could leave invisible. Feasible control led to explicit optimisation. Adaptation led to decentralised coordination. Training instability and data scarcity led to stronger learning and reuse mechanisms. Local and community objectives led to hierarchy. Changes in assets, sessions, health, and action meaning led to TI-MARL. Reproducibility and physical use led to orchestration, packaging, inference, monitoring, and recovery.
 
+The final lesson is simple but demanding. A credible intelligent controller must expose what it controls, what it can currently observe and invoke, how an action becomes feasible, which experiment produced the policy, which runtime is executing it, what was actually applied, and what evidence supports its continued use. EnergAIze supplies the surrounding system, TI-MARL supplies a policy formulation for changing typed interfaces, and the simulator, controller progression, lifecycle, and demonstrators supply the evidence needed to test both. Together, they move the discussion from a successful learning curve towards an auditable path for intelligent control in changing physical systems.

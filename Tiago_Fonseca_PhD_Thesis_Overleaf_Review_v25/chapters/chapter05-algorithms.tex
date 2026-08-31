@@ -1,384 +1,1014 @@
-\chapter{Progressive Control and Learning Solutions for Renewable Energy Communities}
+\chapter{Control and Learning Methods for Renewable Energy Communities}
 \label{chap:control-benchmark}
-\markboth{Progressive Control and Learning}{Progressive Control and Learning}
+\markboth{Control and Learning Methods}{Control and Learning Methods}
 
-The common simulation and evaluation substrate supports a cumulative sequence of control studies. Passive operation and progressive RBCs establish feasibility and transparent operating logic; optimisation makes objectives and constraints auditable; single-agent learning introduces adaptation; MADDPG introduces decentralised coordination; MATD3 improves the deterministic multi-agent actor--critic baseline; and data-efficient and hierarchical mechanisms address reuse, sample efficiency, and local--community coordination.
+A dwelling with a stationary battery, two EV chargers, and a deferrable appliance already presents a difficult scheduling problem. The controller has to use photovoltaic production and low-price periods without missing an EV departure, starting an appliance too late, or exceeding the electrical service allocated to the building. Placing that dwelling in a renewable energy community adds another layer: an action that is sensible locally can coincide with the actions of other members and create a community peak, increase ramping, or consume scarce phase headroom. The controller must then balance a participant's objectives with outcomes that are only visible at community level.
 
-The sequence begins with passive operation and rule-based control, where feasibility and transparent operating logic can be checked directly. It then introduces explicit optimisation, which makes objectives and constraints auditable. Single-agent reinforcement learning adds adaptation without requiring a complete model at every decision step. MADDPG adds decentralised multi-agent coordination, and MATD3 addresses part of the training instability and value overestimation observed with deterministic multi-agent actor--critic learning. Behaviour cloning, guided exploration, replay selection, offline learning, distillation, and hierarchical coordination then address sample efficiency, reuse, and the separation between local and community decisions.
+No single method was assumed to solve this complete problem at the start of the research. The work developed through a sequence of increasingly demanding control settings. Business-as-usual operation and rule-based controllers made feasible behaviour inspectable. Mixed-integer optimisation made objectives and constraints explicit and supplied reference schedules. Building-level reinforcement learning tested whether a controller could adapt without solving a full model at every step. Multi-agent methods introduced decentralised execution while retaining community information during training. The learning system itself also changed: observations became causal and asset-aware, action heads acquired semantic structure, rewards were corrected when they rewarded the wrong behaviour, and replay was adapted to retain rare service events. Demonstrations and residual policies reused knowledge that had already been acquired. Hierarchical coordination separated the slower community decision from the faster decisions taken inside each building.
 
-Each stage produces a distinct empirical contribution by establishing what can be achieved, under which information and operational assumptions, and at what computational cost. The accumulated evidence also exposes the remaining integration problem: stable, data-efficient, or hierarchical controllers can still depend on fixed observation and action interfaces and on manually maintained physical contracts. Those residual assumptions become the design requirements for TI-MARL.
+This progression is both historical and methodological. The first EnergAIze experiments used an hourly, 17-dwelling case and a MADDPG controller with rule-guided exploration \parencite{fonseca2024energAIze}. Later work exposed stronger baselines, stricter information boundaries, service failures hidden by aggregate reward, and the need to distinguish local adaptation from community coordination. The annual 15-minute suite introduced in \cref{sec:sim-annual-dataset-suite} provides the common substrate on which those lessons are consolidated. Historical experiments remain part of the provenance of the research; the final comparisons use the current simulator, datasets, scorecard, and controller contracts.
 
-\draftnote{This chapter is a complete narrative and experimental blueprint. The implemented stack includes passive operation, five RBC levels, MILP, PPO, SAC, TD3, MADDPG, MATD3, RBC-guided exploration, behaviour cloning, prioritised replay, offline RL, distillation, and hierarchical coordination. Exact controller names, observation and action definitions, reward variants, training budgets, seed counts, hyperparameters, and quantitative findings must be imported from the frozen repositories and experiment store. The chapter deliberately distinguishes completed capabilities from claims that still require a final evidence audit.}
+The chapter first formulates the shared control problem and fixes the comparison protocol. It then describes the control--learning interface shared by the methods, including the input representation, action path, reward lineage, replay design, and model continuity. Four levels of control complexity organise the controller progression: transparent and model-based control, adaptive building control, decentralised multi-agent control, and hierarchical community coordination. Knowledge reuse is treated separately because it cuts across several algorithm families. The closing synthesis records what each level is designed to establish and the limitations that remain after the progression. Numerical findings are inserted only from frozen, replayable experiments; the present text fixes their scientific position without anticipating their values.
 
-\section{Research Progression and Common Evaluation Protocol}
+\draftnote{The chapter was reconstructed against the current Algorithms repository, its implementation history, algorithm matrix, MILP contracts, single-agent audits, community-coordinator experiments, and the CityLearn v3 annual dataset contract. Final quantitative tables must be populated from one frozen experiment ledger. Historical hourly evidence, diagnostic windows, annual training replays, held-out evaluations, oracle schedules, and final confirmatory runs must retain distinct evidence labels.}
+
+\section{Research Progression}
 \label{sec:control-progression}
 
-A controller can appear better simply because it receives more information, uses a more favourable forecast, or is evaluated on an easier scenario. To prevent this, the methods in this chapter are compared through common physical scenarios and explicit information assumptions. Loads, photovoltaic production, assets, tariffs, deadlines, constraints, and evaluation periods are shared whenever the comparison permits it. Controller-specific models or preprocessing are treated as part of the method and are reported rather than hidden.
+The control problem grew along four dimensions. The decision boundary moved from one asset to a building and then to the community. The available information expanded from current local measurements to forecasts and authorised community aggregates. The method changed from explicit rules and models to policies learned through interaction. The evidence requirements also became stricter: cost and energy outcomes had to be read alongside service, physical feasibility, learning stability, and computational cost.
 
-The progression is evaluated through four recurring questions:
+The four levels in \cref{fig:control-progression} reflect this growth in complexity. They are not a ranking in which every later method supersedes the earlier ones. A rule-based controller remains useful when its assumptions fit the task, an optimisation model remains the clearest reference for a bounded scheduling problem, and a local policy remains preferable when community coordination adds no measurable value. Each level answers a different question.
 
-\begin{enumerate}
-  \item \textbf{What problem was the method introduced to solve?}
-  \item \textbf{What did the experiments show that it actually solved?}
-  \item \textbf{Under which information, scale, and operational assumptions was that result obtained?}
-  \item \textbf{What limitation remained and motivated the next step?}
-\end{enumerate}
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  stage/.style={draw, rounded corners=2pt, minimum height=2.45cm, text width=3.55cm, align=center, inner sep=7pt},
+  arrow/.style={-{Latex[length=3mm]}, very thick},
+  label/.style={font=\small, align=center}
+]
+  \node[stage, fill=blue!7] (l1) {\textbf{Level I}\\Transparent references\\[2pt]\footnotesize BAU, RBC, MILP};
+  \node[stage, fill=green!8, right=0.48cm of l1] (l2) {\textbf{Level II}\\Adaptive building control\\[2pt]\footnotesize PPO, TD3, structured PPO};
+  \node[stage, fill=orange!10, right=0.48cm of l2] (l3) {\textbf{Level III}\\Decentralised coordination\\[2pt]\footnotesize deterministic, PPO and entropy families};
+  \node[stage, fill=purple!8, right=0.48cm of l3] (l4) {\textbf{Level IV}\\Hierarchical coordination\\[2pt]\footnotesize community coordinator and local leaves};
+  \draw[arrow] (l1) -- node[above, label] {adaptation} (l2);
+  \draw[arrow] (l2) -- node[above, label] {joint effects} (l3);
+  \draw[arrow] (l3) -- node[above, label] {decision\\decomposition} (l4);
+  \node[draw, dashed, rounded corners=2pt, below=0.55cm of l2, xshift=2.02cm, text width=10.0cm, align=center, inner sep=5pt, fill=gray!5] (reuse) {\textbf{Learning engineering across levels:} causal encoding, guided exploration, residual control, behaviour cloning, event-aware replay, safety projection, checkpointing, and export};
+  \draw[-{Latex[length=2.5mm]}, thick, dashed] (reuse.north west) -- (l2.south);
+  \draw[-{Latex[length=2.5mm]}, thick, dashed] (reuse.north) -- (l3.south);
+  \draw[-{Latex[length=2.5mm]}, thick, dashed] (reuse.north east) -- (l4.south);
+\end{tikzpicture}}
+\caption{Progression of the controller studies. Each level introduces one additional control problem while retaining earlier methods as references, teachers, or fallbacks.}
+\label{fig:control-progression}
+\end{figure}
 
-The methods are classified by their role as strong baselines, reusable mechanisms, empirical contributions, or components of TI-MARL. The recurring analysis records the problem addressed, measured result, scope, and remaining assumption for each stage.
+\paragraph{Level I: transparent references.}
+The first question is whether flexibility can be scheduled plausibly and whether the relevant objective can be stated explicitly. BAU reveals the cost and service consequences of ordinary operation. Progressively informed RBCs show the value of price, forecast, flexibility, and community information without a learning process. MILP supplies a model-based schedule under declared assumptions. This level establishes feasibility, interpretability, and an opportunity bound before neural control is considered.
 
-\Cref{fig:control-progression} summarises the cumulative research progression: each stage resolves a concrete problem, retains a useful capability, and reveals the assumption addressed by the next stage.
+\paragraph{Level II: adaptive building control.}
+The second question is whether a building can improve its operation from local experience. Each dwelling is treated as a separate decision problem, with its own observations, actions, reward, and service obligations. PPO and TD3 represent on-policy and off-policy approaches to continuous control. Strictly local experiments isolate adaptation: they do not credit an algorithm with a gain that came from hidden access to community measurements or settlement outcomes.
 
-\plannedfigure[0.16\textheight]{fig:control-progression}{Cumulative progression from explicit control to adaptive and hierarchical multi-agent coordination.}{\textbf{Type:} left-to-right progression diagram. For each stage (passive/RBC, MILP, single-agent RL, MADDPG, MATD3, learning-efficiency mechanisms, hierarchy), state the problem addressed, capability gained, and assumption left unresolved. End with the design requirements passed to TI-MARL. \textbf{Purpose:} show that earlier methods solved problems rather than merely failing before the final method. \textbf{Source needed:} final method/claim/evidence ledger.}
+\paragraph{Level III: decentralised multi-agent control.}
+The third question concerns interacting decisions. Each building still executes a local policy, while training can use joint observations and actions to account for community effects. MADDPG supplied the original EnergAIze formulation. MATD3 retained the same execution structure while addressing value overestimation and training instability through twin critics, target smoothing, and delayed actor updates. PPO- and entropy-based multi-agent alternatives test whether an apparent gain is specific to one actor--critic family.
 
-\paragraph{Problem instances.}
-The experiments cover related levels of control rather than one universal decision problem.
+\paragraph{Level IV: hierarchical community coordination.}
+The fourth question is whether local and community decisions can be separated without collapsing all assets into one central action vector. A community coordinator acts at a slower timescale and issues a compact signal. Local controllers continue to manage EV deadlines, storage, and deferrable services. This level examines the authority of the signal, the information exposed to the coordinator, the distribution of benefits, and the stability of composing learned controllers.
 
-\begin{description}
-  \item[Asset level.] A controller schedules charging, discharging, thermal operation, or a deferrable request for one asset.
-  \item[Building level.] A controller coordinates the assets behind one meter while respecting local service and electrical limits.
-  \item[Community level.] A controller coordinates several buildings or modifies a shared signal to reduce cost, peak demand, ramping, emissions, or grid stress.
-  \item[Reconfigurable level.] Agents, assets, capabilities, observations, actions, or topology change. This level motivates and is evaluated in \cref{chap:ti-marl}.
-\end{description}
-
-A real deployment can combine all four. For example, a community-level coordinator can issue one price multiplier, while each building continues to schedule its own EV and battery. The high-level problem and the local problem should therefore not be collapsed into one large vector merely because that is convenient for an algorithm.
-
-\paragraph{Comparison principles.}
-The evaluation follows six principles.
-
-\paragraph{Information fairness.} Every result states what the method knew at decision time. A perfect-information MILP is an oracle reference, not an operational competitor to a policy that sees only current observations and forecasts.
-
-\paragraph{Strong baselines.} The RBCs become progressively more informed. The optimisation formulation includes the relevant constraints. Learning methods are compared with tuned and credible alternatives, not with deliberately weak references.
-
-\paragraph{Repeated learning runs.} RL and MARL results are reported over independent seeds. Central tendency, dispersion, learning stability, and checkpoint selection are part of the result.
-
-\paragraph{Multiple outcomes.} Aggregate reward is not sufficient. Energy, service, safety, fairness, learning, computation, and communication metrics are reported separately before any combined score is considered.
-
-\paragraph{Operational interpretation.} Training cost, inference latency, memory, communication, model requirements, and integration effort are considered together with energy performance.
-
-\paragraph{Negative and boundary results.} A method that does not improve one dimension, or improves it only under a narrow assumption, remains informative. Such results define where the method should and should not be used.
+The repository contains more methods than the four names used in the first EnergAIze experiments. \Cref{tab:control-implemented-families} records the current implementation surface. This table prevents three common ambiguities: treating a multi-agent implementation as a single-agent method, presenting an experimental comparator as a selected controller, and attributing a structural interface change to the optimisation algorithm alone.
 
 \begin{table}[htbp]
 \centering
-\caption{Metric families used throughout the controller progression.}
-\label{tab:controller-metrics}
-\begin{tabularx}{\textwidth}{@{}p{0.23\textwidth}X@{}}
+\caption{Controller and learner families implemented in the Algorithms repository and their role in this chapter.}
+\label{tab:control-implemented-families}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}p{0.19\textwidth}p{0.29\textwidth}X p{0.20\textwidth}@{}}
 \toprule
-\textbf{Metric family} & \textbf{Representative measures} \\
+\textbf{Family} & \textbf{Implemented methods} & \textbf{Scientific role} & \textbf{Interface boundary} \\
 \midrule
-Participant outcomes & electricity cost, grid import/export, self-consumption, comfort or departure service, asset cycling \\
-Community outcomes & aggregate cost, peak demand, load factor, ramping, local renewable use, carbon indicators, demand-response delivery \\
-Safety and service & infeasible proposals, clipping or projection, power-limit violations, missed EV departure targets, incomplete services \\
-Learning behaviour & return, convergence, variance across seeds, sample efficiency, critic disagreement, overestimation diagnostics \\
-Computational cost & training wall time, environment interactions, CPU/GPU time, memory, checkpoint size, inference latency \\
-Distribution and fairness & outcome by participant and asset group, worst-participant result, dispersion of savings \\
-Operational complexity & model and forecast requirements, configuration effort, communication, package size, target compatibility \\
+Passive and rule-based & Normal, Normal No Battery, Random, RBC Basic, RBC Smart Local, RBC Community, Rule Based, and signal-aware variants & Ordinary-operation denominator, informed baselines, teachers, causal probes, and deterministic fallbacks & Reconstruct actions from known asset semantics; no learned representation \\
+\addlinespace
+Optimisation and replay & Fixed-service, total-home, total-energy, individual and community MILP oracles, with replay policies & Explicit constrained schedules, opportunity estimates, and demonstrations after simulator replay & Variables and horizon are declared before solving; the current reference family uses perfect information \\
+\addlinespace
+Strict local RL & PPO and TD3, instantiated once per controlled member & On-policy and off-policy tests of adaptive local control & Fixed local observation and action dimensions \\
+\addlinespace
+Independent MARL & IPPO & Independent PPO learners inside one multi-member run & No central value or action-value function \\
+\addlinespace
+Centralised-training MARL & MADDPG, MATD3, MASAC, MAPPO, and HAPPO & Deterministic, entropy-regularised, simultaneous PPO, and sequential PPO comparisons under decentralised execution & Flat actor layouts; central value or critic inputs grow with the registered population \\
+\addlinespace
+Entity-structured learners & AgentTransformerPPO and AgentTransformerMATD3 & Tests whether shared asset-type projections and variable token counts improve representation and accommodate changes in known asset instances & Known entity types and feature widths; building-count changes remain a rebuild boundary \\
+\addlinespace
+Hierarchical control & Building Agent, Community Coordinator, CC Level 1, CC Level 2, fixed-price and causal-price signal agents & Separation of asset service from slower community coordination & Signal semantics and recipient layout must be fixed and tested \\
+\addlinespace
+Execution compositions & Pipeline and Ensemble & Frozen leaves, teacher--student stages, independent local learners, and composite export & Composition is an execution structure, not a new learning algorithm \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\Cref{fig:control-common-protocol} defines the common protocol required for a fair comparison across controller families with different information and training requirements.
+A standalone SAC controller is not registered in the current repository. The soft actor--critic branch is implemented as MASAC, with decentralised stochastic actors and central twin critics. TD3 is the explicit one-member reduction of the MATD3 path. These distinctions are retained in the method names and result ledger.
 
-\plannedfigure[0.15\textheight]{fig:control-common-protocol}{Common experimental protocol used to compare controller families.}{\textbf{Type:} protocol schematic or experiment matrix. Show shared scenario/data split, information available to each controller, training budget, repeated seeds, evaluation episodes, KPIs, constraint metrics, computation/resource metrics, and statistical comparison. Mark perfect-information/oracle variants separately from operational-information variants. \textbf{Purpose:} make fairness of the comparisons visible before results are presented. \textbf{Source needed:} frozen protocol and configuration manifest.}
+These levels contribute differently to the research questions. Local and community reward formulations, decentralised execution, and hierarchical coordination address the balance between individual and collective objectives in RQ1. Population size, critic growth, simulator interactions, training time, memory, and inference latency provide RQ2 evidence. Constraint-aware references, service-preserving baselines, action projection, faults, and forecast errors support RQ3. Exportable policies, deterministic inference, declared preprocessing, and controller dependencies create algorithm-side evidence for RQ4; the governed lifecycle itself is developed later in the thesis.
 
-\section{Operationally Plausible and Constraint-Aware Control}
+The same progression also exposes the four cross-cutting requirements introduced in \cref{sec:intro-realworld-gap}. Scalability appears when a central action vector or joint critic grows with the community. Deployability appears when a policy depends on a teacher, an observation encoder, or a coordination signal that is absent from its exported artefact. Safety appears when a low-cost action conflicts with electrical headroom or a service deadline. Robustness appears when forecasts degrade, commands are delayed, equipment becomes unavailable, or the active control interface changes. These properties are observed throughout the chapter instead of being attached to one final algorithm.
+
+\section{Common Control Problem and Experimental Protocol}
+\label{sec:control-common-protocol}
+
+A fair controller comparison begins before training. The physical problem, information boundary, action semantics, accounting rule, and evidence threshold must be fixed first. Otherwise, a controller can appear stronger because it sees additional forecasts, uses community information unavailable to the baseline, receives a different settlement rule, or is evaluated on an easier service schedule.
+
+\subsection{REC Control Formulation}
+
+Consider a community with active members $\mathcal{N}_t$. Most experiments in this chapter use a fixed population $\mathcal{N}$; scenarios in which $\mathcal{N}_t$ or the assets of a member change are used to test the boundary of those methods. Member $i$ has inflexible demand $P^{\mathrm{load}}_{i,t}$, photovoltaic generation $P^{\mathrm{PV}}_{i,t}$, and a set of controllable assets $\mathcal{A}_{i,t}$. The local net exchange follows the sign convention
+
+\begin{equation}
+ P^{\mathrm{grid}}_{i,t}
+ = P^{\mathrm{load}}_{i,t}
+ - P^{\mathrm{PV}}_{i,t}
+ + \sum_{b\in\mathcal{B}_{i,t}} P^{b}_{i,t}
+ + \sum_{c\in\mathcal{C}_{i,t}} P^{\mathrm{EV}}_{i,c,t}
+ + \sum_{d\in\mathcal{D}_{i,t}} P^{\mathrm{def}}_{i,d,t},
+ \label{eq:control-local-balance}
+\end{equation}
+
+where positive power denotes import. $\mathcal{B}_{i,t}$, $\mathcal{C}_{i,t}$, and $\mathcal{D}_{i,t}$ contain stationary batteries, chargers with active EV sessions, and deferrable services. Community exchange is
+
+\begin{equation}
+ P^{\mathrm{com}}_t = \sum_{i\in\mathcal{N}_t} P^{\mathrm{grid}}_{i,t}.
+ \label{eq:control-community-balance}
+\end{equation}
+
+These two balances are related but do not define the same optimisation problem. A local controller can reduce $P^{\mathrm{grid}}_{i,t}$ while increasing $P^{\mathrm{com}}_t$ at an already congested time. Community settlement can also change a participant's cost without changing the physical exchange of that participant. Local retail cost, community settled cost, and grid-only counterfactual cost are kept as distinct quantities.
+
+The principal control actions are continuous battery and charger set-points together with discrete or bounded start decisions for deferrable services. A compact local action is
+
+\begin{equation}
+ a_{i,t} =
+ \left[
+  \{P^{b}_{i,t}\}_{b\in\mathcal{B}_{i,t}},
+  \{P^{\mathrm{EV}}_{i,c,t}\}_{c\in\mathcal{C}_{i,t}},
+  \{u^{\mathrm{def}}_{i,d,t}\}_{d\in\mathcal{D}_{i,t}}
+ \right].
+ \label{eq:control-local-action}
+\end{equation}
+
+Several physical and service constraints restrict this vector. Storage energy evolves according to
+
+\begin{equation}
+ E_{t+1}=E_t+
+ \eta^{\mathrm{ch}}P^{\mathrm{ch}}_t\Delta t
+ -\frac{P^{\mathrm{dis}}_t\Delta t}{\eta^{\mathrm{dis}}},
+ \qquad
+ E^{\min}\leq E_t\leq E^{\max},
+ \label{eq:control-storage-dynamics}
+\end{equation}
+
+with charging and discharging bounded by the asset's power limits. An EV action is valid only while the associated session occupies its charger, and the energy at departure must satisfy its declared minimum service requirement. A deferrable cycle can start only inside its admissible window and must then execute its complete profile. Total and per-phase imports and exports are bounded at building and service level. These restrictions are evaluated on the applied trajectory, while requested actions and simulator interventions remain visible separately.
+
+For learning, the community is represented as a partially observed stochastic game
+
+\begin{equation}
+ \mathcal{G}=\left\langle
+ \mathcal{N},\mathcal{S},\{\mathcal{O}_i\}_{i\in\mathcal{N}},
+ \{\mathcal{A}_i\}_{i\in\mathcal{N}},P,
+ \{R_i\}_{i\in\mathcal{N}},\gamma
+ \right\rangle,
+ \label{eq:control-markov-game}
+\end{equation}
+
+where $s_t\in\mathcal{S}$ is the simulator state, $o_{i,t}\in\mathcal{O}_i$ is the information available to agent $i$, $a_{i,t}\in\mathcal{A}_i$ is its action, and $P$ is the transition induced by the physical models, exogenous data, user services, and joint action. The objective of agent $i$ is
+
+\begin{equation}
+ J_i(\pi)=
+ \mathbb{E}_{\pi,P}
+ \left[
+ \sum_{t=0}^{T-1}\gamma^t r_{i,t}
+ \right].
+ \label{eq:control-agent-objective}
+\end{equation}
+
+The reward is a training signal, not the final definition of controller quality. A general reward family used across the experiments has the form
+
+\begin{equation}
+ r_{i,t}= -w_C\tilde{C}_{i,t}
+           -w_P\tilde{\Psi}^{\mathrm{peak}}_{i,t}
+           -w_R\tilde{\Psi}^{\mathrm{ramp}}_{i,t}
+           -w_S\tilde{L}^{\mathrm{service}}_{i,t}
+           -w_V\tilde{V}_{i,t}
+           -w_D\tilde{L}^{\mathrm{degradation}}_{i,t},
+ \label{eq:control-reward-family}
+\end{equation}
+
+where the tildes denote scale-normalised components. $C_{i,t}$ can be local retail cost, an allocated community settlement cost, or a community objective shared by several agents. $V_{i,t}$ records physical violations or unsafe requests; service loss covers EV departures and incomplete deferrables. Peak, ramping, and degradation terms are included only when they belong to the registered experimental question. Every run records the selected components, weights, normalisers, and aggregation rule. A change to any of them defines a different method variant.
+
+\subsection{Information and Comparison Surfaces}
+
+The Algorithms repository supports several valid controller views. Mixing them in one ranking would confound the source of an observed improvement. The final protocol separates three comparison surfaces, shown in \cref{tab:control-comparison-surfaces}.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison surfaces used to preserve information and objective fairness.}
+\label{tab:control-comparison-surfaces}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}p{0.25\textwidth}p{0.24\textwidth}X@{}}
+\toprule
+\textbf{Surface} & \textbf{Controller information} & \textbf{Primary references} & \textbf{Principal question} \\
+\midrule
+Strict building-local & Local asset, demand, generation, service, current/causal forecast, and public exogenous data; no private observations from other members & Normal, RBC Smart Local, and individual MILP & Does adaptation improve a building's own outcome under the same local information? \\
+\addlinespace
+Decentralised community & Local actor observations; declared community features where authorised; joint information available only to central critics during training & RBC Community and community MILP; MADDPG as the historical learning reference & Does explicit multi-agent training improve local and community outcomes without centralising execution? \\
+\addlinespace
+Hierarchical community & Frozen or separately trained local leaves; coordinator receives declared aggregates or compact member summaries and emits a coordination signal & Neutral signal, fixed-signal probes, and the same local controller without a coordinator & Does the additional coordination layer create causal value beyond the local controller? \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The strict building-local surface is deliberately demanding. A policy composed as $N$ independent learners does not become a local method merely because its actors are separate. Community observations, community settlement in the reward, or a teacher with community access would still cross the boundary. The local reference is therefore \texttt{RBCSmartLocalPolicy}, and each building has its own cost, service gates, checkpoint, and exported actor.
+
+The decentralised community surface permits coupled training. In MADDPG and MATD3, actor $i$ still observes $o_{i,t}$ at execution, while its critic can use the joint state and action during training. Community settlement, aggregate demand, or other shared observations are available only when the experiment declares them. The comparator is \texttt{RBCCommunityPolicy} or the community MILP, not a strictly local RBC whose information is weaker.
+
+The hierarchical surface fixes the leaf before attributing a result to the coordinator. A multiplier of one is the neutral intervention and must reproduce the standalone leaf exactly. Fixed signals are run before a learned coordinator to show that the signal reaches a controllable mechanism. This causal check prevents a neural coordinator from being credited for variation caused by a changed leaf, a different reward, or an out-of-distribution observation transformation.
+
+Perfect-information schedules form a fourth category, but not a competitive surface. They are labelled as oracle references. A controller that uses realised future prices, demand, production, sessions, or faults cannot be ranked as an operational alternative to a causal policy. The repository also defines an operational rolling-horizon protocol in which the model receives only information available at decision time. That variant becomes a controller comparator only after its complete replay, forecast, solve-time, fallback, and infeasibility audit; until then, it remains a planned entry in the evidence ledger.
+
+\subsection{Dataset Ladder and Experimental Funnel}
+
+The annual datasets in \cref{sec:sim-annual-dataset-suite} are used as a funnel rather than a Cartesian product of every controller, scenario, and hyperparameter. This keeps the campaign computationally defensible and reduces selection on the final stress cases.
+
+\begin{table}[htbp]
+\centering
+\caption{Role of the annual dataset suite in the controller campaign.}
+\label{tab:control-dataset-funnel}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.25\textwidth}X p{0.18\textwidth}@{}}
+\toprule
+\textbf{Dataset or family} & \textbf{Use in Chapter 5} & \textbf{Evidence admitted} & \textbf{Selection status} \\
+\midrule
+Micro-4-Q & Loader, action, reward, export, and short end-to-end checks & Functional smoke evidence only & Reusable during debugging \\
+Core-15-Stripped & Algorithm development, ablations, learning diagnostics, and early resource screening & Development evidence; no final superiority claim & Open during development \\
+Core-30-Nominal & Principal matched comparison under a fixed population and complete asset mix & Seed-level learning and held-out control evidence & Frozen before final runs \\
+Core-30-Safety & Total and per-phase headroom under otherwise matched conditions & Safety and service attribution & No safety-specific retuning after evaluation \\
+Core-30-Health & Missing or biased observations, delayed/dropped commands, and equipment unavailability & Robustness degradation and recovery evidence & No health-specific retuning after evaluation \\
+Core-30-Dynamic and Combined & Membership and asset changes, followed by interacting disturbances & Applicability and failure-boundary evidence for fixed-interface methods; performance evidence only for compatible controllers & Held back until nominal selection \\
+Premium-100-Clean & Scale, heterogeneity, multiple chargers, and variable participation & Final scale and interface evidence for eligible methods & Held back \\
+Premium-100-AllIn & Coincident scale, safety, health, and reconfiguration pressure & Confirmatory stress evidence & Final confirmation only \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+An algorithm is admitted only to scenarios compatible with its declared interface. The fixed-vector PPO, TD3, MADDPG, MATD3, and fixed-output coordinators can be evaluated on static Core-30 variants. Their inability to absorb an added charger or a changed population is recorded as an applicability boundary, not hidden by silently padding a new vector or retraining on the test event. RBCs that consume the entity interface can traverse dynamic cases because their decisions are reconstructed from the active assets. The larger dynamic datasets are therefore useful even before a learning method can be ranked on them: they reveal which assumptions are structural.
+
+Temporal evaluation also follows a funnel. Short windows are used to diagnose wiring, reward behaviour, and service failures. Algorithm selection then uses seasonally distributed training and validation blocks with causal forecasts. Final claims of temporal generalisation require a disjoint evaluation interval and a frozen checkpoint. A deterministic replay over the complete year measures annual operation and rare-event coverage; when the same annual exogenous trajectory contributed to training, that replay is identified as an annual in-sample or robustness result rather than an independent generalisation test.
+
+Expert schedules obey the same split. A perfect-information MILP can describe the opportunity available in an evaluation interval but cannot supply demonstrations for a policy that is then claimed to generalise on that interval. Training demonstrations are generated only from the training portion or from a separately declared historical dataset. The manifest records the source interval, oracle scope, solver status, model gap, and simulator replay status.
+
+\subsection{Training Budgets, Repetition, and Statistical Reading}
+
+Learning algorithms are compared under matched environment interactions within a declared surface. Wall-clock parity alone is unsuitable because an on-policy method, an off-policy method, and an optimisation solver use data differently. Every result therefore reports environment transitions, update count, episodes, training time, hardware, peak memory, checkpoint-selection rule, and inference latency. Hyperparameter search is part of the computational cost and is reported separately from the final training run.
+
+Stochastic methods use at least three independent training seeds in the principal comparison. The checkpoint rule is fixed before the confirmatory evaluation and cannot select directly on the final test score. Learning curves report the centre and dispersion across seeds. Controller KPIs are paired with the same scenario and reference trajectory. A single favourable seed cannot establish a gain, while a reduction in seed variance can be valuable even when the mean KPI changes little.
+
+The 35,040 time steps of one annual trajectory are temporally dependent and are not treated as 35,040 independent samples. Confidence intervals for annual energy and cost differences use paired temporal blocks, such as days or weeks, chosen to preserve autocorrelation. Member-level comparisons retain the complete distribution, the number $x/N$ of eligible members that improve, the worst member, and a fairness measure. The members form a designed heterogeneous scenario rather than a random sample of the Portuguese population, so inference across members is interpreted within the scenario.
+
+The final decision is lexicographic. Run integrity is checked first. Electrical, EV, deferrable, SoC, and outage gates follow. Cost, peak, ramping, solar use, import/export, and participant outcomes are interpreted only after those gates pass. Computational and deployment properties then distinguish candidates with comparable control quality. A weighted reward or aggregate score cannot compensate for a physical violation or an unserved mandatory service.
+
+The core scorecard is the 17-indicator contract in \cref{tab:sim-core-scorecard}. Extended KPIs and action traces diagnose why a result changed. In particular, requested and applied violations are kept separate: a safe physical trajectory produced only because the simulator clipped unsafe requests is not evidence that the policy learned safe behaviour.
+
+\section{Engineering the Control--Learning Interface}
+\label{sec:control-learning-interface}
+
+Changing MADDPG to MATD3, or PPO to MAPPO, addresses only part of the learning problem. The controller also needs a stable interpretation of simulator state, an action vector whose entries retain their physical meaning, a reward that does not favour an unwanted shortcut, and a training record that distinguishes what the policy proposed from what was executed. Several apparently small implementation changes were introduced after a concrete failure in one of those contracts. They form part of the method because removing them changes the decision problem seen by the learner.
+
+\subsection{From Simulator State to Policy Input}
+\label{sec:control-input-layer}
+
+The simulator's entity interface exposes tables, relations, and metadata. The Algorithms wrapper resolves those records into one observation and one action contract per building. District context, local demand and generation, batteries, physical chargers, connected and incoming EV sessions, deferrable services, electrical limits, action feedback, and topology metadata retain their identities during this conversion. A policy never infers that identity from column position alone; the ordered feature and action names are attached to the controller and written to its artefact manifest.
+
+For a fixed-vector learner, the input at time $t$ is
+
+\begin{equation}
+ x_{i,t}^{(p)} =
+ \mathcal{E}_{p}
+ \left(
+   \mathcal{F}_{i,p}(O_t)
+ \right),
+ \label{eq:control-input-pipeline}
+\end{equation}
+
+where $O_t$ is the entity payload, $\mathcal{F}_{i,p}$ applies the member and information filters of profile $p$, and $\mathcal{E}_{p}$ encodes the retained values. Filtering precedes learning. A central feature removed only after it influenced a derived variable would still leak information into a strict-local experiment.
+
+\begin{table}[htbp]
+\centering
+\caption{Implemented entity-encoding profiles and their experimental use.}
+\label{tab:control-encoding-profiles}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.31\textwidth}X@{}}
+\toprule
+\textbf{Profile} & \textbf{Representation} & \textbf{Use} \\
+\midrule
+Min--max space & Complete surface, normalised from the simulator spaces without changing feature order or width & RBC inspection, debugging, schema audits, and the structured Transformer controllers \\
+\addlinespace
+MADDPG v1 & Complete surface with cyclic time, normalised SoC, relative deadlines, physical scaling, and explicit missing-value treatment & Compatibility and detailed audits \\
+\addlinespace
+MADDPG v2 compact & Earlier compact vector & Reproduction of experiments created before the operational feature set stabilised \\
+\addlinespace
+MADDPG v3 operational & Compact state plus feasible EV actions, departure margin, charge/discharge availability, applied-action feedback, deferrable must-start state, and compact forecasts & Principal fixed-vector training profile \\
+\addlinespace
+MADDPG v3 real-time & Operational profile without forecasts derived from realised simulator futures & Causal, real-world-safe comparison and deployment preparation \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Calendar variables use cyclic or categorical encodings; connection, availability, and operating states retain explicit indicators; and missing continuous values are represented through a declared missing-value convention. Departure time is expressed relative to the current step, while feasible charging margin is expressed in physical or normalised action units. The absolute episode index remains metadata. Feeding it to the actor would make memorising one annual trajectory easier than learning the operational state that recurs in another year.
+
+The first vectorisation path repeatedly searched and transformed the complete observation list. It was replaced by a compiled source plan grouped by table, row, and column, followed by vectorised encoding. A direct entity-to-model path avoids constructing a second raw vector when the controller does not need it. This change is computational rather than conceptual, but it matters to RQ2 and RQ4: preprocessing latency is part of inference latency, and the same compiled feature order must be reproduced outside the training process.
+
+\subsection{Action Semantics and the Executed Transition}
+\label{sec:control-action-path}
+
+Every controllable battery, charger, and deferrable service has its own action entry. Two chargers in one building therefore remain two independently addressable controls. Shared-trunk actors initially ended in one dense output layer. Multi-head actors separated individual commands, and semantic multi-head actors later grouped EV, stationary-storage, deferrable, and other actions while scattering their outputs back to the simulator's original order. This reduced direct competition between unrelated outputs without changing the external action contract.
+
+The complete action path is written as
+
+\begin{equation}
+\begin{aligned}
+ z_{i,t} &= \pi_{\theta_i}(x_{i,t}),\\
+ a^{\mathrm{pol}}_{i,t} &= \ell_i+
+ \frac{\tanh(z_{i,t})+1}{2}(u_i-\ell_i),\\
+ a^{\mathrm{cmp}}_{i,t} &=
+ \operatorname{clip}_{[\ell_i,u_i]}
+ \left(a^{\mathrm{base}}_{i,t}+g_{i,t}\odot a^{\mathrm{pol}}_{i,t}\right),\\
+ a^{\mathrm{req}}_{i,t} &=
+ \Pi^{\mathrm{loc}}_{i,t}\left(a^{\mathrm{cmp}}_{i,t};O_t\right),
+ \qquad
+ a^{\mathrm{app}}_{i,t}=\mathcal{S}\left(a^{\mathrm{req}}_{i,t},s_t\right),
+\end{aligned}
+\label{eq:control-complete-action-path}
+\end{equation}
+
+where $[\ell_i,u_i]$ are the active bounds, $a^{\mathrm{base}}$ is zero for an autonomous policy or comes from a declared teacher, $g_{i,t}$ is the residual authority, $\Pi^{\mathrm{loc}}$ is the optional controller-side projection, and $\mathcal{S}$ is the simulator transition. The recorded trace retains the policy, base, composed, requested, projected, and applied interpretations whenever the selected controller uses them. This separation prevents an imitation target from being confused with an executed action and prevents simulator clipping from being presented as learned safety.
+
+Initial exploration also became asset-aware. Uniform full-range actions are useful for checking bounds, but they fill early replay with saturated storage, negative EV commands, and arbitrary deferrable starts. The implemented alternatives include no-op-centred sampling, separate storage and negative-EV noise scales, controlled deferrable trigger probabilities, and deterministic rule-guided warm starts. Warm starts leave through a registered probability or blending schedule. No-op actor initialisation and residual zero-initialisation make the initial neural contribution small enough to audit. These choices are ablated because an exploration strategy changes both safety exposure and the distribution from which an off-policy critic learns.
+
+\subsection{Reward Lineage}
+\label{sec:control-reward-lineage}
+
+The general decomposition in \cref{eq:control-reward-family} was not written once and left unchanged. Early cost-focused rewards exposed shortcuts: V2G could lower cost while an EV remained below its target; dense urgency could make immediate charging look better than waiting for a cheaper feasible interval; infeasible departure deficits could dominate every critic target; and a high storage-throughput penalty could remove the very flexibility being studied. Each correction was kept as a named profile so that an old run could still be reproduced.
+
+\begin{table}[htbp]
+\centering
+\caption{Main stages in the implemented reward lineage. Exact parameters and registered profile names are retained in Appendix~\ref{app:controller-configurations}.}
+\label{tab:control-reward-lineage}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}p{0.17\textwidth}p{0.29\textwidth}X@{}}
+\toprule
+\textbf{Stage} & \textbf{Profiles} & \textbf{Problem corrected} \\
+\midrule
+Cost with hard-service terms & Cost Hard Constraint, Service Guard V2, and Cost Balanced V3 & Makes electrical violations, outages, EV departure loss, V2G below target, storage bounds, and deferrable deadlines visible beside cost \\
+\addlinespace
+Strict local objectives & Local V1, Scorecard Guard V2, Economic Safety V3, and Individual Scorecard Aligned V3 & Separates local information from settlement-aware reward, calibrates service gates, and removes dense urgency when a feasibility projector already protects recoverability \\
+\addlinespace
+Community settlement and service bands & Community V4, V41, and V42 & Aligns the economic term with member settlement, introduces over-service precision, and tests storage versus service pressure \\
+\addlinespace
+Physical feasibility and timestep scaling & Community V43--V47 & Uses observed storage bounds, scales state penalties by timestep, smooths recoverable deficits, accounts for phase-limited effective EV power, and caps only the training contribution of infeasible gaps \\
+\addlinespace
+Flexibility value & Community V49--V52 & Rebalances settlement, peak, export, storage throughput, deadline service, and target-band precision so that useful cycling is neither free nor suppressed \\
+\addlinespace
+Residual learning & Community V53--V55 & Makes small improvements over an RBC visible, densifies sparse EV consequences, and removes service terms from a storage-only critic only when service actions are copied unchanged from an audited teacher \\
+\addlinespace
+Coordinator rewards & CC, CC Level 1, CC Level 2, and CC Phase 1 & Moves from price-arbitrage signals to normalised community cost, peak, ramp, export, violation, service, and member-decomposed credit \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The common reward implementation emits both per-agent and community components. Its economic term can use local retail import, exact member settlement, or a declared community aggregation. EV penalties distinguish connected deficit, recoverable schedule deficit, departure failure, V2G below service, and over-service. The feasible schedule calculation uses the charger power available after building and phase headroom when those observations exist. Stationary-storage terms use observed SoC limits where possible, and state penalties can scale with the 900-second timestep. Deferrable urgency and missed deadlines remain separate components. Community terms can include import, peak, ramping, export, emissions, and electrical violations.
+
+Reward and scorecard retain different jobs. Reward supplies gradients and may deliberately smooth a sparse consequence. The scorecard measures settled cost, feasible EV service, target tolerance, electrical violations, battery throughput, V2G, solar self-consumption, import, export, net exchange, peaks, load factor, runtime, and participant outcomes. A reward revision is accepted when it fixes a diagnosed learning signal under held-out evaluation; a larger return alone is not evidence of a better controller.
+
+\subsection{Replay, Demonstrations, and Rare Events}
+\label{sec:control-replay-engineering}
+
+PPO and the deterministic off-policy methods require different records. A PPO rollout stores the exact pre-squash sample, old log-probability, value estimate, executed action, reward, and termination/truncation state. A policy-eligibility flag prevents teacher, warm-start, or phase-out decisions from entering the clipped policy-ratio objective as if the current actor had sampled them. Short rollouts are flushed at episode or topology boundaries and bootstrap only when the successor state remains valid.
+
+The off-policy buffer began as a joint list of transitions and became a compact set of preallocated arrays. It stores per-agent current and successor states, final action, reward, and done state. Residual and imitation experiments add separate current base action, successor base action, and cloning target. The separation matters: the critic must evaluate the action that affected the environment, a residual target must reconstruct the base policy at the successor state, and a stronger teacher may supply a cloning target that was never executed.
+
+Uniform replay remains the reference. The multi-agent event-aware buffer mixes uniform and weighted samples using
+
+\begin{equation}
+ p_k = \varepsilon
+ + \lambda_r g(r_k)
+ + \lambda_a h(a^{\mathrm{beh}}_k)
+ + \lambda_e e_k,
+ \qquad
+ \Pr(k)=\frac{1-\eta}{M}
+ +\eta\frac{p_k^{\alpha}}{\sum_{j=1}^{M}p_j^{\alpha}},
+ \label{eq:control-event-priority}
+\end{equation}
+
+where $g$ can select absolute, negative, or positive reward magnitude, $h$ measures registered behaviour-action activity, $e_k$ is an external observation-event boost, $M$ is the active buffer size, and $\eta$ is the weighted fraction of a batch. Priorities are capped when configured. The buffer can restrict $h$ to EV dimensions and form separate positive-action strata for each charger. A further stratum retains steps in which several chargers act concurrently; a maximum over the joint action would otherwise make one active charger indistinguishable from two.
+
+Observation-derived boosts cover registered EV departure/service states and combined EV--PV--price--peak events. Multi-step returns propagate a sparse consequence across the preceding transitions, with max, mean, or sum aggregation of their event boosts. These mechanisms do not replace the uniform ablation. Repeatedly sampling penalties can distort ordinary operation, so rare-event coverage, critic stability, service, and routine-period cost are read together.
+
+Fixed-vector replay rejects a change in state or action dimension. The structured MATD3 buffer takes a different approach: every transition carries a complete layout signature containing token families, entity types, instance identities, feature names, action names, and widths. Batches contain one signature only. A topology boundary flushes the pending multi-step queue as truncated under the old signature; learning resumes when the new bucket contains enough samples. Historical buckets remain available, while a building-count change clears the controller state because no safe remapping has been declared.
+
+\subsection{Optimisation, Checkpoints, and Export Continuity}
+\label{sec:control-training-continuity}
+
+Several safeguards were added after long runs made small numerical failures expensive. They include running reward or return normalisation, target clipping, selectable mean-squared or Huber critic loss, gradient clipping, delayed actor updates, target-policy smoothing, soft target updates, automatic entropy-temperature tuning in MASAC, and optional mixed-precision training. Actor diagnostics separate policy, behaviour-cloning, residual, saturation, storage, and V2G terms. Critic diagnostics retain target scale, absolute temporal-difference error, twin-critic disagreement, gradient norm, and update time. A configuration may disable a mechanism for an ablation; it cannot change it silently between candidates.
+
+Full checkpoints contain the model and target networks, optimisers, training clocks, replay or rollout state, reward normalisers, exploration state, behaviour-cloning progress, and Python, NumPy, PyTorch, and CUDA random-number states where applicable. Inference checkpoints omit training-only state. Restore validates algorithm, building order, observation and action dimensions, bounds, and, for structured policies, the complete layout signature before mutating a live controller. This transactional rule prevents a partially restored process from continuing with an actor, optimiser, and replay buffer from different runs.
+
+Deterministic actors can be exported per building to ONNX together with ordered observations, encoders, action bounds, names, topology, and provenance. Residual composition, local safety, and price-conditioning adapters remain external to several neural graphs. The exporter refuses to call such an artefact independently deployable unless the required runtime dependency is declared. This final check connects algorithm engineering to the deployment lifecycle: the action observed in a simulator evaluation must be reproducible from the exported policy set and its manifest.
+
+\section{Level I: Transparent and Constraint-Aware Controllers}
 \label{sec:rbc-ladder}
 
-\paragraph{Passive operation.}
-The passive or business-as-usual case follows the native asset or user schedule without active flexibility management. An EV can begin charging when it is connected, a battery can remain idle, and a deferrable request can follow its default start. This case is not a weak controller. It is the denominator that shows how much value is created by any intervention at all.
+Transparent controllers answer two questions that learning alone cannot settle. They show whether the scenario can be controlled without violating its basic obligations, and they reveal how much improvement follows from information and domain logic before training begins. They also provide deterministic trajectories against which observation encoding, action scaling, settlement, and KPI export can be checked.
 
-\paragraph{Progressive rule-based controllers.}
-The five RBC levels form a ladder of increasing knowledge and coordination. Their repository class names are mapped to the following conceptual levels so that the comparison remains stable across implementation revisions.
+\subsection{Business-as-Usual and the Rule-Based Ladder}
 
-\begin{description}
-  \item[Local feasibility.] The controller blocks impossible actions, remains inside asset limits, and prioritises urgent service requirements.
-  \item[Time- and price-aware control.] The controller uses tariff periods, time to deadline, and threshold logic.
-  \item[Forecast- and flexibility-aware control.] The controller uses short-horizon forecasts and explicit flexibility quantities, such as remaining EV energy divided by remaining connection time.
-  \item[Community-aware control.] Local rules respond to community demand, headroom, or a shared coordination signal.
-  \item[Expert and fail-safe control.] The strongest rule set combines local feasibility, forecasts, community context, and conservative fallback behaviour. It can also generate expert demonstrations.
-\end{description}
+The baseline ladder maps repository implementations to stable scientific roles. Class names may evolve as compatibility code is removed; the information and decision contract of each level remains fixed.
 
-The RBC ladder solves several problems early in the thesis. It establishes physically plausible behaviour, gives the simulator and action adapters a deterministic reference, provides a low-cost runtime fallback, and separates the value of richer information from the value of learning. If a learned controller only outperforms a local rule but not a community-aware rule, the observed gain may come from coordination information rather than from the learning mechanism itself.
+\begin{table}[htbp]
+\centering
+\caption{Transparent controller ladder used in the experiments.}
+\label{tab:control-rbc-ladder}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.19\textwidth}p{0.23\textwidth}X p{0.20\textwidth}@{}}
+\toprule
+\textbf{Level} & \textbf{Repository policy} & \textbf{Decision logic} & \textbf{Scientific role} \\
+\midrule
+BAU without stationary storage & \texttt{NormalNoBattery}\allowbreak\texttt{Policy} & Immediate EV charging towards service, earliest feasible deferrable start, and no stationary-battery action & Native demand and service denominator \\
+\addlinespace
+BAU with storage & \texttt{NormalPolicy} & The same service behaviour with simple PV self-consumption by the stationary battery & Isolates the value and side effects of installed storage \\
+\addlinespace
+Basic informed control & \texttt{RBCBasicPolicy} & Current/near-term price, EV energy gap, time to departure, deferrable urgency, and storage limits & Minimum credible intelligent baseline \\
+\addlinespace
+Strong local control & \texttt{RBCSmartLocalPolicy} & Local PV and load, causal forecasts, headroom, price, service slack, conservative V2G, and asset limits; community access disabled & Strict local reference and learning teacher \\
+\addlinespace
+Strong community control & \texttt{RBCCommunityPolicy} & Local rules augmented with community import, export, surplus, headroom, and settlement context & Non-learning community comparator \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
-The remaining limitation is adaptation. Rules can be effective when the expected conditions are known, but they need manual redesign when objectives, tariffs, asset combinations, or patterns of uncertainty change. The more conditions the rule set covers, the more difficult it becomes to reason about conflicts and maintenance.
+BAU is not designed to be deliberately poor. An EV charges when it is connected, a mandatory deferrable service starts at the earliest feasible time, and the user receives the requested service. The no-battery variant provides the clean denominator; the storage variant shows how much ordinary self-consumption changes without price or community optimisation. These cases also prevent a learned controller from receiving credit for simply activating an asset that the reference left unused.
 
-\paragraph{Evidence from the RBC progression.}
-The RBC comparison follows the complete ladder instead of reporting only the strongest rule set. Performance changes are attributed to local feasibility, temporal or forecast context, community information, and expert fallback behaviour. This creates an interpretable path from passive operation to the rule-based teacher retained by TI-MARL.
+RBC Basic introduces the smallest amount of anticipatory reasoning. Let $E^{\mathrm{req}}_{c,t}$ be the energy still required by an EV session, $H_{c,t}$ the remaining connected steps, and $\bar{P}^{\mathrm{ch}}_c$ its maximum charging power. A simple urgency measure is
 
-\paragraph{Explicit constraint-aware coordination.}
+\begin{equation}
+ \rho^{\mathrm{EV}}_{c,t} =
+ \frac{E^{\mathrm{req}}_{c,t}}
+ {H_{c,t}\,\bar{P}^{\mathrm{ch}}_c\,\eta_c\,\Delta t}.
+ \label{eq:control-ev-urgency}
+\end{equation}
+
+Values close to one leave little freedom to defer charging. The rule charges at the minimum rate required to remain feasible and uses cheap periods when slack exists. Deferrables follow the same logic through remaining duration and latest start. Storage responds to declared cheap and expensive price regions while respecting its SoC range.
+
+RBC Smart Local adds solar, demand, headroom, and causal forecast context. It uses available PV before importing for flexible demand, reserves enough EV energy for the departure target, and only permits V2G when the remaining connection window can recover the discharged energy. Deferrable services start when their slack becomes small or when local surplus is available. The stationary battery supports local demand and service obligations before it pursues price arbitrage. The strict-local implementation neutralises community access even when a raw simulator observation contains those columns. This is essential because an RBC consumes named observations directly and could otherwise see information that was removed only from the neural encoder.
+
+RBC Community introduces aggregate context. Its local decisions react to community surplus, import pressure, and the declared settlement rule. This controller tests a common source of confounding: a learned multi-agent policy can outperform a local RBC because it receives a community signal, not because learning discovered a better use of the same information. The community-aware rule makes that information advantage visible.
+
+The ladder is evaluated incrementally. BAU without storage is compared with BAU with storage; Basic with BAU; Smart Local with Basic; and Community with the matched local and community references. This order attributes changes to storage availability, deadline and price awareness, richer local information, and community information. It also supplies fallbacks of different complexity. The strongest rule is not assumed to dominate every KPI: conservative service and headroom logic can trade cost or solar use for a larger operating margin.
+
+\subsection{MILP Reference Problems}
 \label{sec:milp-control}
 
-MILP provides a different form of intelligence. Instead of learning from repeated interaction, it represents decisions, objectives, and constraints explicitly. Binary variables can represent service activation or mutually exclusive modes; continuous variables can represent power and energy; and constraints can encode deadlines, capacity, balance, and electrical limits.
+Rule-based control embeds domain knowledge in conditionals. MILP exposes the same decision problem through variables, constraints, and an objective. It is useful as a benchmark because a schedule can be audited step by step and its optimality statement can be restricted to a precise mathematical model.
 
-The optimisation is used in two forms.
+For a storage asset, non-negative charge and discharge variables $p^{+}_{t}$ and $p^{-}_{t}$ are linked to \cref{eq:control-storage-dynamics}. Binary variables prevent simultaneous charge and discharge where the formulation requires it. An EV session $s$ attached to charger $c$ has zero power outside $[t^{\mathrm{arr}}_s,t^{\mathrm{dep}}_s)$ and must satisfy
 
-\paragraph{Operational formulation.} It uses forecasts and information that could realistically be available at decision time. Its performance includes solver time, infeasibility handling, and sensitivity to forecast error.
+\begin{equation}
+ E^{\mathrm{EV}}_{s,t^{\mathrm{dep}}_s}
+ \geq E^{\mathrm{EV,min}}_s.
+ \label{eq:control-milp-ev-service}
+\end{equation}
 
-\paragraph{Perfect-information reference.} It uses realised future information and provides an oracle-like bound for the simplified formulation. It is not labelled as a deployable controller.
+A deferrable service has one binary start variable inside its admissible window. Its power trajectory is the convolution of that start with the complete cycle profile. Total and phase-specific exchange constraints apply to the combined inflexible demand, PV, storage, EV, and deferrable schedule.
 
-MILP solves important problems. It makes the meaning of the objective explicit, provides a strong constraint-aware benchmark, generates reference schedules, and can supply expert trajectories for behaviour cloning. It also reveals whether a learned method is recovering a useful scheduling pattern or only exploiting a weak baseline.
+The local retail objective is
 
-Its limitations are equally informative. Real communities contain uncertainty, mixed discrete and continuous decisions, heterogeneous devices, long horizons, and changing participation. Solve time can grow, a simplified model can omit relevant behaviour, and repeated model maintenance can be expensive. These limitations motivate adaptive control, but they do not make optimisation obsolete. MILP remains a reference, a teacher, and a possible verifier or fallback within the integrated stack.
+\begin{equation}
+ \min \sum_t \lambda_t
+ \sum_{i\in\mathcal{N}} G_{i,t}\Delta t,
+ \qquad
+ G_{i,t}\geq P^{\mathrm{grid}}_{i,t},\quad G_{i,t}\geq 0,
+ \label{eq:control-milp-local-objective}
+\end{equation}
 
+where export has no retail credit under the declared counterfactual. The community model replaces the independent imports by
 
-\paragraph{Local results and solved problems.}
-Passive, RBC, and MILP evidence is presented beside the corresponding methods. The comparison covers feasibility and service outcomes, the incremental value of each RBC information level, operational MILP performance and solve time, and the gap to any perfect-information oracle. Appendix~\ref{app:reproducibility} retains detailed schedules, sensitivity runs, and per-building tables.
+\begin{equation}
+ \min \sum_t \lambda_t G_t\Delta t,
+ \qquad
+ G_t\geq \sum_i P^{\mathrm{grid}}_{i,t},\quad G_t\geq 0.
+ \label{eq:control-milp-community-objective}
+\end{equation}
 
-\section{Adaptive Single-Agent and Community-Level Learning}
+The symmetric internal transfer price cancels in the aggregate community objective used by the current dataset contract. Explicit member settlement variables are still needed when individual bills, unequal weights, fairness, or asymmetric tariffs enter the objective.
+
+Four scopes prevent the expression ``the MILP'' from hiding different decision problems.
+
+\begin{table}[htbp]
+\centering
+\caption{MILP reference scopes and permitted interpretation.}
+\label{tab:control-milp-scopes}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.23\textwidth}p{0.27\textwidth}X@{}}
+\toprule
+\textbf{Scope} & \textbf{Controlled decisions} & \textbf{Permitted interpretation} \\
+\midrule
+Local fixed-service & Stationary battery of each building; EV and deferrable trajectories fixed to the matched service controller & Conditional local opportunity for storage scheduling \\
+Community fixed-service & Stationary batteries scheduled jointly; EV and deferrables fixed & Conditional community opportunity under the fixed service trajectories \\
+Local total-energy & Stationary battery, EV/V2G, and deferrable starts inside one building & Optimum of the supplied local linear/MILP model, followed by a simulator-feasible upper schedule after replay \\
+Community total-energy & All represented flexible assets and the community exchange objective & Optimum of the supplied community model, followed by a simulator-feasible upper schedule after replay \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Service is handled lexicographically. The solver first maximises physically attainable mandatory service, then enforces the registered gates, and only then minimises cost. This avoids a schedule that lowers its objective by deliberately missing a departure or omitting a deferrable cycle. Each solve records its status, primal objective, lower bound, relative gap, horizon, forecast assumptions, and wall time.
+
+A model solution is replayed through the simulator before it is used as controller evidence. Replay checks nonlinear efficiencies, initial conditions, session boundaries, action conventions, phase assignment, and settlement. A small model--replay gap supports the fidelity of that bounded formulation. It does not prove global optimality for every mechanism implemented by the simulator. The resulting language remains precise: ``optimal for the supplied model and feasible on replay'' is stronger and more useful than calling every perfect-foresight schedule optimal.
+
+The implemented reference family currently uses perfect information and therefore estimates opportunity; it is not an operational controller. The repository fixes a separate rolling-horizon protocol for the operational variant: seven days of causal lookahead, one day committed after each solve, exact carry-over of storage and EV state and of deferrable cycles already in progress, and an audited fallback when a solve fails. The seven-day horizon covers the longest EV session and deferrable window in the current annual suite while avoiding the size of one monolithic annual MILP. This rolling schedule can enter the controller comparison only after its complete simulator replay and solve-failure audit. The perfect-information schedules may also provide training demonstrations, but only on intervals permitted by the data split.
+
+\subsection{Evidence Produced at Level I}
+
+Level I produces more than baseline cost. The RBC ladder tests whether every asset and service can be traversed for a complete year, whether richer information changes the intended actions, and whether requested actions remain inside their bounds. MILP identifies the gap left by the strongest rule and distinguishes a weak controller from a physically narrow opportunity. Together, the two families supply three reference points: ordinary operation, a credible low-cost heuristic, and a model-based schedule under explicit assumptions.
+
+Their limitations are different. RBC quality depends on anticipated cases and manual priority rules. MILP quality depends on model fidelity, forecast quality, horizon length, and solve time. Both normally assume that the assets and decision variables are known before execution. These boundaries motivate the adaptive level without removing the value of either reference.
+
+\section{Level II: Adaptive Building Control}
 \label{sec:single-agent-learning}
 
-The next stage asks what can be learned without explicit multi-agent coordination. Depending on the task, one agent can control one asset, one building, or an aggregated community. This level provides a clean comparison between adaptation and coordination.
+The building-level experiments isolate the value of learning from the value of coordination. Each member owns one learner and receives only the observations admitted by the strict local surface. The environment still contains the whole community so that shared physical conditions are reproduced, but one building's actor does not read another building's private state. This formulation also matches a plausible deployment boundary: a local controller can operate when the community service is temporarily unreachable.
 
-\paragraph{Proximal Policy Optimisation.}
-PPO is an on-policy actor--critic method that limits the size of policy updates through a clipped objective \parencite{schulman2017ppo}. It is useful as a robust baseline and as the high-level learner in the hierarchical coordinator. Its main cost is data: samples are used for a limited number of updates and are then discarded.
+\subsection{Strict Local Learning Contract}
 
-\paragraph{Soft Actor--Critic.}
-SAC is an off-policy method that optimises reward together with policy entropy \parencite{haarnoja2018sac}. It provides a strong continuous-control reference when exploration and sample reuse matter. In community-level control, SAC can learn an aggregated policy without the non-stationarity introduced by several learning agents, but its action space grows when all assets are controlled centrally.
+For member $i$, the stochastic game in \cref{eq:control-markov-game} reduces to a local MDP with observation $o_{i,t}$, action $a_{i,t}$, and local reward $r^{\mathrm{loc}}_{i,t}$. A configuration containing $N$ PPO or TD3 learners is built as an ensemble of $N$ independent actor--critic pairs. Replay, value estimation, normalisation, checkpoints, and exported models remain separate. The global building index is preserved in each artefact so that a local policy cannot later be assigned to the wrong observation or action contract.
 
-\paragraph{Twin Delayed Deep Deterministic Policy Gradient.}
-TD3 reduces overestimation in deterministic actor--critic learning through twin critics, target policy smoothing, and delayed actor updates \parencite{fujimoto2018td3}. It is relevant for bounded continuous energy actions and provides the single-agent basis for MATD3.
+Local observations cover asset state, inflexible demand, PV, service deadlines, current price, and causal forecast features authorised by the experiment. The reward uses the member's physical retail cost or another explicitly local objective. Community settlement and private member aggregates are excluded. RBC Smart Local and the individual MILP share this boundary.
 
-Together, PPO, SAC, and TD3 solve part of the adaptation problem. They can improve beyond fixed rules, learn from repeated operation, and avoid solving a full optimisation problem at every step. The comparison also reveals where aggregation becomes restrictive: one community policy can hide participant objectives, create a large joint action space, or require central access to data that should remain local.
+Three policy modes are separated throughout the experiments:
 
+\begin{description}
+  \item[Autonomous.] The actor proposes the complete local action. Safety logic only enforces the declared physical envelope.
+  \item[Residual.] A deterministic local controller supplies a feasible base action and the actor learns a bounded correction.
+  \item[Service-anchored.] EV and deferrable obligations remain with a verified service controller while the actor optimises a restricted asset set, usually stationary storage. The runtime dependency is stated explicitly.
+\end{description}
 
-\paragraph{Comparative learning results.}
-Repeated-run learning curves, held-out evaluation outcomes, sample use, wall-clock cost, and inference requirements compare PPO, SAC, and TD3 under matched scenarios and information assumptions. Representative curves and the principal statistical comparison remain in the chapter; seed-level tables, hyperparameter sweeps, secondary reward variants, and unsuccessful configurations are archived in the appendix and experiment record.
+The autonomous mode tests the strongest learning claim but also presents the largest search space. Residual control tests whether learning can improve a strong operating point without rediscovering service logic. Service anchoring isolates economic adaptation where the complete action problem is not yet learned reliably. These modes cannot be pooled under one algorithm name.
 
-\section{Decentralised Multi-Agent Coordination}
+\subsection{Proximal Policy Optimisation}
+
+PPO represents the on-policy branch of the comparison \parencite{schulman2017ppo}. A stochastic actor with parameters $\theta$ produces a bounded continuous action. The implementation samples a Gaussian latent action, applies the hyperbolic tangent transformation, and accounts for that transformation in the log-probability. A value network estimates the expected return from the local observation.
+
+The clipped policy objective is
+
+\begin{equation}
+ \mathcal{L}^{\mathrm{clip}}(\theta)=
+ \mathbb{E}_t\left[
+ \min\left(
+  r_t(\theta)\hat{A}_t,
+  \operatorname{clip}(r_t(\theta),1-\epsilon,1+\epsilon)\hat{A}_t
+ \right)
+ \right],
+ \label{eq:control-ppo-objective}
+\end{equation}
+
+where $r_t(\theta)=\pi_\theta(a_t\mid o_t)/\pi_{\theta_{\mathrm{old}}}(a_t\mid o_t)$ and $\hat{A}_t$ is an advantage estimate. Clipping limits the influence of a large policy update. The complete loss includes a value term and an entropy term, with gradient clipping and a KL diagnostic used to detect an excessive update.
+
+PPO is useful here for three reasons. Its stochastic actor explores bounded continuous decisions without an external deterministic noise process. Its on-policy updates provide a clean separation between actions sampled from the current policy and actions supplied by a teacher. The same implementation can also act as a community coordinator over a lower-frequency action space.
+
+The cost is sample use. Once a rollout has contributed to the PPO update, it cannot be replayed indefinitely as if it came from the current policy. Teacher-controlled transitions are therefore excluded from the policy-ratio objective. They can train the value function or a separate behaviour-cloning loss under a declared rule, but their log-probability is not presented as an on-policy sample. Topology or layout changes also require the current rollout to be closed before the policy interface is rebuilt.
+
+\subsection{Twin Delayed Deep Deterministic Policy Gradient}
+
+TD3 represents the off-policy deterministic branch \parencite{fujimoto2018td3}. In the strict local implementation it is the one-agent reduction of the MATD3 code path: the joint state and action contain one member only, while the twin-critic, delayed-update, and replay mechanisms remain unchanged.
+
+Two critics $Q_{\phi_1}$ and $Q_{\phi_2}$ estimate the action value. The target is
+
+\begin{equation}
+ y_t=r_t+\gamma(1-d_t)
+ \min_{j\in\{1,2\}}
+ Q_{\bar{\phi}_j}
+ \left(o_{t+1},
+ \operatorname{clip}\left(\mu_{\bar{\theta}}(o_{t+1})+\epsilon_t\right)
+ \right),
+ \label{eq:control-td3-target}
+\end{equation}
+
+where $d_t$ marks termination and $\epsilon_t$ is clipped target-policy noise. Taking the minimum reduces optimistic value estimates. The actor is updated less frequently than the critics, and target networks move through soft updates. Replay allows several gradient steps from previously collected transitions, giving TD3 greater sample reuse than PPO.
+
+That reuse creates its own risks. A replay buffer can contain actions generated by an earlier policy, a teacher, or a different exploration regime. If behaviour actions are mixed without labels, the critic and any auxiliary imitation loss learn from an ambiguous distribution. The implementation therefore retains the executed behaviour action and its source. Warm-start, residual, and teacher configurations fail early when the declared teacher is unavailable.
+
+TD3 provides a useful bridge to the multi-agent level. A local TD3 result shows what deterministic twin-critic learning can achieve without non-stationarity from other learning agents. A later MATD3 comparison can then attribute changes to joint training and coordination instead of to the underlying TD3 corrections alone.
+
+\subsection{Residual Control, Service Protection, and Local Safety}
+
+The earliest autonomous policies showed why cost cannot be the only gate. Frequent EV charging or V2G can reduce one short-window objective while missing departure requirements or creating electrical pressure. A local action adapter was introduced to preserve the meaning of service and physical headroom during learning.
+
+In residual form, the applied proposal is
+
+\begin{equation}
+ a_{i,t}^{\mathrm{prop}}
+ = a_{i,t}^{\mathrm{base}}
+ + g_i\,\delta_{\theta_i}(o_{i,t}),
+ \qquad
+ a_{i,t}^{\mathrm{req}}
+ = \Pi_{\mathcal{A}^{\mathrm{loc}}_{i,t}}
+ \left(a_{i,t}^{\mathrm{prop}}\right),
+ \label{eq:control-residual-policy}
+\end{equation}
+
+where $g_i$ bounds the authority of the learned residual and $\Pi$ applies the declared local envelope. $g_i=0$ reproduces the base policy and provides a neutral control. Per-building gains are admissible only when calibrated on development data and then frozen.
+
+The local envelope protects action bounds, SoC, charger availability, deadline-feasible EV service, atomic deferrable starts, and observed electrical headroom. EV protection is intentionally deadline-feasible rather than an instruction to charge at the average required rate from the moment of arrival. The controller retains flexibility until postponing another step would make the service impossible. If headroom is absent from the observation contract, the adapter does not invent a zero limit. Missing evidence and an actual zero limit have different meanings.
+
+Projection is recorded, not hidden. The scorecard reports both the unsafe energy requested before projection and the residual violation after the simulator applies the action. A policy that relies continuously on projection has not learned the constrained problem, even if the physical trace is safe. This distinction links Level II directly to safety and deployability: an adapter used during evaluation must also exist, with the same semantics, in the exported inference path.
+
+The local learning comparison therefore includes autonomous PPO/TD3, residual variants, service-anchored variants, and their neutral controls. The decisive questions are whether the learned component improves beyond its base, whether the gain survives a disjoint interval, how broadly it is distributed across buildings, and how much external protection remains necessary.
+
+\subsection{Entity-Structured PPO}
+\label{sec:control-transformer-ppo}
+
+The fixed-vector PPO actor is tied to the number and order of features and actions present during training. AgentTransformerPPO was implemented to test a narrower structural question: can one building policy retain the identities of known asset types while the number of their active instances changes? The entity adapter constructs three token families for each building and processes them with a Transformer encoder \parencite{vaswani2017attention}:
+
+\begin{equation}
+ [\mathcal{T}^{\mathrm{SRO}}_{i,t},
+   \mathcal{T}^{\mathrm{NFC}}_{i,t},
+   \mathcal{T}^{\mathrm{CA}}_{i,t}]
+ \xrightarrow{\mathrm{Transformer}}
+ [\{h^{\mathrm{CA}}_{i,c,t}\}_{c},\bar{h}_{i,t}],
+ \qquad
+ a_{i,c,t}=f_{\mathrm{act}}(h^{\mathrm{CA}}_{i,c,t}),
+ \quad
+ V_i(o_{i,t})=f_V(\bar{h}_{i,t}),
+ \label{eq:control-transformer-ppo}
+\end{equation}
+
+where SRO denotes shared read-only context, NFC is one derived non-flexible-consumption token, and CA denotes a controllable asset. One projection is learned per declared entity type rather than per asset instance. The actor head is applied to each CA embedding in the simulator action order, while the value head uses the mean-pooled building representation. A second charger of a known type can therefore reuse the charger projection and actor head without introducing a permanently reserved vector slot.
+
+Each building still owns an independent tokenizer, Transformer, actor, critic, optimiser, value normaliser, and rollout buffer. This is structured local PPO, not a centralised multi-agent critic. On-policy integrity remains strict: the rollout keeps the exact pre-tanh sample and is closed before an old layout is replaced. Compatible asset-instance changes preserve type projections, neural weights, optimiser state, normalisation state, and counters. A new entity type, changed feature width, altered action meaning, or changed building population causes rejection or a full rebuild rather than silent adaptation.
+
+The implementation includes deterministic RBC demonstrations, actor-only pretraining, an auxiliary post-PPO cloning step, local action projection, transactional topology rollback, and per-building ONNX export. Demonstrations are grouped by the layout signature on which they were collected. The exported graph remains specific to the current topology, and runtime safety is external unless separately reproduced. AgentTransformerPPO is therefore an implemented representation baseline for variable counts of known assets. It does not solve changing action semantics, health-dependent capability loss, or population-wide credit assignment.
+
+\section{Level III: Decentralised Multi-Agent Control}
 \label{sec:marl-progression}
 \label{sec:standard-marl}
 
-\paragraph{MADDPG.}
-MADDPG extends deterministic policy gradients to multi-agent settings through centralised training with decentralised execution \parencite{lowe2017maddpg}. Each actor uses local observations at execution, while its critic can condition on joint observations and actions during training. This matches the EnergAIze design in which dwelling or asset controllers operate locally but learn from community interactions.
+Independent local policies cannot observe the effect of simultaneous decisions on a shared community objective. A collection of otherwise successful battery controllers can charge during the same low-price interval and create a new peak. Training each actor against a changing population of other learners also makes the transition distribution non-stationary from the actor's local perspective. Level III introduces centralised training with decentralised execution to address these effects.
 
-The inherited EnergAIze implementation uses one agent per dwelling or controllable node, continuous actions, individual and community reward components, and RBC-guided early exploration \parencite{fonseca2024energAIze}. It established that decentralised policies can pursue local service and economic outcomes while learning from community effects. This solved a problem that the centralised single-agent formulations did not: local policy execution with an explicitly multi-agent training objective.
+\subsection{Centralised Training and Decentralised Execution}
 
-The remaining issues include non-stationarity, sensitivity to reward and exploration settings, critic growth with joint information, and deterministic value overestimation. These observations motivate MATD3 and later structural changes.
-
-\paragraph{MATD3.}
-MATD3 extends the twin-critic and delayed-update ideas of TD3 to centralised multi-agent critics \parencite{ackermann2019matd3}. The standard algorithm is prior work, but the thesis can make substantial contributions through its implementation, adaptation, evaluation, and integration.
-
-MATD3 has three roles in the thesis:
-
-\begin{enumerate}
-  \item \textbf{empirically}, by quantifying stability, critic disagreement, performance, and resource cost in heterogeneous REC tasks;
-  \item \textbf{methodologically}, when material modifications such as expert initialisation, event-aware replay, hierarchical coordination, dynamic interfaces, or physics-informed constraints are isolated through ablations; and
-  \item \textbf{operationally}, by integrating the selected MATD3-based policy into the EnergAIze experiment, policy-set, and edge lifecycle.
-\end{enumerate}
-
-MATD3 is therefore an important contribution stage and a likely learning backbone for \gls{timarl}. It is not, however, the unifying algorithmic contribution of the thesis. The distinctive contribution emerges from the way the later method combines learning, changing interfaces, physical feasibility, and safe execution.
-
-\paragraph{MADDPG--MATD3 comparison.}
-The comparison holds the actor structure, observations, actions, scenarios, replay budget, and evaluation procedure constant where possible. The main independent variables are the critic structure, target construction, policy smoothing, and actor-update schedule. The analysis includes:
-
-\begin{itemize}
-  \item value overestimation and critic disagreement;
-  \item stability and variance across seeds;
-  \item convergence and sample efficiency;
-  \item participant and community KPIs;
-  \item sensitivity to reward scale and exploration noise; and
-  \item training, memory, and inference overhead.
-\end{itemize}
-
-A modest KPI improvement with substantially lower variance can be more useful than a large improvement from one favourable seed. Conversely, a higher return without better service or energy outcomes is not sufficient evidence of progress.
-
-\Cref{fig:maddpg-matd3-comparison} separates the standard MADDPG-to-MATD3 algorithmic change from the thesis-specific adaptation and evaluation criteria.
-
-\plannedfigure[0.16\textheight]{fig:maddpg-matd3-comparison}{MADDPG and MATD3 training architecture and the evaluation dimensions used in their comparison.}{\textbf{Type:} paired actor--critic schematic plus a small metric panel. Show decentralised actors, centralised critic inputs, twin critics and delayed updates in MATD3, and the exact quantities to compare: return/control KPIs, critic disagreement or overestimation proxy, seed variance, convergence, invalid/extreme actions, training time, inference cost. \textbf{Purpose:} distinguish the standard algorithmic change from the thesis-specific adaptation and evidence. \textbf{Source needed:} frozen implementation and final experiment logs.}
-
-
-\paragraph{Coordination and stability findings.}
-The MADDPG--MATD3 comparison places energy and service outcomes beside seed-to-seed variability, critic diagnostics, training cost, and inference resource use. MATD3 constitutes a substantive stage only where the evidence shows that it resolves a measurable limitation of MADDPG; the thesis does not claim the standard MATD3 algorithm as a new invention. Named modifications and their ablations define any additional method contribution.
-
-\section{Data-Efficient, Reusable, and Hierarchical Learning}
-\label{sec:data-efficient-hierarchy}
-\label{sec:learning-efficiency}
-
-The next stage reuses knowledge that already exists in rules, optimisation trajectories, previous policies, and historical data. These mechanisms solve distinct problems and are evaluated separately before any combined configuration is retained.
-
-\paragraph{RBC-Guided Exploration.}
-Purely random exploration spends many interactions on actions that are infeasible or operationally meaningless. The inherited EnergAIze approach centres early exploration on a plausible RBC action and gradually gives the learned policy more influence. A generic blended action is:
+At execution, agent $i$ uses only its authorised observation:
 
 \begin{equation}
- a_t=(1-\alpha_t)a^{\mathrm{RBC}}_t+\alpha_t\pi_\theta(o_t)+\epsilon_t,
+ a_{i,t}=\mu_{\theta_i}(o_{i,t}).
+ \label{eq:control-decentralised-actor}
 \end{equation}
 
-where $\alpha_t$ changes over training and $\epsilon_t$ is bounded exploration noise. This mechanism solves part of the early-training problem by keeping trajectories near feasible operation. The remaining risk is expert anchoring: the learner may reproduce the rule instead of improving beyond it.
+During training, a central critic can condition on $s_t$ or on the concatenated observations and actions of the active agents. This removes part of the apparent non-stationarity from value estimation because the critic sees the decisions that contributed to the next state. Private observations remain a training privilege and are not required by the deployed actor.
 
-\paragraph{Behaviour Cloning.}
-Behaviour cloning trains a policy from expert state--action pairs before RL fine-tuning. Experts can be produced by an RBC, operational MILP, hierarchical teacher, or validated historical controller. For continuous actions, the actor can minimise:
+This structure is well matched to a community in which each building retains a local controller. It does not make communication free. Collecting joint training data, building a central critic, synchronising policies, and distributing compatible checkpoints all contribute to RQ2 and RQ4. The critic input also grows with the number and dimension of agents when simple concatenation is used.
+
+\subsection{MADDPG and the Original EnergAIze Formulation}
+
+MADDPG extends deterministic policy gradients to a multi-agent setting \parencite{lowe2017maddpg}. Agent $i$ owns a local actor $\mu_{\theta_i}$ and a central critic
 
 \begin{equation}
- \mathcal{L}_{\mathrm{BC}}(\theta)=\frac{1}{|\mathcal{D}_E|}\sum_{(o,a_E)\in\mathcal{D}_E}\|\pi_\theta(o)-a_E\|^2.
+ Q_i\left(s_t,a_{1,t},\ldots,a_{N,t}\right).
+ \label{eq:control-maddpg-critic}
 \end{equation}
 
-Behaviour cloning is evaluated for its effect on the control problem: whether expert initialisation reduces required interaction, preserves feasible behaviour, and still permits improvement beyond the teacher.
-
-\paragraph{Prioritised and Event-Aware Replay.}
-Uniform replay treats ordinary intervals and rare critical events equally. Prioritised experience replay addresses this imbalance by sampling transitions according to a priority and correcting the resulting bias \parencite{schaul2016per}. Energy trajectories contain many nominal steps and relatively few imminent departures, demand-response activations, near-violations, communication failures, or topology changes. The thesis evaluates standard TD-error priority and event-aware priority of the form:
+The critic is trained with a Bellman target formed from target actors and a target critic. The actor gradient follows
 
 \begin{equation}
- p_k=\lambda_{\mathrm{TD}}|\delta_k|+\lambda_{\mathrm{event}}e_k+\lambda_{\mathrm{safety}}c_k+\varepsilon,
+ \nabla_{\theta_i}J_i
+ \approx
+ \mathbb{E}\left[
+  \nabla_{a_i}Q_i(s,a_1,\ldots,a_N)
+  \big|_{a_i=\mu_{\theta_i}(o_i)}
+  \nabla_{\theta_i}\mu_{\theta_i}(o_i)
+ \right].
+ \label{eq:control-maddpg-gradient}
 \end{equation}
 
-where $e_k$ marks an operational event and $c_k$ reflects proximity to a constraint or intervention. This stage seeks to solve inefficient learning from rare but important experiences. Bias correction, capped priorities, and ablation against uniform replay are necessary to show that the improvement does not come from an uncontrolled change in the data distribution.
+Each critic can use an individual reward, a community reward, or a declared combination. The original EnergAIze design used one agent per dwelling or controllable node, continuous charging actions, local execution, a replay buffer, soft target updates, and early exploration guided by an RBC. This design answered the practical question that motivated the first phase of the research: local policies could be trained with knowledge of community interactions and later executed without a central action server.
 
-\paragraph{Offline Reinforcement Learning.}
-Offline RL learns from a fixed dataset and reduces the need for online exploration \parencite{levine2020offline}. This is useful when historical trajectories exist but physical trial-and-error is unacceptable. Its limitation is support: a policy that proposes actions not represented in the dataset can be evaluated unreliably. Behaviour cloning remains the conservative baseline, while methods such as CQL or IQL can be used where the action structure permits it \parencite{kumar2020cql,kostrikov2021iql}.
+The historical hourly 17-member case is retained to reproduce that result. It is not silently compared with the new 15-minute annual suite. Resolution, assets, prices, services, simulator behaviour, and baselines changed. The historical experiment establishes provenance; the canonical Core-30 campaign tests the method under the current contract.
 
-The thesis uses offline learning as pretraining, as a test of what can be learned from existing operations, and as a pre-deployment stage before simulator fine-tuning. The contribution lies in the dataset and coordination conditions under which it succeeds or fails, especially when the active policy set and joint behaviour matter.
+MADDPG leaves several measurable risks. Deterministic critics can overestimate actions, learning is sensitive to reward and exploration scale, and the joint critic grows with the complete observation and action layout. A fixed actor head also binds a policy to the assets present during training. These issues motivate a controlled MATD3 comparison while preserving MADDPG as an important reference.
 
-\paragraph{Policy Distillation.}
-Distillation transfers behaviour from a larger or centralised teacher to a smaller or local student \parencite{rusu2015distillation}. It can reduce runtime cost and support edge deployment. It can also remove information or coordination structure that the student needs. The experiments therefore report the performance--resource trade-off and whether the student preserves participant service, safe execution, and compatibility with the target interface.
+\subsection{MATD3}
 
-These mechanisms address sample efficiency, reuse, and runtime simplification while retaining a fixed interface assumption. A cloned MATD3 policy still expects the observation and action contract on which it was trained, and an offline policy can remain data-efficient while failing when a new action appears. Structural reconfiguration therefore remains unresolved.
+MATD3 applies the principal TD3 corrections to each central multi-agent critic \parencite{ackermann2019matd3}. Agent $i$ owns two critics, $Q_{i,1}$ and $Q_{i,2}$. Its target uses the lower estimate:
 
-\paragraph{Hierarchical community coordination.}
-\label{sec:hrl}
+\begin{equation}
+ y_{i,t}=r_{i,t}+\gamma(1-d_t)
+ \min_{j\in\{1,2\}}
+ Q_{i,j}^{\mathrm{target}}
+ \left(s_{t+1},\tilde{a}_{1,t+1},\ldots,\tilde{a}_{N,t+1}\right),
+ \label{eq:control-matd3-target}
+\end{equation}
 
-A fully central controller can become difficult to scale and deploy, while independent local controllers can create community peaks. Hierarchical coordination introduces a smaller decision between the two. A community coordinator does not directly command every charger or battery; it modifies a signal that changes how local controllers interpret the current community condition.
+where each $\tilde{a}_{k,t+1}$ includes bounded target smoothing. Actor and target updates occur less frequently than critic updates. The replay, actor layout, observations, actions, reward, and training budget are held constant against MADDPG wherever possible. This isolates critic structure, target construction, policy smoothing, and update delay.
 
-The implemented hierarchy uses a high-level PPO coordinator and a low-level signal-aware controller. The coordinator observes community aggregates and emits a price multiplier. In the current implementation the multiplier is bounded in $[0.5,1.3]$. A value of 1 leaves the parent low-level controller unchanged, which provides a clean comparison between standalone and coordinated operation.
+The comparison is read across more than return. Critic disagreement and overestimation proxies test the mechanism directly. Seed variance and catastrophic training runs reveal stability. Cost, service, peak, ramping, import/export, and violations show whether a change in value estimation improves the control task. Training time, memory, checkpoint size, and inference time identify the resource price of the second critic.
 
-The high-level controller acts every four 15-minute steps, while the local controllers act at every environment step. This temporal abstraction reduces the coordinator's horizon and keeps local feasibility close to the assets. Two variants are evaluated:
+MATD3 is treated as an algorithmic stage, not as a relabelled final solution. The standard algorithm is prior work. Thesis-specific contributions require a named modification, a controlled ablation, and evidence under the REC problem. Residual control, behaviour cloning, event-aware replay, local safety, or hierarchical composition qualify as separate mechanisms only when their effect is isolated.
 
-\begin{description}
-  \item[Global coordination.] One multiplier is broadcast to the community. This is compact and easy to operate, but it cannot distinguish participants with different flexibility.
-  \item[Per-building coordination.] One multiplier is produced for each building. This allows targeted coordination at the cost of a larger observation, action, and monitoring interface.
-\end{description}
+\subsection{Alternative MARL Comparators}
 
-The current high-level reward contains cost, peak, ramping, export, and violation terms; an additional variant includes EV service. The behaviour-cloning teacher also contains a proactive headroom heuristic. This mismatch is informative: behaviour cloning may teach the coordinator to act before a violation, while PPO can later weaken that behaviour if the reward only penalises the consequence. The analysis therefore compares the teacher, the fine-tuned policy, and the evolution between them, rather than only the terminal KPI.
+MADDPG and MATD3 belong to one deterministic off-policy family. A broader comparison checks whether their behaviour follows from that family. The current repository contains the alternatives in \cref{tab:control-marl-comparators}.
 
 \begin{table}[htbp]
 \centering
-\caption{Hierarchical coordination matrix.}
-\label{tab:hrl-matrix}
-\begin{tabularx}{\textwidth}{@{}lcccX@{}}
+\caption{MARL comparator families and the hypothesis tested by each one.}
+\label{tab:control-marl-comparators}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.15\textwidth}p{0.25\textwidth}X p{0.18\textwidth}@{}}
 \toprule
-\textbf{Low-level controller} & \textbf{Standalone} & \textbf{Global CC} & \textbf{Per-building CC} & \textbf{Purpose} \\
+\textbf{Method} & \textbf{Training structure} & \textbf{Question addressed} & \textbf{Principal cost} \\
 \midrule
-BAU & yes & --- & --- & Passive denominator \\
-RBC Basic & yes & yes & yes & Generalisation across rule sophistication \\
-RBC Smart & yes & yes & yes & Headline controlled comparison \\
-RBC Community & yes & yes & yes & Learned coordination versus community heuristic \\
-MADDPG/MATD3 & yes & yes & yes & Hierarchy over an already learned local controller \\
+IPPO & Independent PPO actor--value pair for each member & Can stable on-policy local updates compete without a central critic? & No direct central credit assignment \\
+MAPPO & Decentralised PPO actors with a central value function \parencite{yu2022mappo} & Does central value information help without deterministic action-value learning? & On-policy sample demand and central value growth \\
+HAPPO & Sequential PPO-style agent updates \parencite{kuba2022happo} & Does controlling the order and trust region of multi-agent updates improve stability for heterogeneous agents? & Sequential update cost and order dependence \\
+MASAC & Stochastic decentralised actors with central twin critics, based on entropy-regularised SAC \parencite{haarnoja2018sac} & Does entropy-driven exploration improve continuous community control? & Entropy tuning and stochastic training variance \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-Hierarchical coordination solves part of the local--community decomposition. It can reuse local controllers, preserve a clear fallback path, and reduce the dimensionality of the community decision. Its remaining assumption is that the lower-level interfaces are already known and compatible. A new asset or capability still needs a representation that the coordinator and local policy can understand.
+\paragraph{IPPO.}
+IPPO uses the same squashed-Gaussian actor, value network, GAE calculation, clipped objective, entropy term, value loss, minibatches, and KL diagnostic as the local PPO branch. Each member estimates value from its own observation and reward. It is the cleanest test of whether several independent on-policy learners are sufficient; any community improvement must arise through the environment and reward rather than a central training input.
 
-\Cref{fig:hierarchical-control-architecture} shows how the community coordinator modifies local control without replacing the local controllers or their fallback paths.
+\paragraph{MAPPO and HAPPO.}
+MAPPO keeps decentralised actors but evaluates advantage with a central value input. It can use joint information during training without learning an action-value function over the full joint action. HAPPO uses the same central-value principle and updates agents sequentially in a fixed or random registered order. The sequential update makes the policy change of one agent explicit before the next is optimised. This is relevant for heterogeneous members, although it increases update cost and makes the order an experimental variable.
 
-\plannedfigure[0.17\textheight]{fig:hierarchical-control-architecture}{Hierarchical community coordination used in the progressive controller studies.}{\textbf{Type:} two-level architecture diagram. Show the community coordinator, its slower decision interval and aggregate observations, the global or per-building coordination signal, local RBC/MADDPG workers, physical assets, and feedback. \textbf{Purpose:} explain what hierarchy solved and how it differs from goal-based hierarchical RL. \textbf{Source needed:} as-built coordinator and worker configuration; annotate which variants were actually evaluated.}
+\paragraph{MASAC.}
+MASAC replaces deterministic actors and external action noise with stochastic Gaussian actors. Each agent has two central critics and an entropy temperature $\alpha_i$. Its actor minimises
 
+\begin{equation}
+ \mathcal{L}^{\mathrm{MASAC}}_{\pi_i}
+ =\mathbb{E}
+ \left[
+   \alpha_i\log\pi_i(a_i\mid o_i)
+   -\min_{j\in\{1,2\}}Q_{i,j}(s,a_1,\ldots,a_N)
+ \right],
+ \label{eq:control-masac-actor}
+\end{equation}
 
-\paragraph{Mechanism-level ablations and results.}
-Each enhancement is evaluated against the problem it was introduced to solve. Behaviour cloning and guided exploration are judged by initial feasibility and interactions required to reach a performance threshold. Replay variants are judged by learning efficiency and rare-event coverage. Offline learning is judged by policy quality, dataset coverage, and extrapolation failures. Distillation is judged by model size, latency, and retained control quality. Hierarchy is judged by local--community outcomes and the cost of the additional coordination layer. Only the decisive ablations remain in the chapter; exhaustive sweeps and secondary combinations move to the appendix.
+and the temperature can be adjusted automatically towards a target entropy based on the local action dimension. The comparison tests whether continued entropy-driven exploration improves coverage of continuous REC actions after the initial random phase. Checkpointing includes both critic pairs, the stochastic actors, entropy parameters and optimisers, replay, and inherited training state.
 
-\section{Unified Cross-Method Comparison and Solved-Problem Ledger}
+These methods enter after the reference and data contracts are stable. They are screening comparators, not automatically equal thesis contributions. A candidate advances only after it passes the same EV, deferrable, electrical, SoC, and outage gates as MADDPG and MATD3. The matrix prevents extensive training of an algorithm that has not yet shown feasible short-window behaviour.
+
+\subsection{Entity-Structured MATD3}
+\label{sec:control-transformer-matd3}
+
+AgentTransformerMATD3 combines the entity-token actor introduced in \cref{sec:control-transformer-ppo} with off-policy centralised training. Each building owns an independent deterministic actor stack and one pair of independent central critics. A critic tokenises every building, injects the corresponding action into each controllable-asset embedding, pools the action-conditioned representation of that building, and aggregates buildings with a permutation-invariant Deep Sets operation before producing $Q_i$. The critic therefore accepts different numbers of known asset instances and avoids making building order itself a learned spatial coordinate.
+
+The learning rule retains MATD3's lower twin-critic target, clipped target noise, delayed actor updates, and soft target networks. Only actor $i$ receives gradients when its policy is updated; the other actors' actions are detached. Optional residual control, replay-based BC, a separate RBC demonstration reservoir, local price conditioning, local action projection, multi-step returns, reward normalisation, and selectable critic loss are implemented as named switches. These switches are not folded into the definition of Transformer MATD3: each produces a separate configuration and ablation.
+
+Dynamic asset-instance changes are handled transactionally. The controller validates the complete old and new layout, flushes pending multi-step transitions under the old signature, reuses compatible type projections and heads, and rolls back the whole operation if attachment fails. Replay samples only the current complete signature. A changed building count performs a full rebuild; mixed-signature batches and cross-layout checkpoint restore are not supported. ONNX exports are per building and per topology, with residual, safety, and price adapters declared as external runtime dependencies.
+
+This method is the strongest structured baseline produced before the next chapter. It shows how far variable token counts, shared type projections, signature-aware replay, and a set-based central critic can go while the catalogue of types and their feature meanings remain fixed. It also makes the residual problem precise: asset count can change within the known schema, but a failed sensor, a new action type, a changed dependency, or a building joining the population still lacks one shared runtime control contract.
+
+\subsection{Evidence Produced at Level III}
+
+Level III tests three claims separately. The first is decentralised execution: each actor must reproduce its action from local inputs without the training critic. The second is coordination: community outcomes must improve beyond strict local learning and a strong community RBC under matched information. The third is learning quality: the improvement must survive independent seeds and justify its computational cost.
+
+The principal comparison uses Core-30-Nominal. Core-30-Safety tests simultaneous actions under shared headroom, while Core-30-Health evaluates degraded inputs and commands that do not alter the actor layout. Fixed-vector methods are not credited with dynamic-topology capability. A join, departure, or new charger changes the dimensions of their actor or critic and therefore defines an explicit applicability failure unless the method declares and validates a separate representation strategy.
+
+\section{Prior Knowledge and Data-Efficient Learning}
+\label{sec:data-efficient-hierarchy}
+\label{sec:learning-efficiency}
+
+Reinforcement learning is expensive when every useful behaviour has to be rediscovered through interaction. The controller studies already contain several sources of knowledge: transparent rules, optimisation schedules, previously trained policies, and archived trajectories. The question is how to reuse that knowledge without hiding a permanent dependency or preventing the policy from improving beyond its source.
+
+\subsection{Rule-Guided Exploration and Residual Policies}
+
+The original EnergAIze exploration strategy mixed a plausible RBC action with a learned deterministic action and decaying noise. A generic form is
+
+\begin{equation}
+ a_t=(1-\alpha_t)a^{\mathrm{RBC}}_t
+     +\alpha_t\mu_\theta(o_t)
+     +\epsilon_t,
+ \qquad \alpha_t\in[0,1].
+ \label{eq:control-rbc-guided-exploration}
+\end{equation}
+
+Early transitions remain close to a service-aware trajectory; policy authority increases as training progresses. This avoids spending most of the initial replay buffer on disconnected EV actions, impossible deferrable starts, or saturation at action bounds. The schedule of $\alpha_t$, the noise process, and the treatment of mixed actions in replay are part of the method.
+
+Residual control, introduced in \cref{eq:control-residual-policy}, retains the base throughout operation instead of phasing it out. It is stronger operationally because zero residual has an exact meaning and the controller returns to a known behaviour when the learned correction is unavailable. It is also a narrower learning claim. A residual policy has not learned the complete service problem when the base still supplies EV and deferrable decisions.
+
+The two mechanisms are evaluated separately. Guided exploration is judged by early feasibility, useful replay coverage, and transitions required to reach a fixed performance threshold. Residual control is judged by improvement over exact neutral parity, required projection, and robustness when the residual is disabled. Neither is compared with an autonomous policy without labelling the difference in runtime authority.
+
+\subsection{Behaviour Cloning and Demonstration Use}
+
+Behaviour cloning trains an actor on observation--action pairs $(o,a_E)$ produced by an expert. For continuous actions, the basic loss is
+
+\begin{equation}
+ \mathcal{L}_{\mathrm{BC}}(\theta)=
+ \frac{1}{|\mathcal{D}_E|}
+ \sum_{(o,a_E)\in\mathcal{D}_E}
+ w(o,a_E)\left\|\pi_\theta(o)-a_E\right\|_2^2,
+ \label{eq:control-bc-loss}
+\end{equation}
+
+where $w$ can give sufficient representation to rare positive EV, V2G, or deferrable actions. Uniform action loss can otherwise be dominated by the many intervals in which an asset is idle. Registered sources include the executed replay action, a warm-start policy, a separate teacher policy, deterministic RBC Smart demonstrations, and compatible replay-validated oracle schedules. The expert's information boundary must be no richer than the policy's declared training contract unless the experiment is explicitly studying privileged supervision.
+
+One target is not suitable for every action. The loss can weight EV, stationary-storage, deferrable, and other dimensions separately; positive EV and deferrable targets can receive additional sample weight; and long sequences of zero actions can be down-weighted without being discarded. In residual training, the cloning target is clipped to the actor's available residual authority and the unreachable fraction is logged. This avoids asking the residual actor to reproduce a teacher action that its configured gain cannot express.
+
+PPO and off-policy actors use demonstrations differently. PPO keeps expert transitions outside the on-policy rollout and applies actor-only pretraining or an auxiliary loss after the PPO epochs. TD3, MADDPG, MATD3, and MASAC can read labelled cloning targets from replay and can run a bounded actor-only pretraining phase before normal policy updates. The structured implementations also support a separate per-layout demonstration reservoir. Critics, target networks, replay, and reward normalisers are excluded from a behaviour-cloning optimiser step.
+
+Dataset aggregation would address the states visited by an imperfect student by querying the expert during those rollouts \parencite{ross2011dagger}. No standalone DAgger learner is registered in the current repository. The experiments reported here use fixed demonstrations, replay-labelled targets, scheduled teacher phase-out, or auxiliary BC; they are not labelled as DAgger results.
+
+The main comparison reports initial policy quality, environment transitions to a fixed control threshold, improvement beyond the teacher, and failure after the teacher is removed. A policy whose exported artefact still calls the teacher is classified as a composed controller. It cannot be presented as an autonomous learned policy.
+
+\subsection{Replay as a Reusable Knowledge Source}
+
+The replay mechanisms in \cref{sec:control-replay-engineering} support more than repeated critic updates. Behaviour actions preserve a deterministic base, cloning actions preserve an independent teacher, event strata keep rare service decisions visible, and layout signatures state where an example remains meaningful. A replay archive can therefore support actor pretraining and controlled transfer between runs that share the same observation and action contract.
+
+The repository also contains a conventional single-agent TD-error prioritised buffer based on Prioritised Experience Replay \parencite{schaul2016per}. The multi-agent MADDPG/MATD3 path deliberately rejects that buffer because it does not preserve the joint-transition contract. Its canonical weighted buffer uses the reward, registered observation events, and behaviour-action strata described in \cref{eq:control-event-priority}. The two mechanisms are reported under their exact class and sampling rule rather than the generic label ``prioritised replay''.
+
+\subsection{Offline Pretraining and Policy Distillation}
+
+Offline RL studies whether a controller can be trained from a fixed archive without exploratory interaction \parencite{levine2020offline}. This is attractive when historical operation exists and unsafe trial-and-error is unacceptable. It also creates a strict support problem: a value function can assign unrealistic value to actions that are rare or absent from the dataset.
+
+The implemented offline stage is actor-only behaviour-cloning pretraining. It samples a bounded replay or demonstration archive, updates only the actor-side representation and policy, optionally synchronises the target actor, and records the completed update count in the checkpoint. RBC and controlled-policy trajectories retain entity, action, reward, scenario, and seed provenance. Evaluation uses simulator replay on a disjoint interval and coverage diagnostics over observations, actions, assets, and services.
+
+Conservative Q-Learning and Implicit Q-Learning provide relevant fully offline alternatives \parencite{kumar2020cql,kostrikov2021iql}. Neither is registered as an executable controller in the current Algorithms repository, so neither appears as a Chapter 5 result row. Their discussion defines the support problem that a future fixed-dataset extension would have to address; it is not evidence that those algorithms were run.
+
+An offline policy can initialise later simulator training, provide a policy when online interaction is restricted, or serve as a teacher for a smaller model. It is not labelled robust merely because it trained without online errors. Robustness depends on whether the evaluation remains inside the support of the dataset and whether faults or configurations absent from the archive are handled safely.
+
+Policy distillation transfers the actions or distributions of a larger or composed teacher to a student \parencite{rusu2015distillation}. In the implemented controller line, this appears as supervised actor training from RBC, oracle, replay, or coordinator targets rather than as a separate registry entry called ``Distillation''. The relevant result is a performance--resource curve: model size, inference latency, memory, energy use, and retained control quality. A student must also preserve the observation and action semantics of its deployment target. Distillation can compress a policy; it does not repair an incompatible interface.
+
+These knowledge-reuse mechanisms answer part of RQ2 by reducing interactions or runtime cost, part of RQ3 by avoiding unsafe early exploration, and part of RQ4 by producing smaller or more reproducible artefacts. They leave a common boundary. The teacher, dataset, replay record, and student are normally tied to a declared observation and action contract.
+
+\section{Level IV: Hierarchical Community Coordination}
+\label{sec:hrl}
+
+Central control gives one policy direct authority over every asset, but its action space and information requirements grow with the community. Independent local control preserves autonomy and scale, yet it can create coincident behaviour. Hierarchical coordination places a smaller community decision above the local controllers. The coordinator shapes the conditions under which local decisions are made; it does not replace asset-level service logic.
+
+\subsection{Decision Decomposition}
+
+The implemented hierarchy contains a community coordinator and one local leaf per building. At environment step $t$, the coordinator observes a declared community summary $z_t$ and emits a signal $m_t$. Leaf $i$ receives its original local observation and the authorised signal:
+
+\begin{equation}
+ m_t=\pi^{\mathrm{CC}}_\psi(z_t),
+ \qquad
+ a_{i,t}=\pi^{\mathrm{leaf}}_i(o_{i,t};m_{i,t}).
+ \label{eq:control-hierarchy}
+\end{equation}
+
+The local policy continues to enforce EV deadlines, deferrable continuity, storage limits, and building headroom. The coordinator acts every $K$ simulator steps and holds its signal between decisions. With 15-minute data, $K=4$ gives an hourly community action while local leaves still act every 15 minutes. The interval is an experimental variable: a shorter interval increases authority and data volume but can create oscillatory signals; a longer interval is easier to operate but can miss short flexibility windows.
+
+The signal is an effective price multiplier. $m=1$ leaves the local price path and controller behaviour unchanged. Values below one encourage selected flexible demand; values above one can discourage import or encourage discharge where the local controller has such authority. The implementation permits the broad range $[0.5,1.5]$. The annual campaigns use a narrower registered interval, commonly $[0.5,1.3]$, and confirmatory experiments restrict it further when the causal probes identify regions with no useful response.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  block/.style={draw, rounded corners=2pt, align=center, minimum height=1.0cm, text width=3.7cm, inner sep=6pt},
+  leaf/.style={draw, rounded corners=2pt, align=center, minimum height=0.95cm, text width=3.35cm, inner sep=5pt, fill=green!7},
+  flow/.style={-{Latex[length=2.7mm]}, thick},
+  feedback/.style={-{Latex[length=2.3mm]}, thick, dashed}
+]
+  \node[block, fill=purple!9] (cc) {Community coordinator\\\footnotesize aggregate state, slower decision};
+  \node[leaf, below left=1.45cm and 2.8cm of cc] (b1) {Local controller 1\\\footnotesize local observation and service};
+  \node[leaf, below=1.45cm of cc] (b2) {Local controller 2\\\footnotesize local observation and service};
+  \node[leaf, below right=1.45cm and 2.8cm of cc] (bn) {Local controller $N$\\\footnotesize local observation and service};
+  \node[block, fill=blue!6, below=1.1cm of b2, text width=11.1cm] (assets) {Batteries, physical chargers, EV sessions, deferrable services, PV, building and phase limits};
+  \draw[flow] (cc) -- node[left, font=\footnotesize] {$m_{1,t}$} (b1);
+  \draw[flow] (cc) -- node[right, font=\footnotesize] {$m_{2,t}$} (b2);
+  \draw[flow] (cc) -- node[right, font=\footnotesize] {$m_{N,t}$} (bn);
+  \draw[flow] (b1) -- (assets);
+  \draw[flow] (b2) -- (assets);
+  \draw[flow] (bn) -- (assets);
+  \draw[feedback] (assets.north) .. controls +(3.8,1.0) and +(3.8,-1.0) .. (cc.south);
+\end{tikzpicture}
+}
+\caption{Hierarchical community coordination. The coordinator changes a compact signal; local controllers retain asset-level decisions and service protection. The dashed return path carries community aggregates and outcomes.}
+\label{fig:hierarchical-control-architecture}
+\end{figure}
+
+\subsection{Global and Member-Specific Coordination}
+
+Two coordinator levels expose a clear scalability--fairness trade-off.
+
+\paragraph{Global coordination.}
+A Level-1 coordinator emits one multiplier for the community. Its input contains time, price, aggregate import/export, PV, flexible capacity, headroom, and recent history. Input and output sizes need not grow with the number of members. The same signal cannot distinguish a flexible office from a household close to an EV deadline; distribution remains the responsibility of the local leaves.
+
+\paragraph{Member-specific coordination.}
+A Level-2 coordinator emits one multiplier per building and can receive compact member summaries. It can target flexibility and distribute benefits more deliberately. Its output grows with $N$, membership order becomes part of the contract, and a joining member changes the policy interface. A set-based encoder can reduce order dependence in the input, but fixed per-member outputs still retain a population-size assumption.
+
+The hierarchy is evaluated first over deterministic RBC leaves and then over frozen learned leaves. RBC leaves make the signal response easy to inspect. Learned leaves test composition with a stronger adaptive controller. Jointly training coordinator and leaves is a separate experiment because it changes both policies and complicates credit assignment. A poor joint result does not show that hierarchy itself is ineffective; it can indicate that the local competence was overwritten during community learning.
+
+\subsection{Causal Signal Path and Neutral Parity}
+
+A price signal has value only if the leaf reacts to it through a mechanism that was designed or trained for that signal. Applying a multiplier directly to a neural observation can move a frozen actor outside its training distribution. Applying it only to a reward has no effect during inference. Replacing the leaf's base controller at the same time as the coordinator is introduced prevents attribution.
+
+The hierarchy therefore follows four causal requirements:
+
+\begin{enumerate}
+  \item a neutral multiplier reproduces the standalone leaf, including exported trajectories and KPIs;
+  \item a non-neutral fixed probe changes the intended local action channel before a learned coordinator is trained;
+  \item the leaf remains frozen and deterministic during the coordinator comparison unless joint learning is the named experimental variable; and
+  \item the training reward uses the same cost and settlement semantics as the final scorecard, with service and violation terms retained as gates.
+\end{enumerate}
+
+The signal-aware local base receives the multiplier while the frozen neural residual retains its original observations. This preserves the distribution on which the actor was trained and gives the coordinator a causal actuator. Fixed multiplier and time-schedule probes determine whether discounts, surcharges, current price, or forecast price actually affect executed actions. A region with no response is not explored repeatedly by PPO.
+
+The PPO coordinator uses aggregate observations and a bounded Gaussian action. Its reward can contain community settled cost, excess import, ramping, export, electrical violations, and EV service. These components are normalised from a matched neutral run. Cost remains visible as the primary outcome; peak, ramping, throughput, emissions, and fairness are reported separately. Reward-weight changes define ablations rather than hidden tuning.
+
+Teacher actions used to pretrain the coordinator are stored outside the on-policy rollout. The final teacher action cannot cross into the first PPO batch with a fabricated log-probability. Deterministic evaluation occupies its own episode and performs no update. These details matter because a coordinator acts relatively few times per year; one contaminated boundary can materially alter an early PPO update.
+
+\subsection{Hierarchical Comparison}
+
+The experimental matrix varies one axis at a time: global or member-specific output, RBC or learned leaf, neutral/fixed/learned signal, 15-minute or hourly coordinator interval, aggregate or member-aware input, and cost-first or grid-aware reward. The baseline is always the same leaf with a neutral signal. Fixed causal schedules are diagnostic references and are labelled in-sample when their trigger was derived from the same annual trajectory.
+
+The principal evidence asks whether the coordinator lowers matched cost without losing EV or deferrable service, whether it reduces or merely shifts physical exchange, and how benefits are distributed. A community gain concentrated in a few members is reported even when the aggregate result is positive. Signal variance, action saturation, tracking response, leaf interventions, and inference latency explain how the coordinator reached its outcome.
+
+Hierarchy establishes a useful decomposition when a compact community action improves or protects a community outcome while leaves preserve local competence. It retains two structural assumptions. The coordinator and leaves must share a tested interpretation of the signal, and member-specific outputs normally assume a fixed set and ordering of recipients. These assumptions become part of the open limitations rather than being hidden inside the pipeline.
+
+\section{Cross-Method Synthesis and Open Limitations}
 \label{sec:control-results}
+\label{sec:control-open-limitations}
 
-The broad experiment campaign is a funnel rather than a full Cartesian product. Deterministic controllers are first verified on small scenarios. Learning algorithms are screened under common fixed-population conditions. Strong candidates are then compared with the highest RBC levels and operational optimisation. Only a small number of backbones and enhancements are carried into \gls{timarl} and deployment studies.
+The complete campaign is read as a sequence of solved subproblems. A controller advances only after establishing a capability under a stated contract; the largest aggregate reward is insufficient evidence. \Cref{tab:control-solved-problems} fixes that interpretation before the quantitative results are inserted.
+
+\begin{table}[htbp]
+\centering
+\caption{Scientific role and remaining boundary of each controller stage.}
+\label{tab:control-solved-problems}
+\footnotesize
+\begin{tabularx}{\textwidth}{@{}p{0.19\textwidth}p{0.22\textwidth}p{0.27\textwidth}X@{}}
+\toprule
+\textbf{Problem} & \textbf{Method stage} & \textbf{Capability tested} & \textbf{Boundary retained} \\
+\midrule
+Ordinary service and asset value & BAU variants & Service-respecting denominator and isolated storage effect & No deliberate adaptation or coordination \\
+Plausible low-cost dispatch & RBC ladder & Transparent priorities, causal information use, deterministic fallback, and expert actions & Manually maintained rules and known action semantics \\
+Auditable constrained scheduling & Local and community MILP & Explicit objective, service constraints, model bounds, and replayable reference schedules & Forecast/model fidelity, solve cost, and predefined variables \\
+Adaptive local control & PPO and TD3 & Learning under strict local information, continuous actions, and exported per-building policies & Fixed building interface and no learned community coordination \\
+Independent on-policy control & IPPO & Same PPO implementation and budget across several independent members & No central credit assignment \\
+Decentralised coordination & MADDPG & Centralised training with local actor execution & Single critic estimates, fixed joint layout, and training sensitivity \\
+More stable deterministic MARL & MATD3 & Twin-critic and delayed-update comparison under the same REC contract & Additional compute and the same fixed actor/critic structure \\
+Alternative MARL updates & MAPPO, HAPPO, and MASAC & Central value learning, sequential policy updates, and entropy-regularised central-critic learning & On-policy sample cost, update-order effects, or entropy tuning \\
+Known-type structural change & AgentTransformerPPO and AgentTransformerMATD3 & Variable counts of known asset instances, semantic tokens, and signature-aware training & Fixed type catalogue and feature meanings; population changes rebuild learned state \\
+Use of prior knowledge & Guided, residual, imitation, replay, actor pretraining, and distillation mechanisms & Faster or safer learning and reuse of rules, models, trajectories, and policies & Dependence on teacher/data support and interface compatibility \\
+Local--community decomposition & Hierarchical coordination & Compact community signal above service-aware local control & Tested signal semantics and fixed recipient/interface assumptions \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{draftonly}
 \begin{table}[p]
 \centering
-\caption{Controller comparison ledger to be populated from verified experiments. ``Oracle'' indicates unavailable future information and must not be compared as an operational controller.}
+\caption{Frozen result ledger to be populated from the final common-protocol campaign. Oracle-information rows are reported separately from deployable controllers.}
 \label{tab:controller-result-ledger}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lcccccccc}
+\begin{tabular}{lccccccccc}
 \toprule
-\textbf{Controller} & \textbf{Information} & \textbf{Cost} & \textbf{Peak} & \textbf{Ramping} & \textbf{Service} & \textbf{Violations} & \textbf{Train/solve} & \textbf{Inference} \\
+\textbf{Controller} & \textbf{Surface} & \textbf{Cost} & \textbf{Service} & \textbf{Viol.} & \textbf{Peak} & \textbf{Ramp} & \textbf{Members} & \textbf{Train/solve} & \textbf{Inference} \\
 \midrule
-Passive & realised local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a & \evidencepending \\
-RBC 1--5 & local/predictive/community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a & \evidencepending \\
-MILP operational & forecasts & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a \\
-MILP oracle & perfect future & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a \\
-PPO & declared schema & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
-SAC & declared schema & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
-TD3 & declared schema & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
-MADDPG & local actors/joint critics & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
-MATD3 & local actors/twin joint critics & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+BAU / Normal & local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a & \evidencepending \\
+RBC Basic & local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a & \evidencepending \\
+RBC Smart Local & local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a & \evidencepending \\
+RBC Community & community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a & \evidencepending \\
+MILP operational & declared & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a \\
+MILP perfect-information & oracle & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & n/a \\
+PPO selected & local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+TD3 selected & local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+MADDPG & community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+MATD3 & community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+IPPO & local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+MAPPO & community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+HAPPO & community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+MASAC & community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+Transformer PPO & structured local & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+Transformer MATD3 & structured community & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
+Hierarchical selected & hierarchy & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending & \evidencepending \\
 \bottomrule
 \end{tabular}}
 \end{table}
 \end{draftonly}
 
-\begin{table}[p]
-\centering
-\caption{Solved-problem ledger for the algorithmic progression.}
-\label{tab:solved-problem-ledger}
-\begin{tabularx}{\textwidth}{@{}p{0.20\textwidth}p{0.22\textwidth}p{0.25\textwidth}X@{}}
-\toprule
-\textbf{Problem} & \textbf{Solution stage} & \textbf{Capability established} & \textbf{Remaining assumption} \\
-\midrule
-Plausible local behaviour & RBC ladder & feasibility, transparency, low-cost fallback, expert demonstrations & anticipated rules and fixed control grammar \\
-Explicit constraints and reference scheduling & MILP & auditable objectives, feasibility, operational and oracle references & model/forecast maintenance and solve-time growth \\
-Adaptive model-free control & PPO, SAC, TD3 & adaptation and continuous control without repeated full optimisation & aggregation or fixed single-agent interface \\
-Decentralised coordination & MADDPG & CTDE, local execution, individual/community reward interaction & training instability and fixed joint interface \\
-More stable deterministic MARL & MATD3 & twin-critic evidence, delayed updates, stronger backbone & fixed agents, observations, and actions \\
-Efficient use of prior data & guided exploration, BC, replay, offline RL, distillation & faster initial learning, reuse, rare-event sampling, smaller policies & teacher/dataset support and interface compatibility \\
-Local--community decomposition & hierarchical control & slower community signals combined with local feasibility & known lower-level controllers and interfaces \\
-\bottomrule
-\end{tabularx}
-\end{table}
+The final results block draws from one machine-readable ledger. Each row identifies the dataset manifest, simulator and Algorithms commits, controller configuration, information surface, seeds, training and evaluation intervals, hardware, checkpoint, reference run, and evidence level. The main chapter retains the comparisons that decide a scientific question. Seed tables, learning diagnostics, unsuccessful recipes, solver schedules, and member-level exports remain in Appendix~\ref{app:reproducibility}.
 
-\begin{draftonly}
-The numbered findings will be instantiated from the frozen experiment ledger:
+\subsection{Contribution to the Research Questions}
 
-\begin{itemize}
-  \item \textbf{F5.1:} progressively informed RBCs resolve [verified local and community control problems] and explain [verified condition] of the gain otherwise attributed to learning;
-  \item \textbf{F5.2:} operational optimisation provides [verified constraint/performance reference] under [verified information and solve-time conditions];
-  \item \textbf{F5.3:} [selected single-agent method] improves [verified adaptive-control dimension] while remaining limited by [verified aggregation/interface condition];
-  \item \textbf{F5.4:} MADDPG establishes [verified decentralised coordination result];
-  \item \textbf{F5.5:} MATD3 improves [verified stability/value/performance metric] relative to MADDPG at [verified resource cost];
-  \item \textbf{F5.6:} [BC/replay/offline/distillation mechanism] improves [verified sample-efficiency or deployment metric] under [verified data condition]; and
-  \item \textbf{F5.7:} hierarchical coordination improves [verified local--community trade-off] while retaining [verified fallback or local-control property].
-\end{itemize}
-\end{draftonly}
+RQ1 receives partial but important evidence from the controller progression. Strict local PPO/TD3 and IPPO establish individual decision boundaries. MADDPG, MATD3, MAPPO, HAPPO, and MASAC introduce different forms of coupled training, while community rewards and hierarchy expose the trade-off between participant and collective outcomes. The structured PPO and MATD3 variants admit variable counts of known asset instances. New semantics, health-dependent capabilities, and changing populations remain outside the complete capability established here.
 
-\Cref{fig:control-comparative-results} brings the principal control, learning, service, and resource results into one comparison without reducing the chapter to a single winner.
+RQ2 is addressed through explicit scaling dimensions. The campaign reports simulator transitions, wall time, update count, CPU/GPU resources, memory, critic and actor size, checkpoint size, communication assumptions, and inference latency. Independent local actors scale differently from concatenated central critics; global coordinators scale differently from member-specific outputs. Premium-100 provides a held-back admission and resource test for methods whose interfaces are compatible. No result is described as scalable without naming the dimension that increased and the resource or control quality that was maintained.
 
-\plannedfigure[0.18\textheight]{fig:control-comparative-results}{Comparative control, learning, and resource results across the progressive methods.}{\textbf{Type:} a coordinated multi-panel results figure, generated from one verified result table: (a) operational KPI improvement relative to passive/RBC baseline; (b) learning stability/sample efficiency; (c) constraint/service outcomes; (d) computation or inference cost. Use confidence intervals and identify oracle-information methods. \textbf{Purpose:} show what each stage solved without reducing the chapter to one winner. \textbf{Source needed:} final common-protocol results, seed-level data, and statistical analysis.}
+RQ3 is addressed through service-first MILP objectives, deadline-aware RBCs, local action envelopes, requested-versus-applied violation traces, matched Safety and Health scenarios, and failure-aware evaluation. These mechanisms prevent several known unsafe actions and reveal degradation under selected faults. They do not amount to universal formal safety certification. A controller can still depend on an observation that later becomes stale or on a mask constructed for the original asset layout.
 
-\section{Accumulated Capabilities, Remaining Integration Problem, and RQ Contribution}
-\label{sec:control-to-timarl}
+RQ4 receives the algorithm-side contract needed by a later lifecycle: deterministic inference, versioned configuration, encoded observation metadata, one artefact per actor, checkpoint lineage, ONNX export, and explicit runtime dependencies. A service-anchored policy is marked as dependent on its teacher or safety adapter. These records make deployment assessment possible; they do not by themselves govern promotion, distributed rollout, monitoring, update, or recovery.
 
-The progression solves a substantial part of the original problem. It provides:
+\subsection{Open Limitations}
 
-\begin{itemize}
-  \item feasible and transparent local control;
-  \item explicit constrained scheduling and reference trajectories;
-  \item adaptive continuous control;
-  \item decentralised multi-agent coordination;
-  \item a more stable deterministic MARL backbone;
-  \item expert and historical data reuse;
-  \item rare-event and safety-relevant replay; and
-  \item hierarchical local--community coordination.
-\end{itemize}
+The progression leaves six connected limitations.
 
-The unresolved problem is not that these capabilities are missing. It is that their assumptions do not automatically compose. A stable MATD3 actor can still expect a fixed observation vector. A cloned policy can inherit a teacher's fixed action grammar. A hierarchical coordinator can assume that every local controller interprets its signal in the same way. A safety mask can become stale if an asset gains a new mode or loses a supporting measurement.
+\paragraph{Partly fixed control interfaces.}
+The flat neural controllers expect the observation and action dimensions present during training. The structured PPO and MATD3 variants can add or remove instances of a known asset type inside existing buildings, provided feature widths and action semantics remain compatible. A new type, changed dependency, changed building population, or member-specific coordinator output can still invalidate learned state. Padding can accommodate a predefined maximum catalogue, but it does not express a genuinely new action meaning.
 
-The findings therefore lead to the following design requirements for TI-MARL:
+\paragraph{Constraint knowledge outside the policy.}
+RBCs, MILP, safety adapters, and simulator projection carry physical knowledge that a neural policy may not have learned. This is acceptable when the composition is explicit and deployable. It becomes fragile when a bound, phase relation, or service rule changes while the adapter or policy remains stale. Frequent projection can also hide poor learned behaviour.
 
-\begin{enumerate}
-  \item represent each agent through a versioned capability schema, explicit module and entity instances, and a separate runtime health state;
-  \item compile entity-bound typed observations, dynamic action-group instances, parameterised action ports, dependencies, validity, bounds, and local constraint relations from those objects;
-  \item preserve the local information boundary while allowing parameter sharing by role and authorised aggregate community observations;
-  \item encode all active local entities and groups into one shared local representation, then jointly decode a coherent action bundle rather than independent asset actions or one fixed flat vector;
-  \item reuse shared type-conditioned decoders when known assets enter or leave, without adding permanent neural heads or rebuilding the global layout;
-  \item incorporate non-negotiable local constraints into bundle construction while leaving normal community optimisation to multi-agent learning;
-  \item learn community coordination through coupled local and community outcomes and variable-population set or graph critics during centralised training;
-  \item propagate sensor and module health through dependencies to action availability, bounds, degraded modes, and recovery;
-  \item evaluate population, entity, interface, computation, communication, and graph scale separately and jointly; and
-  \item expose the same typed contract to lifecycle compatibility, deployment admission, monitoring, and execution-level traces.
-\end{enumerate}
+\paragraph{Teacher and dataset support.}
+Imitation and offline learning inherit the coverage and assumptions of their data. An expert generated with perfect future information can overstate operational performance. A dataset without faults, new assets, or rare services cannot support strong claims in those regions. Removing the teacher after training can expose a dependence that was hidden by mixed actions.
 
-\paragraph{Contribution to the research questions.}
-The controller decompositions and comparative evidence support RQ1 by establishing how local and community objectives are represented. Computational cost, data use, coordination, and scale assumptions contribute to RQ2. Explicit constraints, feasible references, expert behaviour, and fail-safe baselines contribute to RQ3. Together, the solved-problem ledger and remaining assumptions provide the causal basis for the TI-MARL design.
+\paragraph{Growth of central training structures.}
+Concatenated critics grow with the number and heterogeneity of agents. More buildings increase memory, batch cost, and the amount of joint experience required. Parameter sharing reduces actor count only when roles and interfaces are compatible; it does not remove critic or communication growth automatically.
+
+\paragraph{Causal authority and fairness in hierarchy.}
+A compact community signal may have a weak or uneven effect on local controllers. A global multiplier can favour members with large batteries and leave inflexible members with no opportunity to benefit. Per-member outputs improve targeting at the cost of a fixed population interface and more difficult credit assignment. Aggregate savings therefore require member-level interpretation.
+
+\paragraph{Limits of the evidence domain.}
+The annual suite is a controlled hybrid representation of Portuguese REC conditions, not a sample of every community. One year, one settlement contract, bounded electrical-service models, and selected failure modes cannot establish universal controller behaviour. Full-year in-sample replay, held-out temporal evaluation, scale tests, and field evidence answer different questions and remain labelled accordingly.
+
+These limitations share a practical theme: the controller line now contains specialised methods for local adaptation, multi-agent credit, stochastic exploration, structured entities, prior knowledge, and hierarchy. Their assumptions about entities, information, actions, constraints, and runtime dependencies still do not form one reconfigurable control contract. The next chapter begins with that unresolved control problem.
 
 \section{Chapter Summary}
-The algorithmic research forms a cumulative progression. Rules establish feasibility and fallback behaviour; MILP makes objectives, constraints, and reference schedules explicit; single-agent methods provide adaptive control; MADDPG introduces decentralised coordination; and MATD3 addresses part of the stability and value-estimation problem. Guided exploration, behaviour cloning, replay selection, offline learning, and distillation improve the use of knowledge and data, while hierarchy separates community and local decisions.
 
-Each method retains a role as a reference, reusable mechanism, empirical finding, or component of the integrated solution. The remaining limitation is the fixed or manually maintained control contract, which motivates TI-MARL in the next chapter.
+The controller research developed through four levels of complexity. BAU, rule-based control, and MILP established transparent behaviour, explicit constraints, and strong references. PPO and TD3 isolated adaptive control at building level. IPPO, MAPPO, HAPPO, MADDPG, MATD3, and MASAC exposed independent, central-value, deterministic central-critic, sequential, and entropy-regularised multi-agent alternatives. AgentTransformerPPO and AgentTransformerMATD3 added variable-cardinality representations for known asset types. Prior knowledge was reused through guided and residual actions, demonstrations, labelled replay, actor pretraining, and distillation. Hierarchical control separated a slower community signal from local asset and service decisions.
 
+The common protocol fixes information surfaces, dataset roles, training budgets, service and safety gates, statistical reading, and computational evidence before controller results are compared. The shared engineering contract records how observations are encoded, how requested and applied actions differ, why reward profiles changed, how rare transitions and demonstrations enter training, and which runtime dependencies remain outside an exported network. Earlier methods retain roles as baselines, teachers, fallbacks, or bounded solutions. The remaining limitations concern partially fixed interfaces, externally maintained constraint knowledge, dataset support, central-training growth, hierarchical authority, fairness, and the scope of the available evidence.

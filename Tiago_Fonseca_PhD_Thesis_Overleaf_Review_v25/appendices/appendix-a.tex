@@ -18,7 +18,7 @@ This section freezes the human-readable contract for the annual suite used in Ch
 
 \subsection{Calendar, price forecasts, and settlement}
 
-The current-price column is the official Portuguese OMIE 2023 day-ahead series converted from EUR/MWh to EUR/kWh. Each physical hourly value is repeated over four 15-minute steps; the 23- and 25-period daylight-saving days are preserved by the continuous UTC calendar. Forecast columns target 1, 6, and 24 hours. For a delivery interval whose day-ahead result is available by the declared conservative 13:00 local cut-off, the forecast contains that published value; before the cut-off it contains the corresponding previous-day value. The entity bundle additionally exposes 15-minute and 3-hour horizons. These use the shortest stored horizon capable of targeting the same delivery step, read at the corresponding earlier issue time. At an episode cold start with no such issue in the retained window, the current price is used. This rule is tested independently against the controller-visible observation and prevents the interface from reconstructing an unpublished realised price from the full annual table.
+The current-price column is the official Portuguese OMIE 2023 day-ahead series converted from EUR/MWh to EUR/kWh. Each physical hourly value is repeated over four 15-minute steps; the 23- and 25-period daylight-saving days are preserved by the continuous UTC calendar. Forecast columns target 1, 6, and 24 hours. For a delivery interval whose day-ahead result is available by the declared conservative 13:00 local cut-off, the forecast contains that published value; before the cut-off it contains the corresponding previous-day value. The entity bundle also exposes 15-minute and 3-hour horizons. These use the shortest stored horizon capable of targeting the same delivery step, read at the corresponding earlier issue time. At an episode cold start with no such issue in the retained window, the current price is used. This rule is tested independently against the controller-visible observation and prevents the interface from reconstructing an unpublished realised price from the full annual table.
 
 Settlement matches member surplus and demand within the same step, uses equal importer weights and a local price equal to 80\% of the grid-import price, and assigns zero remuneration to residual grid export. The retained grid-only counterfactual disables local matching but preserves the same member demand, generation, actions, and OMIE price. Taxes, network tariffs, supplier margins, and regulated export compensation are outside this experimental accounting contract.
 
@@ -42,7 +42,7 @@ Larger consumption & 75--350~MWh; centre 175.9~MWh & 30--150~kW; target annual c
 \end{tabularx}
 \end{table}
 
-\Cref{tab:app-suite-routines} lists the behaviour strata. The assignment is deterministic and family-independent, so the first 15 physical members remain identical between Core-15-Stripped and Core-30. Within an archetype, member-specific amplitudes, centres, activity reductions, annual targets, and short-term variation remain independently reproducible. Occupancy follows the routine rather than remaining constant: commuter homes are largely unoccupied during the working day, home-working and home-day members retain daytime occupancy, and service occupancy follows its opening or process window.
+\Cref{tab:app-suite-routines} lists the behaviour strata. The assignment is deterministic and family-independent, so the first 15 physical members remain identical between Core-15-Stripped and Core-30. Within an archetype, member-specific amplitudes, centres, activity reductions, annual targets, and short-term variation remain independently reproducible. Occupancy varies with the routine: commuter homes are largely unoccupied during the working day, home-working and home-day members retain daytime occupancy, and service occupancy follows its opening or process window.
 
 \begin{table}[htbp]
 \centering
@@ -92,9 +92,9 @@ Electrical reporting distinguishes the pre-projection pressure of the requested 
 
 EV capacities are sampled from 40, 50, 58, 64, 75, and 82~kWh, with 0.90 depth of discharge and initial SoC between 0.30 and 0.60. Residential chargers use one persistent vehicle identity; shared service chargers use pools of four vehicles. Residential visit probability, arrival centre, following-morning departure centre, temporal spread, and trip-energy scale depend on the host routine and differ between weekdays and weekends. Service and larger-consumption chargers use two to four routine-dependent probabilistic windows on their eligible operating days. Independent charger-level draws allow two chargers at the same member to receive different sessions. All times are jittered and rounded to the 15-minute contract; cross-midnight normalisation prevents two sessions from occupying one physical charger simultaneously.
 
-Required session energy is sampled from class-conditional log-normal scenario distributions with a 6~kWh residential base median multiplied by a 0.66--1.12 routine factor, a 9~kWh small-service median, and a 15~kWh larger-consumption median. It is limited to 85\% of $\Delta t\,P^{\max}\eta$ for residential sessions, 72\% for shared service sessions, and 72\% of EV capacity before arrival and target SoC are written. The catalogue also records the minimum full-power steps and residual temporal slack. Thus every ordinary session is individually deliverable at 95\% charger efficiency. Joint service can nevertheless become infeasible after total/phase limits, concurrent sessions, topology changes, demand-response obligations, or injected failures are introduced. \Cref{tab:app-suite-mobility-counts} freezes the generated catalogue counts and the zero-infeasibility audit result.
+Required session energy is sampled from class-conditional log-normal scenario distributions with a 6~kWh residential base median multiplied by a 0.66--1.12 routine factor, a 9~kWh small-service median, and a 15~kWh larger-consumption median. It is limited to 85\% of $\Delta t\,P^{\max}\eta$ for residential sessions, 72\% for shared service sessions, and 72\% of EV capacity before arrival and target SoC are written. The catalogue also records the minimum full-power steps and residual temporal slack. Every ordinary session is individually deliverable at 95\% charger efficiency. Joint service can nevertheless become infeasible after total/phase limits, concurrent sessions, topology changes, demand-response obligations, or injected failures are introduced. \Cref{tab:app-suite-mobility-counts} freezes the generated catalogue counts and the zero-infeasibility audit result.
 
-Every occupied charger row additionally stores the explicit session identity and an optional current-SoC boundary reference. The reference follows the neutral constant-rate trajectory from the declared arrival SoC to the departure target and is consulted only when an episode, member, charger, or new session becomes active inside an occupied interval. It prevents an arbitrary catalogue initial SoC from being substituted for omitted history; it does not overwrite the controller-driven SoC during an uninterrupted session. This distinction covers the 0, 3, 4, and 69 back-to-back session boundaries in Micro, Core-15, Core-30, and Premium, respectively, including the case in which the same residential EV begins the new session and charger occupancy remains continuous. The audit verifies that session identity agrees with the catalogue, the reference is finite and monotonic while connected, absent while disconnected, equal to arrival SoC at the session boundary, and leaves a deliverable remainder at every intermediate step. At runtime, a separate conservation check sums positive connected-session changes in stored EV energy and compares them with charger input. Any SoC gain not supported by metered input, beyond numerical tolerance, fails the controller-level audit.
+Every occupied charger row additionally stores the explicit session identity and an optional current-SoC boundary reference. The reference follows the neutral constant-rate trajectory from the declared arrival SoC to the departure target and is consulted only when an episode, member, charger, or new session becomes active inside an occupied interval. It prevents an arbitrary catalogue initial SoC from being substituted for omitted history; it does not overwrite the controller-driven SoC during an uninterrupted session. This rule covers the 0, 3, 4, and 69 back-to-back session boundaries in Micro, Core-15, Core-30, and Premium, respectively, including the case in which the same residential EV begins the new session and charger occupancy remains continuous. The audit verifies that session identity agrees with the catalogue, the reference is finite and monotonic while connected, absent while disconnected, equal to arrival SoC at the session boundary, and leaves a deliverable remainder at every intermediate step. At runtime, a separate conservation check sums positive connected-session changes in stored EV energy and compares them with charger input. Any SoC gain not supported by metered input, beyond numerical tolerance, fails the controller-level audit.
 
 \begin{table}[htbp]
 \centering
@@ -118,13 +118,13 @@ All 47,258 distinct catalogue sessions across the four families are individually
 
 Each deferrable asset alternates between two complete cycle profiles and receives a member-specific energy multiplier from 0.82 to 1.22. Residential appliance types comprise washing machine, dishwasher, washer--dryer, domestic-hot-water cycle, and a mixed dishwasher/laundry class. Service types comprise cleaning or preconditioning, cold storage or cleaning, sterilisation or laundry, hospitality dishwashing or hot water, and compressor or pumping. Larger-member types comprise batch process, process auxiliaries, maintenance or pumping, thermal preparation, and late batch process. Requests occur probabilistically on routine-eligible days. Residential occurrence probabilities range from 0.52 to 0.70 and \texttt{must\_run} probabilities from 0.66 to 0.76; the corresponding ranges are 0.82--0.90 and 0.88--0.94 for small services, and 0.90--0.94 and 0.94--0.97 for larger members. Earliest start, window length, completion margin, deadline, and priority vary reproducibly by asset and day. A new request is omitted if its earliest admissible start would overlap the preceding request's completion window for the same appliance. The schedule retains cycle identity, earliest/latest start, deadline, priority, and mandatory-service flag so completion, delay, and unserved energy can be evaluated.
 
-The complete Micro, Core-15, Core-30, and Premium catalogues contain 214, 928, 1,892, and 7,360 deferrable cycles, respectively. All are observable in the static variants. Under the declared dynamic topology, Core-30 has 1,657 fully observable cycles, 234 whose start window occurs entirely while the member or appliance is absent, and one whose full start window is visible but whose completion interval crosses an asset-removal boundary. Premium has 5,950, 1,409, and one in the same categories. The last category can be completed before removal or interrupted by it and is therefore policy-dependent; the annual audit accepts the corresponding completed-plus-missed denominator only within the explicit one-cycle interval. No-start cases are topology-censored, not unserved requests.
+The complete Micro, Core-15, Core-30, and Premium catalogues contain 214, 928, 1,892, and 7,360 deferrable cycles, respectively. All are observable in the static variants. Under the declared dynamic topology, Core-30 has 1,657 fully observable cycles, 234 whose start window occurs entirely while the member or appliance is absent, and one whose full start window is visible but whose completion interval crosses an asset-removal boundary. Premium has 5,950, 1,409, and one in the same categories. The final category is policy-dependent because the cycle can be completed before removal or interrupted by it; the annual audit accepts the corresponding completed-plus-missed denominator only within the explicit one-cycle interval. No-start cases are topology-censored, not unserved requests.
 
 \subsection{Topology and robustness calendars}
 
-Topology events change whether an entity exists in the active scenario; robustness events leave it in the topology but alter data, commands, or availability. This distinction is preserved in the event logs and controller-facing masks. Reinstallation creates a new runtime instance from the declared template and initializes a stateful asset at its boundary state, while the pre-removal instance remains in historical KPI aggregation. It does not imply unobserved state continuity through the interval in which the asset is absent. \Cref{tab:app-core-topology-calendar,tab:app-premium-topology-calendar} summarise the UTC topology calendar; exact time steps, target and source identifiers, and restoration templates remain in each variant schema.
+Topology events change whether an entity exists in the active scenario; robustness events leave it in the topology but alter data, commands, or availability. Event logs and controller-facing masks preserve these semantics. Reinstallation creates a new runtime instance from the declared template and initializes a stateful asset at its boundary state, while the pre-removal instance remains in historical KPI aggregation. It does not imply unobserved state continuity through the interval in which the asset is absent. \Cref{tab:app-core-topology-calendar,tab:app-premium-topology-calendar} summarise the UTC topology calendar; exact time steps, target and source identifiers, and restoration templates remain in each variant schema.
 
-An \texttt{add\_asset} event constructs a new runtime instance from the immutable catalogue template. Paired removal/restoration entries therefore have replacement or recommissioning semantics: the restored capability starts from its declared initial state, and no hidden SoC, degradation, or unfinished-cycle continuity is inferred across the absence. Temporary loss of the same equipment is modelled through a robustness-unavailability event instead; the entity identity and accumulated state remain present while the selected telemetry or control channel is unavailable. This separation avoids attributing an undocumented state-reset convention to a controller result.
+An \texttt{add\_asset} event constructs a new runtime instance from the immutable catalogue template. Paired removal/restoration entries have replacement or recommissioning semantics: the restored capability starts from its declared initial state, and no hidden SoC, degradation, or unfinished-cycle continuity is inferred across the absence. Temporary loss of the same equipment is modelled through a robustness-unavailability event; the entity identity and accumulated state remain present while the selected telemetry or control channel is unavailable. These semantics avoid attributing an undocumented state-reset convention to a controller result.
 
 \begin{table}[htbp]
 \centering
@@ -172,9 +172,9 @@ An \texttt{add\_asset} event constructs a new runtime instance from the immutabl
 \end{tabularx}
 \end{table}
 
-Health and AllIn event files cover missing non-controllable-load observations, biased price forecasts, delayed storage actions, and temporary charger unavailability. Premium-100-AllIn additionally includes PV telemetry loss, charger-command dropout, a service-charger outage, a stationary-storage outage, and selected grid-outage intervals. Four non-overlapping demand-response requests cover upward and downward directions, different durations, tolerances, activation prices, and shortfall penalties; the Premium power targets are three times the Core-30 targets. These events are scenario interventions, not empirical incident-frequency models.
+Health and AllIn event files cover missing non-controllable-load observations, biased price forecasts, delayed storage actions, and temporary charger unavailability. Premium-100-AllIn also includes PV telemetry loss, charger-command dropout, a service-charger outage, a stationary-storage outage, and selected grid-outage intervals. Four non-overlapping demand-response requests cover upward and downward directions, different durations, tolerances, activation prices, and shortfall penalties; the Premium power targets are three times the Core-30 targets. These controlled scenario interventions carry no empirical incident-frequency claim.
 
-The final structural audit verifies cadence and daylight saving, explicit civil-time localization policy, exact mapping between session timestamps and quarter-hour indices, the 365 official OMIE source records and their hashes, hourly-to-quarter-hour expansion, publication-aware price forecasts, all member and asset counts, referential integrity, explicit session identity, session occupancy and deliverability, mid-session SoC boundary initialization, non-overlapping deferrable deadlines, Portuguese contracted-power classes, phase sums, topology coverage, clean-twin equality, and every generated-file checksum. Across the suite, 1,817 structural and cross-family checks pass. The diversity audit additionally measures exact-duplicate traces and schedules, pairwise and cross-archetype profile correlations, peak-clock dispersion, annual demand, PV and BESS distributions, EV arrivals, duration, energy and slack, and deferrable-window dispersion; it reports no finding. Nine week-long schema rollouts complete 6,048 control transitions with finite observations and rewards. Across the regular and compressed rollouts, 31,565 controller-visible price-feature values match their causal inputs; the compressed dynamic timelines apply all 120 topology events and independently verify the corresponding member/asset state, the stationary-battery SoC at activation, and the physical PV balance. The full simulator regression contains 457 passing tests. The scientific audit classifies the suite as ready for benchmarking within the declared scope. The remaining limitations are the absence of a population-level goodness-of-fit claim and of feeder-level electrical physics.
+The final structural audit verifies cadence and daylight saving, explicit civil-time localization policy, exact mapping between session timestamps and quarter-hour indices, the 365 official OMIE source records and their hashes, hourly-to-quarter-hour expansion, publication-aware price forecasts, all member and asset counts, referential integrity, explicit session identity, session occupancy and deliverability, mid-session SoC boundary initialization, non-overlapping deferrable deadlines, Portuguese contracted-power classes, phase sums, topology coverage, clean-twin equality, and every generated-file checksum. Across the suite, 1,817 structural and cross-family checks pass. The diversity audit also measures exact-duplicate traces and schedules, pairwise and cross-archetype profile correlations, peak-clock dispersion, annual demand, PV and BESS distributions, EV arrivals, duration, energy and slack, and deferrable-window dispersion; it reports no finding. Nine week-long schema rollouts complete 6,048 control transitions with finite observations and rewards. Across the regular and compressed rollouts, 31,565 controller-visible price-feature values match their causal inputs; the compressed dynamic timelines apply all 120 topology events and independently verify the corresponding member/asset state, the stationary-battery SoC at activation, and the physical PV balance. The full simulator regression contains 457 passing tests. The scientific audit classifies the suite as ready for benchmarking within the declared scope. The remaining limitations are the absence of a population-level goodness-of-fit claim and of feeder-level electrical physics.
 
 \subsection{Matched annual baseline scorecard}
 
@@ -203,7 +203,7 @@ Premium-100-AllIn & 113610.37/112170.26 & $-1.27$ & 99.63/99.65 & 99.62/99.64 & 
 \end{tabular}
 \end{table}
 
-Premium Clean records 93/77 BAU/RBC minimum misses among 28,108 observable departures. These occur only at Members~091, 095, and 097, which host four, four, and six shared 22~kW chargers: the BAU distribution is 76, 13, and 4, and RBC Smart yields 62, 14, and 1. AllIn records 107/103 misses and spreads the additional cases over fault-affected service members. This diagnostic is important because the catalogue audit independently found every session to be individually feasible. The annual misses therefore measure simultaneous service, connection, and event pressure rather than an impossible request inserted by the generator.
+Premium Clean records 93/77 BAU/RBC minimum misses among 28,108 observable departures. These occur only at Members~091, 095, and 097, which host four, four, and six shared 22~kW chargers: the BAU distribution is 76, 13, and 4, and RBC Smart yields 62, 14, and 1. AllIn records 107/103 misses and spreads the additional cases over fault-affected service members. The catalogue audit independently found every session to be individually feasible. The annual misses measure simultaneous service, connection, and event pressure, with impossible requests already excluded by the generator audit.
 
 \Cref{tab:app-annual-stress-scorecard} retains the stress-case evidence. Requested pressure is integrated before the feasibility projection; residual violation is reconstructed from the applied total and per-phase trajectories. Robustness counts are identical for the matched policies and record physical asset--time-step unavailability, not the number of internal status fields. Four demand-response events have valid baselines in every declared run.
 
@@ -226,7 +226,7 @@ Premium-100-AllIn & 4267.160/1494.777 & 0/0 & 0.640/0.627 & 394.175/427.110 & 8/
 \end{tabular}
 \end{table}
 
-All 18 runs have zero EV energy-accounting shortfall, zero residual electrical violation, and complete every runtime-visible deferrable cycle with zero unserved energy. These integrity results do not erase controller limitations. RBC Smart increases ramping relative to BAU in six schemas and reduces demand-response compliance in Combined and both Premium variants. The detailed machine-readable scorecard retains these outcomes as controller watches rather than relabelling them as dataset defects.
+All 18 runs have zero EV energy-accounting shortfall, zero residual electrical violation, and complete every runtime-visible deferrable cycle with zero unserved energy. These integrity results do not erase controller limitations. RBC Smart increases ramping relative to BAU in six schemas and reduces demand-response compliance in Combined and both Premium variants. The detailed machine-readable scorecard retains these outcomes as controller watches and does not relabel them as dataset defects.
 
 The member and asset ranges in this appendix are complemented by the row-level supplementary inventory: the family manifests and Parquet catalogues enumerate every member, physical charger, EV, session, PV system, stationary battery, deferrable appliance, phase assignment, connection level, limit, routine, event target, and source checksum. This machine-readable inventory is authoritative where a 100-member row listing would otherwise duplicate the released schema without adding a scientific distinction.
 
@@ -346,8 +346,116 @@ Inherited thermal, HVAC, and comfort & Heat-pump electricity, unmet thermal dema
 Three interpretation rules apply across this catalogue. First, reward and KPI are distinct: reward is controller-facing and may combine selected objectives, whereas KPIs remain evaluative outputs. Second, additive quantities may be summed across members or communities, but ratios require a declared denominator or reporting weight. Third, requested-pressure and applied-residual quantities must not be conflated: the former describes controller intent before feasibility projection, while the latter establishes whether the executed trajectory violated the configured physical boundary. The archived time series and event logs remain necessary whenever an aggregate KPI cannot explain when or why an outcome occurred.
 
 \section{Controller, TI-RL, and TI-MARL Configurations}
+\label{app:controller-configurations}
 
-Complete controller definitions cover the passive case, the five RBC levels, MILP variants, PPO, SAC, TD3, MADDPG, MATD3, hierarchical controllers, learning enhancements, and the TI-RL/TI-MARL variants. The configuration record includes schema, compiler, entity/interface graph, local policy, grouped decoder, local feasibility construction, critic, typed constraint graph, shared hard-monitor, runtime-assurance, and backbone versions and distinguishes default settings, tuned settings, oracle information, operational information, and target-specific adaptations.
+Complete controller definitions cover passive and random operation, rule-based policies, MILP replay policies, strict-local PPO and TD3, IPPO, MAPPO, HAPPO, MADDPG, MATD3, MASAC, the entity-structured PPO and MATD3 variants, hierarchical controllers, and the typed-interface variants introduced in Chapter~\ref{chap:ti-marl}. There is no standalone SAC registry entry: the entropy-regularised implementation is MASAC. \texttt{SingleAgentRL} is a configuration placeholder and is not an executable method.
+
+\subsection{Executable Controller Inventory}
+
+\begin{longtable}{@{}p{0.23\textwidth}p{0.34\textwidth}p{0.35\textwidth}@{}}
+\caption{Executable Algorithms registry grouped by scientific role.}\label{tab:app-controller-registry}\\
+\toprule
+\textbf{Role} & \textbf{Registered names} & \textbf{Configuration evidence retained} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Role} & \textbf{Registered names} & \textbf{Configuration evidence retained} \\
+\midrule
+\endhead
+Passive and diagnostic & \texttt{NormalNoBatteryPolicy}, \texttt{NormalPolicy}, \texttt{RandomPolicy} & Asset availability, service logic, seed, observation/action names, and export contract \\
+Rule-based & \texttt{RBCBasicPolicy}, \texttt{RBCSmartPolicy}, \texttt{RBCSmartLocalPolicy}, \texttt{RBCCommunityPolicy}, \texttt{RuleBasedPolicy} & Information boundary, price and forecast use, EV/V2G thresholds, deferrable logic, headroom rule, and fallback scope \\
+Signal-aware rules & \texttt{SignalAwareRBC}, \texttt{SignalAwareRBC\allowbreak SmartLocal}, \texttt{FixedPriceSignal}, \texttt{CausalPriceSignal} & Signal range, neutral value, update interval, recipient scope, and causal response probe \\
+Oracle replay & \texttt{FixedServiceOracle\allowbreak ReplayPolicy}, \texttt{TotalHomeOracle\allowbreak ReplayPolicy}, \texttt{TotalOracleReplay\allowbreak Policy} & Solver model, horizon, information assumption, status/gap, source interval, replay tolerance, and fallback \\
+Strict local RL & \texttt{PPO}, \texttt{TD3} & One learner per member, local profile, reward, network, optimiser, rollout/replay, exploration, safety, seed, and checkpoint \\
+Flat MARL & \texttt{IPPO}, \texttt{MAPPO}, \texttt{HAPPO}, \texttt{MADDPG}, \texttt{MATD3}, \texttt{MASAC} & Actor information, critic/value scope, team-reward mix, update order, entropy or target-noise settings, replay/rollout, and comparison reference \\
+Entity-structured learning & \texttt{AgentTransformerPPO}, \texttt{AgentTransformerMATD3} & Tokenizer schema, layout signature, known type widths, topology version, homogeneous replay/rollout rule, runtime adapters, and per-topology export \\
+Hierarchical control & \texttt{BuildingAgent}, \texttt{CommunityCoordinator}, \texttt{CCLevel1}, \texttt{CCLevel2} & Leaf identity and checkpoint, frozen state, coordinator inputs/outputs, signal interval, price adapter, reward allocation, and neutral-parity run \\
+Typed interface & \texttt{TIMARL} & Interface registry, compiler and health-rule hashes, hierarchical typed encoder, grouped hybrid actor, analytic local projector, TI-PPO/TI-MAPPO critic, compatibility signature, and trace versions \\
+\bottomrule
+\end{longtable}
+
+\subsection{Observation, Action, and Training Record}
+
+Every neural run archives the raw simulator interface, selected information surface, encoding profile, ordered raw and encoded observation names, ordered action names, physical bounds, building identities, and entity/topology metadata. Fixed-vector campaigns identify one of \path{minmax_space}, \path{maddpg_v1}, \path{maddpg_v2_compact}, \path{maddpg_v3_operational}, or \path{maddpg_v3_realtime}. Structured campaigns additionally archive the tokenizer configuration, SRO/NFC/CA segments, type feature widths, excluded features, action-to-CA order, and full layout signature.
+
+The action record distinguishes actor output, exploration action, deterministic base, residual correction, composed action, controller projection, simulator request, and applied action whenever the selected path contains those stages. For off-policy learning, current and successor base actions and the independent cloning target are preserved separately. For PPO, the exact pre-tanh action, old log-probability, value, policy-eligibility flag, and termination/truncation state remain attached to the rollout sample.
+
+The training manifest records the actor and critic classes and layers, learning rates, discount, target-update coefficient, rollout or replay capacity, batch and minibatch sizes, update cadence, PPO epochs and clipping, GAE, entropy settings, critic loss, target clipping, gradient clipping, target smoothing, actor delay, reward/return normalisation, multi-step return, exploration schedule, semantic noise scales, behaviour-cloning sources and weights, residual authority, local-safety settings, AMP/device use, seed, checkpoint mode, and export dependencies. A field absent from a method is recorded as not applicable rather than assigned a silent default in the result table.
+
+\subsection{TI-MARL Reproducibility Contract}
+\label{app:timarl-contract}
+
+The public input to \texttt{TIMARL} is one technology-neutral \texttt{typed\_agent\_interface\_v1} YAML definition for each registered member, together with an explicit simulator-binding registry. The simulator owns runtime entities, topology events, values, fault evidence, and execution feedback. The compiler owns semantic binding, health derivation, dependency closure, mode validity, dynamic bounds, feasibility inputs, and fallback semantics. Generated defaults are expanded into the resolved interface archived with the run.
+
+\begin{longtable}{@{}p{0.24\textwidth}p{0.68\textwidth}@{}}
+\caption{TI-MARL v1 configuration and evidence fields retained for reproduction.}\label{tab:app-timarl-contract}\\
+\toprule
+\textbf{Area} & \textbf{Required record} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Area} & \textbf{Required record} \\
+\midrule
+\endhead
+Interface & Contract version; member definitions; simulator bindings; semantic, sensor, channel, unit, scope, use, and action-group registries; schema and health-rule hashes \\
+Actor & Latent width; attention heads; relational layers; local or action-conditioned group context; categorical modes; Beta-fraction heads; deterministic strategy, gain, deadband, and non-idle margins by group type \\
+Critic & TI-PPO/local or TI-MAPPO/set pairing; optional typed-group critic; value-target normalisation; Huber or MSE value loss \\
+PPO & Learning rate; reference $\gamma$ and GAE $\lambda$; discount timebase; clip; epochs; rollout length; entropy by group family; advantage-normalisation scope; KL target; gradient limit \\
+Credit and projection & Joint-agent or typed-group credit; intervention-aware masking; intervention distillation; EV service strategy and margins; total/per-phase headroom reserve; deferrable completion margin \\
+Prior knowledge & Behaviour-cloning teacher, demonstration episodes, balancing method, calibration; EV and storage planning coefficients, label parameters, per-reason reservoir capacities, and samples \\
+Population & Stable member order; joining/departing transition treatment; active/registered members; topology version; structural recompilation count \\
+Persistence & \texttt{ti\_marl\_checkpoint\_v1}; learning architecture; actor, critic, group critic, optimisers, rollout, RNG, compiler, resolved config, versions, hashes, and migration decision \\
+Execution evidence & Raw and projected typed bundles; interventions; encoded commands; \texttt{entity\_action\_execution\_v1}; current/next snapshot hashes; trace chunk and deduplication settings \\
+Handoff & Research artefact deployment flag; actor-only bundle format; resolved interfaces; compiler and health rules; projector; normalisation; compatibility signature; omitted critic and optimiser state \\
+\bottomrule
+\end{longtable}
+
+The audited implementation state is Algorithms commit \texttt{58fb6370} with simulator package version 1.8.0. Its focused TI-MARL suite contains 115 passing tests across compiler, policy runtime, runtime contracts, public typed interfaces, a real-simulator dynamic vertical slice, and a 15-second topology stress case. This count identifies the audited state; later releases must report their own test inventory rather than inheriting it.
+
+\subsection{Reward Profile Ledger}
+
+The profile numbers below are provenance identifiers rather than an ordered claim of improvement. A later profile records a diagnosed change in the control signal; it becomes preferable only when the matched evaluation supports that decision.
+
+\begin{longtable}{@{}p{0.16\textwidth}p{0.34\textwidth}p{0.42\textwidth}@{}}
+\caption{Implemented Chapter 5 reward-profile lineage.}\label{tab:app-reward-profile-ledger}\\
+\toprule
+\textbf{Identifier} & \textbf{Registered profile} & \textbf{Change retained for reproduction} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Identifier} & \textbf{Registered profile} & \textbf{Change retained for reproduction} \\
+\midrule
+\endhead
+Base & Cost Hard Constraint & Configurable local/community cost, electrical and outage penalties, EV service and V2G, storage bounds/throughput, deferrables, import, peak, ramp, export, emissions, settlement, and timestep scaling \\
+V2 & Cost Service Guard & Protects EV service from cost savings created by V2G below the target \\
+V3 & Cost Service Cost Balanced & Rebalances service pressure and cost and introduces a light storage-throughput term \\
+Local V1 & Local Cost Service & Removes community settlement and aggregate penalties to enforce a strict-local reward boundary \\
+Local V2 & Local Scorecard Guard & Raises electrical, EV, storage, and deferrable failure costs around the frozen scorecard gates \\
+Local V3 & Local Economic Safety & Removes dense recoverable urgency when deadline-feasible projection already protects service \\
+Individual V3 & Individual Scorecard Aligned & Uses each member's settlement row while actors and critics remain independent; labelled as a market/broadcast reward rather than a strict-local ablation \\
+V4 & Community Band & Adds community settlement and EV over-service tolerance to the service-first objective \\
+V41 & Community Storage Band & Strengthens storage discipline and EV target-band pressure \\
+V42 & Community Service Band & Raises service pressure after cost-improving under-service and over-service were observed \\
+V43 & Community Battery Value & Restores physical storage fallback bounds, uses observed limits, scales by timestep, and lowers the cycling penalty \\
+V44 & Community Smooth Service & Uses quadratic dense EV terms so recoverable deficits do not dominate long high-frequency episodes \\
+V45 & Community Feasible Service & Computes schedule pressure from effective charging power under building/phase headroom and penalises unrecoverable schedule deficit \\
+V46 & Community Feasible Precision & Caps only training penalties for infeasible shortfall and increases over-service precision; raw diagnostics remain uncapped \\
+V47 & Community Feasible Precision, tighter band & Retains V46 feasibility and tightens the upper service band \\
+V49 & Community Storage Value & Reduces throughput suppression and raises settlement/peak value so useful storage operation remains learnable \\
+V50 & Community Deadline Value & Extends bounded deadline shaping while retaining the effective-power feasibility calculation \\
+V51 & Community Precision Value & Rebalances minimum service, over-service, and community value after excessive charging \\
+V52 & Community Peak Deadline & Adds stronger explicit peak/export pressure beside deadline service and settlement \\
+V53 & Community Residual Constraint & Defines a community-shape objective for bounded residual learning over an RBC teacher \\
+V54 & Community Dense EV Residual & Makes sparse EV consequences visible during connected periods for conservative residual control \\
+V55 & Community Storage Residual & Removes uncontrollable service terms only when EV and deferrable actions are copied exactly from the audited teacher \\
+CC & Community Coordinator reward & Price-arbitrage-centred coordinator objective retained for historical reproduction \\
+CC Level 1 & Aggregate coordinator reward & Normalised cost, peak excess, ramp, export, violation, and selectable settlement aggregation \\
+CC Level 2 & Member-aware coordinator reward & Adds EV harm, member-decomposed settlement and constraint credit, team mixing, neutral counterfactual, and running normalisation \\
+CC Phase 1 & Market-making phase reward & Retains the intermediate coordinator formulation used during the hierarchy's historical development \\
+\bottomrule
+\end{longtable}
+
+Each final run stores the complete reward class and parameter mapping. The abbreviated identifiers above are insufficient to reproduce a run on their own. Reward component exports, raw and normalised totals, settlement parameters, seconds per timestep, phase/charger map, and any running state are retained with the experiment evidence.
 
 \section{Hyperparameters, Seeds, and Statistical Procedures}
 

@@ -7,6 +7,14 @@
 - Introduce a concrete example when an abstract concept first appears.
 - Explain why a concept matters before adding technical detail.
 - Keep paragraphs connected: the last idea of one paragraph should prepare the next.
+- Begin paragraphs with the scientific object, problem, method, result, or evidence whenever possible. Limit chapter-level metadiscourse to genuine orientation.
+- Present a contribution directly, then state its boundary. Avoid habitual binary constructions such as `not X, but Y`.
+- Vary sentence and paragraph rhythm. Symmetric lists are useful for definitions and protocols, but causal explanation normally reads better as connected prose.
+- Avoid repeated formal connectives, especially formulaic uses of `moreover`, `therefore`, `in summary`, and `it is worth noting`.
+- Avoid excessive colons, em dashes, slogans, and catalogue-like sequences of component names.
+- Do not end a section by merely repeating its opening. A conclusion should interpret evidence, establish a boundary, or prepare the next scientific step.
+- Remove conversational residue such as `of course`, `here is`, or language addressed to the reader as if answering a chat request.
+- Prefer named systems, datasets, assets, constraints, implementation decisions, and measured situations over generic claims.
 
 ## Terminology
 

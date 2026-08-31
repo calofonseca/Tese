@@ -175,8 +175,10 @@
     \vspace{10mm}
     {\Large\bfseries\@author\par}
     \if@provisional
-      \vspace{8mm}
-      {\Large\textsc{\@provisionaltext}\par}
+      \ifx\@provisionaltext\@empty\else
+        \vspace{8mm}
+        {\Large\textsc{\@provisionaltext}\par}
+      \fi
     \fi
     \vfill
     \includegraphics[width=72mm]{\@logo}

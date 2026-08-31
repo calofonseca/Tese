@@ -5,7 +5,7 @@ The canonical TI-MARL implementation target is defined in `TI_MARL_IMPLEMENTATIO
 ## Metadata
 
 - Confirm the final thesis title and subtitle.
-- Confirm the final co-supervisor. The current project uses Ricardo Severino; the 2024 TRP lists Armando Sousa.
+- Confirm the final supervisor and co-supervisor record. The current project uses Luís Lino Ferreira and Armando Sousa.
 - Confirm the submission date and jury composition.
 
 ## Canonical terminology

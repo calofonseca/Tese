@@ -63,7 +63,7 @@ Edit `metadata.tex`:
 - submission month and year;
 - jury members for jury/final versions.
 
-The current project uses Prof. Luís Lino Ferreira and Prof. Ricardo Severino. The 2024 TRP lists Prof. Armando Sousa as co-supervisor, so the final record must be confirmed.
+The current project uses Prof. Luís Lino Ferreira and Prof. Armando Sousa. The final record must be confirmed before submission.
 
 ## Build modes
 
@@ -121,7 +121,7 @@ The outline follows a claim-oriented hierarchy:
 - a topic that remains only one or two short paragraphs is kept as an unnumbered paragraph heading or merged with a related subsection;
 - central thesis objects and concise chapter summaries are deliberate exceptions.
 
-This rule must be applied again after verified results replace the current placeholders. See `notes/structure-granularity-audit-v10.md`.
+This rule must be applied again after verified results replace the current placeholders.
 
 ## Bibliography and compilation
 
@@ -167,9 +167,3 @@ The initial CSV schema is in `notes/audits/master-evidence-matrix-template.csv`.
 ## Planned figures
 
 The annotated PDF contains orange planning boxes with the required source and evidential role of each figure. The clean PDF shows only neutral figure spaces and captions, keeping production instructions out of the reading flow. The complete production requirements are in `notes/figure-register.md`; visual conventions are in `notes/visual-style-guide.md`.
-
-The bibliography and citation review is documented in `notes/reference-and-citation-audit.md`.
-
-## Authorial voice revision (v11)
-
-The v11 prose was revised to remove assistant-like metadiscourse, editorial explanations of chapter choices, repeated defensive framing, and instructions to a future writer. Scientific objects, methods, results, and evidence now lead the paragraphs. Contributions are stated positively before their boundaries are discussed, examples precede formal detail where useful, and recurring terminology remains stable across chapters. Missing quantitative evidence is kept outside the clean prose and remains visible only in the annotated build.
