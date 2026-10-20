@@ -1,0 +1,139 @@
+\chapter{Simulation Studies of Community Energy Management}
+\label{app:simulation-studies}
+
+This appendix provides the full comparison supporting the simulation-based evidence discussed in Section~\ref{sec:ch3-cross-domain}. Table~\ref{tab:ch3-simulated-applications} compares the 50 selected simulation applications. It groups studies by their principal application, although several combine trading, storage, and demand control. The assessment column identifies what is compared or measured, and the final column summarises the resulting observation. Experimental populations and evaluation periods refer to simulated systems, including cases supplied with measurements from real-world installations.
+
+\begingroup
+\fontsize{9.5}{11.3}\selectfont
+\setlength{\tabcolsep}{3.5pt}
+\renewcommand{\arraystretch}{1.04}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{\dimexpr 0.16\textwidth-1.6\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.18\textwidth-1.6\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.21\textwidth-1.6\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.19\textwidth-1.6\tabcolsep\relax}>{\raggedright\arraybackslash}p{\dimexpr 0.26\textwidth-1.6\tabcolsep\relax}@{}}
+\caption{Simulation studies of community energy management}\label{tab:ch3-simulated-applications}\\
+\toprule
+Study & Application & Scale and scenario & Assessment & Main observation\\
+\midrule
+\endfirsthead
+\caption[]{Simulation studies of community energy management (continued).}\\
+\toprule
+Study & Application & Scale and scenario & Assessment & Main observation\\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\emph{Continued on the next page.}}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\addlinespace[3pt]
+\multicolumn{5}{@{}l}{\textit{Local exchange and community markets}}\\*
+\addlinespace[3pt]
+\textcite{recS01} & Renewable-energy sharing & 3, 4 and 10 homes; three-day episodes & Sharing between household agents & Learned allocation of local renewable energy.\\
+\addlinespace[3pt]
+\textcite{recS02} & Peer-to-peer trading & 50 participants; one market week & Trained and untrained traders & Outcomes differ between participants; learning changes the distribution of costs.\\
+\addlinespace[3pt]
+\textcite{recN12} & Trading with batteries & Eight agents; Ausgrid profiles & Grid-only, random bidding and \gls{rl} & More internal exchange and lower bills in the modelled auction.\\
+\addlinespace[3pt]
+\textcite{recC12} & Buyer--seller trading & Modelled local market & Individual and community returns & Learning supports local exchange and energy-saving decisions.\\
+\addlinespace[3pt]
+\textcite{recS04} & \gls{pv} and storage trading & Networked prosumers & Trading and storage decisions & Joint scheduling accounts for the network linking participants.\\
+\addlinespace[3pt]
+\textcite{recN03} & Community and peer-to-peer markets & 3--30 aggregators; one test week & Equilibrium, costs and computation & Reward convergence can accompany inferior market equilibria.\\
+\addlinespace[3pt]
+\textcite{recN10} & Trading with heterogeneous batteries & 250 household profiles; eight battery types & Independent, joint and federated learning & Improved trading returns and coordination in the simulated market.\\
+\addlinespace[3pt]
+\textcite{recN11} & Network-constrained trading & 20--100 prosumers; 141-node grid & Costs and voltage deviations & Trading performance is assessed together with network effects.\\
+\addlinespace[3pt]
+\textcite{recN02} & Trading with uncertain forecasts & Ten farm/household prosumers; two \glspl{ev} & Forecast-informed decisions & Forecast uncertainty affects trading and storage behaviour.\\
+\addlinespace[3pt]
+\textcite{recC13} & Community trading and storage & 100 prosumers; 52 test days & Costs and peaks under a transformer limit & Coordinated decisions improve the evaluated economic and aggregate-load objectives.\\
+\addlinespace[3pt]
+\textcite{recC26} & Renewable-energy trading between farms & Ten farms per country; one simulated year & Trading access and learned decisions & Separates benefits of local exchange from those of learning.\\
+\addlinespace[3pt]
+\textcite{recC27} & Household storage and grid services & 200 homes; year-long profiles & Trading, regulation and preferences & Batteries provide several services under assumed stable preferences.\\
+\addlinespace[3pt]
+\addlinespace[3pt]
+\multicolumn{5}{@{}l}{\textit{Residential storage and flexible demand}}\\*
+\addlinespace[3pt]
+\textcite{recS08} & Renewables, demand and \gls{ev}/\gls{v2g} & Residential microgrid & Agent benefits and energy scheduling & Scheduling balances the participants' interests in the modelled market.\\
+\addlinespace[3pt]
+\textcite{recS11} & Residential batteries & 17 homes; CityLearn & \gls{dr} with independent learners & Battery schedules respond to the residential demand objective.\\
+\addlinespace[3pt]
+\textcite{recS12} & \gls{pv} and battery operation & Two homes; agent middleware & Energy use and economic benefit & Executable agents coordinate a simulated energy system.\\
+\addlinespace[3pt]
+\textcite{charbonnier2022scalable} & \glspl{ev}, heating and flexible loads & Up to 30 prosumers & Cost and computational scaling & Coordinated flexibility is evaluated as the household population grows.\\
+\addlinespace[3pt]
+\textcite{nweye2023merlin} & Household battery control & 17 homes; CityLearn & Occupant-related objectives and reuse & Previously collected experience supports simulated community control.\\
+\addlinespace[3pt]
+\textcite{savino2025attention} & Electrical and thermal storage & Up to 100 buildings & Demand management and scale & Coordinated control extends to a large modelled district.\\
+\addlinespace[3pt]
+\textcite{pokorn2026modrec} & Community \gls{pv} and batteries & Simulated energy community & Operating cost & Learned control and linear optimisation jointly reduce costs.\\
+\addlinespace[3pt]
+\textcite{recS32} & \gls{pv}, storage and flexible demand & 5--30 homes; hourly, 24-hour horizon & Cost, comfort and asset degradation & Improves a composite objective under deterministic conditions.\\
+\addlinespace[3pt]
+\textcite{recS33} & \glspl{ev} and shared storage & Positive-energy district; mixed input data & Energy autonomy & Coordinated flexibility increases local use of renewable energy.\\
+\addlinespace[3pt]
+\textcite{recS39} & Residential resources and comfort & 11 homes, including five prosumers & Economy, comfort and sustainability & Evaluates multiple community objectives in an \gls{iot}-oriented model.\\
+\addlinespace[3pt]
+\textcite{wilk2024smartcommunity} & \gls{hvac} and \gls{ev} charging & Three identical and nine heterogeneous buildings & Cooperative and competitive objectives & Collective performance and benefit distribution vary with coordination.\\
+\addlinespace[3pt]
+\textcite{recC07} & Price-responsive household demand & Multiple aggregators & Prices, peaks and allocation of benefits & Learned pricing and benefit allocation support \gls{dr}.\\
+\addlinespace[3pt]
+\textcite{recC19} & Residential \gls{ev} charging & Nine homes; 24-hour forecasts & Current versus forecast information & Forecasts inform coordinated charging decisions.\\
+\addlinespace[3pt]
+\textcite{recC20} & \gls{ev} charging with renewable supply & Nine and 90 homes; 30 days & Demand--generation alignment & Decentralised decisions increase use of available renewable energy.\\
+\addlinespace[3pt]
+\textcite{recC21} & Residential \gls{dr} & 90 \glspl{ev} in a household network & Learning, rules and other controllers & Compares self-organising strategies under a shared scenario.\\
+\addlinespace[3pt]
+\textcite{recC22} & Forecast-informed \gls{dr} & Residential load scenarios & Adaptation to changing demand & Performance depends on predictions and changing consumption patterns.\\
+\addlinespace[3pt]
+\textcite{recN01} & \gls{pv} and \gls{ev} charging & Four prosumers and an aggregator & Dynamic versus fixed tariff structures & Coordinated schedules reduce costs under the tested prices.\\
+\addlinespace[3pt]
+\textcite{recN04} & Household load scheduling & Ten homes & Cost, delay and demand peaks & Learned schedules balance expense and consumption timing.\\
+\addlinespace[3pt]
+\textcite{recN19} & \gls{pv}, batteries and \gls{ev} charging & 200 homes; annual consumption profiles & Rules, \gls{dqn} and collective learning & Coordination improves cost and peak-demand objectives.\\
+\addlinespace[3pt]
+\textcite{recN14} & \gls{hvac} with shared storage & Two buildings and one storage agent & Heuristics and centralised control & Shared flexibility brings cost benefits with temperature trade-offs.\\
+\addlinespace[3pt]
+\addlinespace[3pt]
+\multicolumn{5}{@{}l}{\textit{Microgrids and coupled energy resources}}\\*
+\addlinespace[3pt]
+\textcite{recS18} & Generation, storage and demand & Microgrid with historical profiles & Energy balance and linear-program reference & Learned decisions balance flows and generalise across tested conditions.\\
+\addlinespace[3pt]
+\textcite{recS24} & \gls{dc} energy sharing & Four institutional houses represented in a power-interchange emulator & Distributed control in an emulator & Uses installation data to evaluate learned energy exchange.\\
+\addlinespace[3pt]
+\textcite{recS28} & Generation, storage and five loads & MATLAB model of an energy laboratory & Resource scheduling & Learning and auctions allocate energy within the laboratory model.\\
+\addlinespace[3pt]
+\textcite{recS31} & \gls{pv}, batteries and flexible demand & Synthetic residential scenarios & Uncertainty, comfort and degradation & Evaluates coordinated operation under uncertain inputs.\\
+\addlinespace[3pt]
+\textcite{recC16} & Storage and microgrid resilience & \gls{ieee} 33-node cases; simulated disturbances & Outages, forecast errors and agent faults & Demonstrates resilience within the tested disturbance scenarios.\\
+\addlinespace[3pt]
+\textcite{recC23} & Trading and microgrid scheduling & Connected microgrids; empirical inputs & Distributed scheduling and exchange & Joint decisions coordinate internal resources and external transactions.\\
+\addlinespace[3pt]
+\textcite{recC24} & \gls{pv}, storage and demand & Microgrid with communication failures & Performance under lost communication & Explicitly tests learning-based control with impaired information exchange.\\
+\addlinespace[3pt]
+\textcite{recC34} & Storage and stochastic generation & Modelled microgrids & Demand--supply deficit & Learning reduces the mismatch between available power and demand.\\
+\addlinespace[3pt]
+\textcite{recC35} & Wind generation and trading & Microgrids; historical wind and prices & Energy transactions & Learned trading responds to variable renewable supply.\\
+\addlinespace[3pt]
+\textcite{recN13} & Multiple storage technologies and trading & Main microgrid and five trading partners & Rules, single-agent and multi-agent control & Benefits depend on resource coordination and trading opportunities.\\
+\addlinespace[3pt]
+\textcite{recN16} & Electricity, heat and shared storage & Three microgrids; 30 test days & Trading and storage arrangements & Shared resources improve the tested operating objectives.\\
+\addlinespace[3pt]
+\textcite{recN17} & Low-carbon energy trading & Four microgrids; normalised household profiles & Auction and learning strategies & Examines costs and emissions under simplified storage assumptions.\\
+\addlinespace[3pt]
+\addlinespace[3pt]
+\multicolumn{5}{@{}l}{\textit{Building and network interactions}}\\*
+\addlinespace[3pt]
+\textcite{nweye2022realworld} & Grid-interactive building storage & Nine buildings; CityLearn & Prior experience and information sharing & Training experience affects performance; more shared information is not always better.\\
+\addlinespace[3pt]
+\textcite{pigott2022gridlearn} & Building storage and grid operation & 192 buildings; \gls{ieee} 33-node network & Costs, voltage and climate transfer & Aggregate voltage gains coexist with locally worse outcomes.\\
+\addlinespace[3pt]
+\textcite{recS38} & Collaborative building management & Six public-building models & Historical and future climate conditions & Examines flexibility and climate resilience across buildings.\\
+\addlinespace[3pt]
+\textcite{yu2021hvac} & Multi-zone commercial \gls{hvac} & Simulated building zones & Energy expense and indoor conditions & Coordinated thermal control balances cost and comfort.\\
+\addlinespace[3pt]
+\textcite{mai2024demandresponse} & Fast residential \gls{dr} & Up to 1000 thermostatic loads & Signal tracking, scale and heterogeneity & Coordination supports rapid response; resource differences affect performance.\\
+\addlinespace[3pt]
+\textcite{recC03} & Thermal energy management & Modelled building; climate scenarios & Energy, comfort and climate resilience & Collaborative agents adapt building operation within the simulation.\\
+\addlinespace[3pt]
+\end{longtable}
+\endgroup

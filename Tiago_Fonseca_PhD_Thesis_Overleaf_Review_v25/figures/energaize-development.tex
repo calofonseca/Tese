@@ -1,0 +1,31 @@
+\begingroup
+\input{figures/energaize-architecture-styles}
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+\node[ea data box,text width=32mm,minimum height=14mm] (data) at (0,8) {\textbf{Installation data}\\Historical and\\operating records};
+\node[ea model box,text width=34mm,minimum height=14mm] (config) at (5.1,8) {\textbf{Configuration}\\Buildings, resources\\and operating limits};
+\node[ea data box,text width=32mm,minimum height=14mm] (scenario) at (0,5.3) {\textbf{Datasets and scenarios}\\Prepared records and\\simulation settings};
+\node[ea box,text width=31mm,minimum height=14mm] (orchestrator) at (10.2,5.3) {\textbf{Job Orchestrator}\\Experiment configuration\\and execution};
+\node[ea data box,text width=32mm,minimum height=16mm] (simulator) at (0,2.2) {\textbf{CityLearn}\\Buildings, equipment\\and community};
+\node[ea control box,text width=34mm,minimum height=16mm] (controller) at (5.1,2.2) {\textbf{Controller development}\\Training and evaluation};
+\node[ea box,text width=31mm,minimum height=16mm] (workers) at (10.2,2.2) {\textbf{Worker Agents}\\Execution on available\\computing resources};
+\node[ea data box,text width=34mm,minimum height=13mm] (results) at (5.1,-.6) {\textbf{Results and model selection}\\Metrics, logs and model files};
+\node[ea model box,text width=34mm,minimum height=12mm] (bundle) at (5.1,-3.05) {\textbf{Model and model contract}\\Exported bundle};
+\node[ea control box,text width=32mm,minimum height=12mm] (runtime) at (0,-3.05) {\textbf{Runtime}\\Controller placed in service};
+\draw[ea data] (data.south) -- node[ea label,left] {Prepare} (scenario.north);
+\draw[ea support] (config.south) -- (5.1,6.25) -- (2.45,6.25) -- (2.45,5.3) -- (scenario.east);
+\draw[ea support] (config.east) -| (orchestrator.north);
+\draw[ea data] (scenario.south) -- (simulator.north);
+\draw[ea data] (1.8,2.6) -- (3.2,2.6);
+\node[ea label,above] at (2.55,3.05) {Observations\\and rewards};
+\draw[ea action] (3.2,1.8) -- node[ea label,below] {Actions} (1.8,1.8);
+\draw[ea support] (orchestrator.south) -- node[ea label,right] {Run experiments} (workers.north);
+\draw[ea support] (workers.west) -- node[ea label,above] {Execute} (controller.east);
+\draw[ea data] (controller.south) -- (results.north);
+\draw[ea data] (workers.south) -- (10.2,-.6) -- node[ea label,above] {Collect results} (results.east);
+\draw[ea model] (results.south) -- node[ea label,right] {Export} (bundle.north);
+\draw[ea model] (bundle.west) -- node[ea label,above] {Deploy} (runtime.east);
+\draw[ea support] (runtime.west) -- (-2.65,-3.05) -- node[ea label,rotate=90,above] {Operating records and new conditions} (-2.65,8) -- (data.west);
+\end{tikzpicture}
+}
+\endgroup

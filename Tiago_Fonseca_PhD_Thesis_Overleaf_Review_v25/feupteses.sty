@@ -16,14 +16,12 @@
 \newif\if@backrefs
 \newif\if@committeepage
 \newif\if@provisional
-\newif\ifthesisannotations
 
 \DeclareOption{portugues}{\@portuguestrue}
 \DeclareOption{juri}{\@juritrue}
 \DeclareOption{final}{\@finaltrue}
 \DeclareOption{onpaper}{\@onpapertrue}
 \DeclareOption{backrefs}{\@backrefstrue}
-\DeclareOption{annotated}{\thesisannotationstrue}
 \ProcessOptions\relax
 
 \if@final
@@ -76,6 +74,9 @@
 \RequirePackage{tabularx}
 \RequirePackage{siunitx}
 \RequirePackage{microtype}
+% Use uniform interword spacing after punctuation throughout the thesis.
+% English TeX defaults otherwise add extra space after sentences and titles.
+\AtBeginDocument{\frenchspacing}
 \RequirePackage{enumitem}
 \RequirePackage{fancyhdr}
 \RequirePackage{csquotes}
@@ -89,8 +90,6 @@
 \RequirePackage{comment}
 
 \definecolor{engineering}{RGB}{140,45,25}
-\definecolor{draftnote}{RGB}{178,94,0}
-\definecolor{draftnotebg}{RGB}{255,247,232}
 
 \if@onpaper
   \hypersetup{colorlinks=false,pdfborder={0 0 0},bookmarksnumbered=true,breaklinks=true,linktocpage}
@@ -142,8 +141,8 @@
 \gdef\@supervisorstext{}
 \def\supervisor#1#2{%
   \g@addto@macro\@supervisorstext{%
-    \par\vspace{0.35\baselineskip}%
-    \begin{center}\large #1: #2\end{center}%
+    {\large #1: #2\par}%
+    \vspace{3mm}%
   }%
 }
 
@@ -168,9 +167,11 @@
 \renewcommand{\maketitle}{%
   \begin{titlepage}
     \thispagestyle{empty}
-    \raggedright
-    {\vspace*{-8mm}\Large\bfseries\textsc{\@school}\par}
-    \vspace*{19mm}
+    % Centred cover follows the FEUP feupteses reference linked by J. Correia Lopes:
+    % https://www.overleaf.com/latex/templates/feup-dissertation-format/qrsrxjjwzrzf
+    \centering
+    {\vspace*{-23.5mm}\Large\bfseries\textsc{\@school}\par}
+    \vspace*{24mm}
     {\def\baselinestretch{1.15}\selectfont\Huge\bfseries\@title\par}
     \vspace{10mm}
     {\Large\bfseries\@author\par}
@@ -184,10 +185,10 @@
     \includegraphics[width=72mm]{\@logo}
     \vfill
     {\large\bfseries\@degree\par}
-    \vspace{5mm}
-    \@supervisorstext
     \vspace{10mm}
-    {\large\@thesisdate\par}
+    {\setstretch{1}\@supervisorstext}
+    \vspace{13mm}
+    {\normalsize\@thesisdate\par}
   \end{titlepage}
   \ifx\@copyrightnotice\@empty\else
     \thispagestyle{empty}
@@ -268,55 +269,24 @@
 }
 
 \newcommand{\evidencepending}{%
-  \ifthesisannotations
-    \textcolor{draftnote}{\textbf{[TBD]}}%
-  \else
-    \textemdash%
-  \fi
+  \textemdash%
 }
 
-\newcommand{\draftnote}[1]{%
-  \ifthesisannotations
-    \par\smallskip
-    \noindent\colorbox{draftnotebg}{%
-      \parbox{0.96\linewidth}{\color{draftnote}\small\textbf{Draft note.} #1}%
-    }
-    \par\smallskip
-  \fi
-}
-
-\ifthesisannotations
-  \newenvironment{draftonly}{}{}
-  \excludecomment{cleanonly}
-\else
-  \excludecomment{draftonly}
-  \newenvironment{cleanonly}{}{}
-\fi
+% Working notes remain in the source and are omitted from the thesis PDF.
+\newcommand{\draftnote}[1]{}
+\excludecomment{draftonly}
 
 % Planning placeholder for figures that still require a final diagram,
-% photograph, screenshot, or data-driven plot. Annotated builds expose the
-% evidence/source instructions; clean builds retain only a neutral placeholder.
+% photograph, screenshot, or data-driven plot. The fourth argument retains
+% source instructions; the PDF contains a neutral placeholder and caption.
 \newcommand{\plannedfigure}[4][0.12\textheight]{%
   \begin{figure}[htbp]
     \centering
-    \ifthesisannotations
-      \fcolorbox{draftnote}{draftnotebg}{%
-        \begin{minipage}[c][#1][c]{0.91\linewidth}
-          \centering
-          \color{draftnote}
-          \textbf{Planned figure placeholder}\\[0.55\baselineskip]
-          \begin{minipage}{0.88\linewidth}
-            \small\RaggedRight #4
-          \end{minipage}
-        \end{minipage}%
-      }
-    \else
-      \fcolorbox{black!25}{black!1}{%
-        \begin{minipage}[c][#1][c]{0.91\linewidth}
-          \centering\mbox{}
-        \end{minipage}%
-      }
-    \fi
+    \fcolorbox{black!25}{black!1}{%
+      \begin{minipage}[c][#1][c]{0.91\linewidth}
+        \centering\mbox{}
+      \end{minipage}%
+    }
     \caption{#3}
     \label{#2}
   \end{figure}

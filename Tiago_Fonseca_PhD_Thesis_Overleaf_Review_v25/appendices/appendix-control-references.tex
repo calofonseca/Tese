@@ -1,0 +1,51 @@
+\section{Annual BAU Comparisons and Reference Diagnostics}
+\label{app:annual-bau}
+
+The paired \gls{bau} comparison in Section~\ref{sec:control-common-protocol} covers Core-30 Normal, Topology, Safety, Robustness, and Combined, together with Premium-100 Normal and All-in. Each scenario has a reference without stationary storage and a reference using storage for local \gls{pv} self-consumption. The 2023 and 2024 accounts remain separate; the 2024 reference accompanies the principal controller comparison.
+
+\subsection{Development-Year Annual Comparison}
+
+\noindent\textcolor{orange!70!black}{\textbf{Illustrative annual comparison: invented values.}} The two tables below describe the intended full-year comparison for 2023. Their numbers are manuscript examples, independent of the real Core-30 diagnostic reported later in this section. The chosen year-to-year differences carry no empirical interpretation.
+
+\input{chapters/tables/control-bau-2023-energy}
+\input{chapters/tables/control-bau-2023-service}
+
+The illustrative tables use common invented eligible-departure counts within each scenario pair: 10\,000 in Core-30 Normal, Safety, and Robustness; 9\,000 in Topology and Combined; 30\,000 in Premium Normal; and 25\,000 in All-in. They provide arithmetically consistent examples of percentages and missed-service counts. These are not counts from the dataset audit. The annual controller fixtures add an invented unattainable cohort equal to 2\% of eligible departures and assume zero incomplete records. These additional requests remain outside the service-rate denominator. Actual comparisons retain both scenario-specific eligibility and the common cohort required for paired disturbance assessment.
+
+\subsection{Companion Service and Execution Records}
+
+Service, runtime, computation, and deployment accompany the annual scorecards in Tables~\ref{tab:control-safety-events}, \ref{tab:control-robustness-events}, \ref{tab:control-runtime-events}, \ref{tab:control-computation}, and~\ref{tab:control-deployment}. The Premium All-in response account appears in Table~\ref{tab:control-dr-results}. Each companion uses explicitly invented counts and magnitudes. \gls{v2g} is disabled, stationary-battery throughput is zero without storage, and \gls{bau} with storage has zero members saving against itself.
+
+\subsection{Real Short-Window Reference Diagnostics}
+\label{app:reference-diagnostics}
+
+The following values were obtained from an actual Core-30 simulator execution. They preserve its original window and accounting. The annual illustrative tables above are independent manuscript examples.
+
+\begin{table}[H]
+\centering
+\caption{\textbf{Measured short-window \gls{bau} diagnostic.} Portugal v3.1, 671 executed fifteen-minute steps from 1 January 2023 00:00 through 7 January 2023 23:30. Cost and import sum member-level purchases; peak uses \gls{rec} net power.}
+\label{tab:control-real-bau}
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+\textbf{Dataset} & \textbf{Cost} & \textbf{Import} & \textbf{Peak} & \textbf{\gls{ev}} & \textbf{Min.} & \textbf{Band}\\
+ & [EUR] & [kWh] & [kW] & departures & [\%] & [\%]\\
+\midrule
+Core-30 & 240.59 & 5074.2 & 85.59 & 105 & 100.0 & 6.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The storage-enabled \gls{bau} execution in Table~\ref{tab:control-real-bau} provides a concrete reference on the current Core-30 inputs. All 105 observed departures were eligible for minimum-service evaluation, and every one met that criterion. The target-band rate was much lower: 7 of 105 departures. Immediate charging towards full charge explains why ordinary operation can satisfy the minimum requirement while delivering more charge than requested. The run recorded zero residual electrical-violation energy under the simulator's constraint handling. Its exported window contains 671 action intervals; no unexecuted final interval is added to the reported energy or cost.
+
+The import costs were calculated from each member's exported positive net energy and the corresponding realised tariff, retaining negative prices and zero export remuneration. This run establishes actual short-window cost and service values; the full test-window comparison retains its separate scope. It also illustrates why a low bill, a safe executed trajectory, and accurate service are separate observations. The annual scorecard retains these separate outcomes.
+
+The storage-enabled diagnostic used a state-of-charge range of 0.2--0.9, charge and discharge command rates of 0.35, and a local import threshold of 2~kW for discharge. \gls{ev} charging used rate 1.0 and target \gls{soc} 1.0; the appliance start command was 1.0. The no-storage comparison sets stationary-battery charge and discharge to zero while retaining the remaining rules. The resolved configuration is archived with each execution.
+
+\subsection{Complete Annual Controller Scorecards}
+\label{app:control-variant-coverage}
+
+The principal controller families and the additional training and hierarchy variants share the seven-scenario scope. Table~\ref{tab:control-variant-coverage} first compares the annual cost of the additional configurations. The subsequent paired tables give energy, service, safety, resource use, and member benefit for all 26 configurations. Every value is an invented editorial fixture. The complete-year account includes supervisory fallback when the hypothetical learned controller cannot continue; it does not assert that each implementation has been executed on every scenario.
+
+\input{chapters/tables/control-variant-coverage}
+\input{chapters/tables/control-full-scorecards}

@@ -1,0 +1,26 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Runtime and service outcomes over the complete Core-30 Robustness year.}
+\label{tab:control-runtime-events}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.42\textwidth}*{3}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Record & \gls{rbc} Smart Local & \gls{matd3} residual & Transformer \gls{matd3}\\
+\midrule
+Injected fault episodes & 120 & 120 & 120\\
+Eligible decisions & 1\,054\,080 & 1\,054\,080 & 1\,054\,080\\
+Unavailable decisions & 1\,138 & 9\,487 & 5\,218\\
+Fallback episodes & 95 & 791 & 435\\
+Fallback [building-min] & 17\,070 & 142\,305 & 78\,270\\
+Recovery median [min] & 30 & 30 & 30\\
+Recovery maximum [min] & 120 & 120 & 120\\
+Unrecovered episodes & 0 & 0 & 0\\
+Appliance requests & 6\,000 & 6\,000 & 6\,000\\
+Appliance deadlines missed & 72 & 50 & 50\\
+Appliance energy unserved [kWh] & 100.8 & 70.0 & 70.0\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize All counts, exposures and durations are invented aggregates. Unavailable decisions require fallback; duration sums the affected fifteen-minute building intervals. Recovery is measured after the external fault clears. Missed departures remain failures after recovery.\end{minipage}
+\end{table}

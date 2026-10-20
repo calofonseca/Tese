@@ -68,17 +68,17 @@ Relevant technical chapters:
 
 ## Research Questions to support
 
-### RQ1 — Dynamic and Heterogeneous Multi-Agent Control
-How can MARL-based control accommodate heterogeneous and dynamically changing agent populations, capabilities, availability, observation/action interfaces, and individual/community objectives?
+### RQ1 — Scalability of Heterogeneous Multi-Agent Control
+Under which conditions can MARL-based control maintain acceptable control performance and resource use as the number and diversity of participating agents and controlled assets increase and their availability changes?
 
-### RQ2 — Multi-Dimensional Scalability
-Under which conditions and through which algorithmic, computational, communication, simulation, orchestration, and runtime mechanisms can performance and resource use remain acceptable as population, heterogeneity, complexity, and reconfiguration increase?
+### RQ2 — Deployability of Learned Controllers
+How can evaluated MARL controllers be brought into use in real installations with manageable integration effort and maintained there with reproducible behaviour?
 
-### RQ3 — Safe and Robust Operation
-How can physical and operational constraints, uncertainty, missing or delayed data, faults, reconfiguration, and training-to-operation shifts be represented, enforced, and evaluated?
+### RQ3 — Physical and Operational Safety
+How can physical, electrical, and service constraints be represented, enforced, and assessed throughout MARL training and real-world control?
 
-### RQ4 — Governed and Deployable MARL Policy-Set Lifecycle
-What lifecycle abstractions and orchestration mechanisms allow coordinated MARL policy sets to be reproduced, governed, validated, packaged, deployed, monitored, updated, rolled back, and recovered across heterogeneous edge CPS?
+### RQ4 — Robustness to Real-World Disturbances
+How can MARL-based control maintain acceptable service, degrade in a controlled manner, and recover when data, communication, equipment, or operating conditions depart from nominal assumptions?
 
 ---
 
@@ -91,7 +91,7 @@ During the first pass:
 3. **Do not silently upgrade planned features into implemented features.**
 4. **Do not silently downgrade implemented work because documentation is incomplete.** Locate the code, tests, configurations, logs, and history.
 5. Produce the audit outputs listed below.
-6. Any later patch to the thesis should begin in the annotated source and should be based on reviewed audit entries.
+6. Apply any later audit-based patch to the existing sources included by `main.tex`, using the reviewed audit entries.
 
 ---
 
@@ -485,5 +485,5 @@ notes/audits/proposed-thesis-patches.md
 7. Map figures/tables to frozen data
 8. Propose thesis patches
 9. Obtain author review
-10. Patch annotated thesis source, then clean source
+10. Patch the thesis sources included by main.tex
 ```

@@ -1,0 +1,23 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration, Core-30 Normal. Ordinary operation and rule-based references.}
+\label{tab:control-reference-scorecard}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrr@{}}
+\toprule
+\textbf{Configuration} & \textbf{Cost} & \textbf{CO$_2$} & \textbf{Daily peak} & \textbf{Solar} & \textbf{\gls{ev} min.} & \textbf{\gls{ev} band}\\
+ & [EUR] & [kg] & [kW] & [\%] & [\%] & [\%]\\
+\midrule
+\multicolumn{7}{@{}l}{\emph{Operating reference}}\\
+\gls{bau} & 24\,000 & 32\,000 & 60.0 & 65.0 & 100.0 & 18.0\\
+\addlinespace[4pt]
+\multicolumn{7}{@{}l}{\emph{\glspl{rbc}}}\\
+\gls{rbc} Basic & 23\,040 & 30\,800 & 57.0 & 66.0 & 99.2 & 75.0\\
+\gls{rbc} Smart Local & 21\,600 & 28\,400 & 54.0 & 71.0 & 99.8 & 92.0\\
+\gls{rbc} Community & 21\,120 & 27\,700 & 51.6 & 72.0 & 99.8 & 93.0\\
+\bottomrule
+\end{tabular*}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize \gls{bau} uses stationary storage. Solar denotes solar self-consumption; \gls{ev} band uses the target tolerance defined in Chapter~\ref{chap:simulator}.\end{minipage}
+\end{table}

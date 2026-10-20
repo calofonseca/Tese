@@ -1,0 +1,52 @@
+\begingroup\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{longtable}{@{}lrrrrrrrr@{}}
+\caption{\illustrativecaption Energy and economic outcomes for the two \gls{bau} variants over the complete 2023 window.}
+\label{tab:control-bau-2023-energy}\\
+\toprule
+\textbf{\gls{bau} variant} & \textbf{Cost} & \textbf{CO$_2$} & \textbf{Import} & \textbf{Export} & \textbf{Solar} & \textbf{Daily} & \textbf{Max.} & \textbf{Ramp}\\
+ & [EUR] & [kg] & [kWh] & [kWh] & [\%] & [kW] & [kW] & [kW]\\
+\midrule
+\endfirsthead
+\caption[]{\illustrativecaption Energy and economic outcomes for the two \gls{bau} variants over the complete 2023 window. (continued).}\\
+\toprule
+\textbf{\gls{bau} variant} & \textbf{Cost} & \textbf{CO$_2$} & \textbf{Import} & \textbf{Export} & \textbf{Solar} & \textbf{Daily} & \textbf{Max.} & \textbf{Ramp}\\
+ & [EUR] & [kg] & [kWh] & [kWh] & [\%] & [kW] & [kW] & [kW]\\
+\midrule
+\endhead
+\midrule
+\multicolumn{9}{r}{\emph{Continued on the next page.}}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{9}{@{}l}{\emph{Core-30 Normal}}\\*
+Without storage & 29\,160 & 37\,948 & 205\,965 & 42\,840 & 30.3 & 65.9 & 112.7 & 200\,720\\*
+With storage & 25\,920 & 33\,920 & 186\,300 & 21\,420 & 65.2 & 61.8 & 107.6 & 187\,200\\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\emph{Core-30 Topology}}\\*
+Without storage & 27\,432 & 36\,040 & 196\,650 & 39\,780 & 30.7 & 62.8 & 110.7 & 192\,400\\*
+With storage & 24\,624 & 32\,542 & 178\,848 & 23\,970 & 58.2 & 58.7 & 104.5 & 180\,960\\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\emph{Core-30 Safety}}\\*
+Without storage & 28\,728 & 37\,418 & 203\,895 & 42\,840 & 30.3 & 63.9 & 104.5 & 191\,360\\*
+With storage & 25\,596 & 33\,496 & 185\,265 & 21\,930 & 64.3 & 59.7 & 100.4 & 179\,920\\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\emph{Core-30 Robustness}}\\*
+Without storage & 29\,376 & 38\,160 & 207\,000 & 43\,350 & 29.5 & 67.0 & 115.8 & 212\,160\\*
+With storage & 26\,568 & 34\,768 & 189\,922 & 24\,990 & 59.4 & 63.9 & 112.7 & 201\,760\\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\emph{Core-30 Combined}}\\*
+Without storage & 27\,540 & 35\,934 & 195\,615 & 39\,984 & 30.3 & 61.8 & 102.5 & 193\,440\\*
+With storage & 25\,056 & 33\,072 & 180\,090 & 26\,316 & 54.2 & 58.7 & 99.4 & 185\,120\\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\emph{Premium-100 Normal}}\\*
+Without storage & 119\,880 & 154\,760 & 807\,300 & 295\,800 & 38.6 & 262.7 & 502.2 & 780\,000\\*
+With storage & 103\,680 & 135\,680 & 705\,870 & 214\,200 & 55.5 & 236.9 & 456.1 & 717\,600\\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\emph{Premium-100 All-in}}\\*
+Without storage & 113\,400 & 148\,400 & 755\,550 & 269\,280 & 37.4 & 253.4 & 471.5 & 796\,640\\*
+With storage & 100\,440 & 132\,500 & 673\,785 & 201\,960 & 53.1 & 231.8 & 440.7 & 748\,800\\
+\end{longtable}
+\noindent Import/export use the external \gls{rec} boundary; cost sums member purchase bills. All-in cost precedes the separate illustrative \gls{dr} settlement in Table~\ref{tab:control-dr-results}. Daily/Max. denote mean daily/maximum peak; Ramp is accumulated upward power change. Each pair uses the same scenario and year; different populations are not ranked by total cost.\par
+\endgroup

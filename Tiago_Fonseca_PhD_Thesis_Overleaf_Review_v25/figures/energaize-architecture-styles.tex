@@ -1,0 +1,25 @@
+% Shared visual vocabulary for the four Chapter 3 architectural views.
+\definecolor{eaInk}{HTML}{243B4A}
+\definecolor{eaData}{HTML}{307EAA}
+\definecolor{eaAction}{HTML}{33775D}
+\definecolor{eaModel}{HTML}{79639C}
+\definecolor{eaLine}{HTML}{788892}
+\definecolor{eaBlueFill}{HTML}{EDF5FA}
+\definecolor{eaGreenFill}{HTML}{EEF6F0}
+\definecolor{eaGoldFill}{HTML}{FCF3DD}
+\definecolor{eaPurpleFill}{HTML}{F1EDF7}
+\tikzset{
+ ea box/.style={draw=eaLine,fill=white,rounded corners=2pt,line width=.65pt,align=center,inner xsep=6pt,inner ysep=6pt,text=eaInk,font=\sffamily\fontsize{9}{11}\selectfont},
+ ea data box/.style={ea box,draw=eaData,fill=eaBlueFill},
+ ea control box/.style={ea box,draw=eaAction,fill=eaGoldFill},
+ ea action box/.style={ea box,draw=eaAction,fill=eaGreenFill},
+ ea model box/.style={ea box,draw=eaModel,fill=eaPurpleFill},
+ ea arrow/.style={-{Stealth[length=2mm,width=1.35mm]},line width=.8pt,draw=eaLine},
+ ea data/.style={ea arrow,draw=eaData},
+ ea action/.style={ea arrow,draw=eaAction},
+ ea model/.style={ea arrow,draw=eaModel,dashed},
+ ea support/.style={ea arrow,draw=eaLine,dashed,line width=.65pt},
+ ea label/.style={font=\sffamily\fontsize{8.5}{10}\selectfont,text=eaInk,align=center,fill=white,inner sep=2pt},
+ ea title/.style={font=\sffamily\bfseries\fontsize{9}{11}\selectfont,text=eaInk},
+ ea boundary/.style={draw=eaLine!60,rounded corners=3pt,line width=.55pt,fill=eaBlueFill!25}
+}

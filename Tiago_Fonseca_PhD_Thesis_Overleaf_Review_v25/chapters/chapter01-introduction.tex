@@ -1,220 +1,281 @@
 \chapter{Introduction}
 \label{chap:introduction}
+% Keep the template's natural heading spaces instead of stretching short pages.
+\makeatletter
+\let\introductionoriginaltextbottom\@textbottom
+\let\introductionoriginaltexttop\@texttop
+\makeatother
+\raggedbottom
+\newlength{\introductionoriginalparskip}
+\setlength{\introductionoriginalparskip}{\parskip}
+\setlength{\parskip}{0pt}
+\edef\introductionoriginalclubpenalty{\the\clubpenalty}
+\clubpenalty=10000
+\edef\introductionoriginalwidowpenalty{\the\widowpenalty}
+\widowpenalty=10000
 
-This dissertation was developed within the Doctoral Programme in Informatics Engineering at the Faculty of Engineering of the University of Porto. It investigates the development and operation of \gls{marl}-based control for distributed, heterogeneous, and dynamically reconfigurable \glspl{cps}, using smart-energy systems as the principal empirical domain.
+In many real-world systems, participants make decisions about their own resources while sharing the consequences with others, so a choice that serves one participant well may limit what another can achieve. A shared goal therefore has to accommodate local interests that sometimes pull in different directions. The same difficulty appears in robot teams, networks of road junctions, and groups of buildings managing electricity together, where local decisions contribute to an outcome that no participant determines alone. \gls{marl} offers a way to learn these relationships through experience, allowing agents to improve their decisions in response to both their own actions and those of others \parencite{gronauer2022survey,keren2024energynetworks}.
 
-This chapter introduces the context that motivates the research, establishes the transition from simulated learning to operational control, states the central thesis proposition and research questions, defines the scope of the work, summarises its main contributions, and presents the research path reflected in the organisation of the dissertation.
+This thesis investigates how such learned coordination can be put to use in real-world systems by developing multi-agent learning and control methods alongside the mechanisms needed to apply their decisions in practice. The central problem is to translate \gls{marl}'s promising results in simulation into controllers that organisations can deploy and maintain, with \glspl{rec} providing the setting for this investigation. The following sections establish the context and motivation for the work, formulate the research problem, and set out the thesis statement and \glspl{rq}. The contributions and organisation of the thesis complete this introductory chapter.
 
 \section{Context and Motivation}
 \label{sec:intro-context}
 
-The research begins from a class of control problems in which decision-making is distributed across physical assets, software components, and participants whose capabilities and availability may change over time. The following sections move from this broader cyber-physical setting to Renewable Energy Communities and, finally, to the role of multi-agent reinforcement learning in decentralised control.
+To place this investigation in context, the discussion begins with \gls{marl} and the ways in which agents learn to coordinate their decisions. It then turns to energy management, starting with the needs and flexibility of a single household before considering how its choices interact with those of other members of a \gls{rec}. These interactions bring shared objectives into contact with equipment limits and individual service requirements, revealing the coordination challenges that make this setting well suited to investigating \gls{marl} under real-world conditions.
 
-\subsection{Distributed and Dynamically Reconfigurable Cyber-Physical Systems}
-\label{sec:intro-cps}
-
-A \gls{cps} combines computation with physical processes. Sensors provide information about the physical environment, software interprets that information and decides what to do, and actuators change the physical process, creating a feedback loop between computation and the world. This connection is what distinguishes a \gls{cps} from a conventional software system: a software error is no longer confined to incorrect information on a screen; it can also lead to an incorrect physical action. Early work on \glspl{cps} already emphasised that physical dynamics, timing, safety, and reliability require abstractions that go beyond those used in general-purpose computing \parencite{lee2008cps}.
-
-Many contemporary \glspl{cps} are distributed. A factory includes machines, local controllers, sensors, and supervisory services. A fleet-management system coordinates vehicles that move in and out of communication range. A group of robots may share a mission while retaining local sensing and control. An energy community connects buildings, meters, renewable generation, batteries, charging stations, and external platforms. In each case, information and decision authority are spread across several locations; no single controller has a complete view or exclusive ability to act.
-
-Distribution changes the control problem in several ways. Each part of the system may observe only a local portion of the environment; communication introduces delays, bandwidth limits, and possible failures; available computation may range from cloud servers to embedded devices; and local decisions can have system-wide consequences. Local control can react quickly and preserve autonomy at the cost of a restricted view. Central control has access to broader context, with greater communication demands, scaling pressure, and exposure to a single point of failure.
-
-The system may also be dynamically reconfigurable. In this thesis, \gls{dynamicreconfiguration} refers to changes in participating agents, available assets, capabilities, or interaction structure. Consider an electric vehicle connected to a household charger. Before the vehicle arrives, the charger has no energy request to satisfy. During charging, the vehicle's state, required departure charge, and available power become relevant to control. Once the vehicle leaves, that particular flexibility disappears even though the physical charger remains. Similar changes occur when a robot joins a mission, a machine is taken offline, a device fails, or a communication link becomes unavailable.
-
-Such changes are different from ordinary variation in the value of a fixed observation. A temperature changing from \SI{20}{\celsius} to \SI{21}{\celsius} changes the state of an otherwise stable interface. A device or participant joining or leaving can instead change which observations exist, which actions are meaningful, which constraints apply, and which objectives can still be achieved. Control methods built around a fixed and homogeneous population may perform well in a stable benchmark yet require substantial adaptation when the configuration changes during operation.
-
-Centralised optimisation remains a strong option when the system is sufficiently well characterised and the corresponding optimisation can be completed within the available decision time. Decentralised or hierarchical decision-making becomes increasingly relevant as configurations change, local information cannot be shared continuously, and communication or computation constrain central control. The central question is how control can remain coherent when information, capabilities, and decision authority are distributed across both local and shared mechanisms.
-
-\subsection{Renewable Energy Communities as Representative Cyber-Physical Systems}
-\label{sec:intro-recs}
-
-The energy transition provides a concrete instance of these challenges. Electricity systems are incorporating increasing numbers of distributed and renewable resources, while electrification introduces flexible loads such as heat pumps and electric vehicles. Flexibility---the ability to shift production, consumption, storage, or exchange over time---is increasingly important for accommodating uncertainty and aligning demand with available renewable energy \parencite{hussain2023flexibility}.
-
-European legislation defines a \gls{rec} as a legal entity based on open and voluntary participation, effectively controlled by members located near the renewable-energy projects it owns or develops, and primarily intended to provide environmental, economic, or social community benefits rather than financial profit \parencite{eu2018redii}. The control setting considered in this thesis is more concrete: a community may contain participants who consume and produce electricity and who expose different forms of flexibility through buildings, batteries, electric vehicles, chargers, heating systems, and other controllable loads.
-
-A single participant may already combine assets with very different information and control interfaces. A battery can charge or discharge subject to power and \gls{soc} limits. A charger can exchange energy only while a compatible vehicle is connected and must account for the service expected at departure. A heat pump is coupled to thermal dynamics and comfort. These differences are not implementation details: they determine the observations, actions, constraints, and temporal dependencies of the control problem.
-
-Time couples those decisions. Charging a battery now affects what it can do later. Delaying an electric-vehicle charge creates flexibility only until the vehicle must depart. Reducing heating demand in one interval may create a larger requirement later. Energy management is a sequential decision problem: the value of an action depends on its immediate effect and on the options it preserves for the future. This is one reason why \gls{rl} has attracted sustained interest in demand response and building control \parencite{vazquezcanteli2019demandresponse}.
-
-At community level, objectives are also mixed. A participant may seek lower cost or guaranteed service, while the community may seek lower collective peaks, increased use of local renewable production, or adherence to a shared infrastructure limit. These objectives can align, but they are not identical. Several participants may benefit from coordination while simultaneously competing for a limited resource. This produces a mixed cooperative--competitive setting.
-
-The same community can reconfigure during operation. Vehicles connect and disconnect, devices become unavailable, participants can join or leave, and external signals can change the value of different actions. Renewable Energy Communities bring distributed control, heterogeneous capabilities, changing availability, mixed objectives, and shared physical constraints into one empirical setting. These properties also arise in other \glspl{cps}, including robotics, transport, and industrial systems, although the empirical claims of this thesis remain grounded in the energy systems that are actually evaluated.
-
-\begin{figure}[htbp]
-\centering
-\fbox{\parbox[c][4.4cm][c]{0.90\textwidth}{\centering
-\textbf{Figure placeholder: Renewable Energy Community as a representative distributed CPS}\\[0.5em]
-Participants and local agents; heterogeneous assets; local objectives; shared infrastructure; changing availability; community-level interactions.}}
-\caption{Renewable Energy Community as the principal real-world cyber-physical-system instantiation used in the thesis.}
-\label{fig:intro-rec-domain}
-\end{figure}
-
-\subsection{MARL for Mixed Cooperative--Competitive Decentralised Control}
+\subsection{Multi-Agent Learning and Control}
 \label{sec:intro-marl}
 
-Rule-based and optimisation-based controllers remain important in energy management. A rule-based controller can encode transparent operational behaviour, while an optimisation model can schedule several assets from forecasts, explicit constraints, and models of their dynamics. These approaches provide strong references and, in some cases, appropriate operational fallbacks. Learning-based control becomes attractive when the decision strategy is difficult to specify completely in advance, when repeated interaction provides useful experience, or when decentralised decision makers must adapt to a changing environment.
+Control involves choosing actions that guide a system towards an intended outcome, using the available information about its current condition and how it may evolve. When several controllers act within the same environment, each decision can influence both the part of the system being controlled and the conditions faced by others. Coordination requires these effects to be considered together \parencite{albrecht2024marl}.
 
-\Gls{rl} formulates sequential control as a learning problem: an agent observes the environment, selects an action, receives feedback, and improves its policy through experience. The observations, actions, rewards, constraints, and training environment still have to be designed; learning does not remove the need for a sound control formulation. Its value lies in learning useful decision behaviour without encoding the complete strategy as a fixed rule set or solving a full optimisation problem at every decision step.
+Neighbouring road junctions, for example, illustrate how an action can affect conditions elsewhere in the system. Keeping a traffic light green for longer may clear the queue at one junction while sending more vehicles towards the next, so the value of the decision depends on both the traffic that can move immediately and the conditions created further along the road.
 
-\Gls{marl} extends this setting to several agents interacting in a shared environment. It includes cooperative, competitive, and mixed formulations as well as different assumptions about information, communication, and training \parencite{albrecht2024marl,gronauer2022survey}. A common approach is \gls{ctde}, in which broader information can be used during training while each agent executes from its authorised local observations \parencite{lowe2017maddpg}. This is particularly relevant when operational control is distributed but learning can exploit richer information offline.
+The way a controller responds to these conditions can be specified through different approaches. It may operate with rules defined by an expert, optimise an explicit model, or search among candidate schedules. This thesis focuses on learning because experience can help improve decisions whose consequences emerge over time and depend on other participants \parencite{sutton2018rl,albrecht2024marl}. Chapter~\ref{chap:related-work} compares learning with other approaches to these control problems, including rule-based and optimisation-based methods.
 
-The mixed cooperative--competitive character is central to the energy setting. Two households with electric vehicles may share an interest in respecting a community capacity limit while each still prioritises the service required by its own vehicle. The agents must coordinate around shared outcomes without collapsing all participant objectives into one indistinguishable objective.
+\gls{rl} formalises this use of experience through the interaction between a decision-maker, termed an \emph{agent}, and its environment. The agent receives \emph{observations} and selects an \emph{action} according to a \emph{policy}, while a numerical \emph{reward} expresses how the outcome relates to the intended objective. By seeking to improve the reward accumulated over time, learning gives consequences that emerge later a role in the present decision \parencite{sutton2018rl}. At a road junction, observations might describe the number of waiting vehicles and the current signal phases, while actions adjust the timing of the lights. Through repeated interactions, the controller learns how these adjustments affect subsequent traffic.
 
-MARL introduces additional difficulties of its own. Other learning agents make the environment appear non-stationary from the perspective of an individual learner; joint decision spaces grow with the population; heterogeneous agents may expose different observations and actions; and communication or coordination can create additional computational and operational dependencies \parencite{hernandezleal2019survey,gronauer2022survey}. These difficulties become more pronounced when the physical system itself also changes. The learning algorithm is one part of the wider control system considered in this thesis, alongside its interfaces, physical constraints, runtime infrastructure, and evidence.
+With several learning controllers, the experience of one agent also reflects the decisions of others, whose behaviour may change as they learn. Traffic arriving at a junction, for example, depends on what neighbouring controllers have released. With the objective of reducing delay across the road network, \gls{marl} seeks to learn how local decisions can contribute to this shared outcome. Each controller must account for these wider consequences while observing and acting on its own part of the system \parencite{gronauer2022survey,albrecht2024marl}.
 
-\section{Requirements for MARL in Real-World CPS}
-\label{sec:intro-realworld-gap}
+The prospect of learning coordinated behaviour has encouraged research on \gls{marl} in cooperative robot navigation, task allocation, traffic control, and complex strategy games, with surveys reporting promising results across these domains \parencite{gronauer2022survey,orr2023multirobot}. Once trained, a policy can draw on experience gathered through many interactions to select an action from current observations. Translating experimental success into reliable real-world operation nevertheless remains a research challenge, since the learned behaviour must function with the information, constraints, and equipment of an actual installation \parencite{dulacarnold2021realworld,orr2023multirobot}. This is the central problem pursued in this thesis and developed in Section~\ref{sec:intro-problem}.
 
-Simulation is indispensable for training and evaluating learning-based control. It enables repeated experiments, controlled comparisons, and the deliberate creation of disturbances that would be expensive, unsafe, or impractical to reproduce in a physical installation. At the same time, a simulator can provide cleaner observations, more stable configurations, and more computational resources than will exist during operation. Real-world use requires evidence that reaches beyond learning performance under those controlled conditions.
+Energy management provides a setting in which both the promise of coordination and the demands of practical control can be examined. Decisions have consequences over time and across participants, as electricity stored in one building can meet a later need, while electricity consumed there is no longer available for another use \parencite{keren2024energynetworks}. Understanding these relationships begins with the choices available within a single household.
 
-This thesis organises that transition around four cross-cutting requirements: \gls{scalability}, \gls{deployability}, \gls{safety}, and \gls{robustness}. These four requirements define the dimensions investigated explicitly across the architecture, algorithms, experimentation, lifecycle, and operational evidence developed in the thesis; they are not intended as a complete taxonomy of the challenges associated with real-world intelligent control.
+\subsection{Energy Management and Flexibility in Homes}
+\label{sec:intro-energy-flexibility}
 
-\paragraph{Scalability.}
-Scalability concerns more than increasing the number of agents. It includes the computational cost of learning and inference, growth in heterogeneous observations and actions, simulator throughput, communication and coordination overhead, the reproducible execution of many experiments, and the resources required by deployed components. A method that scales in one dimension can still fail in another; for example, parameter sharing can reduce model count while communication or critic cost continues to grow. Relevant evidence identifies the dimension that increased, the resources consumed, and the control quality maintained at that scale.
+For a household, energy management is closely tied to the rhythm of daily life. Rooms should be warm when occupants return, a dishwasher may have until morning to finish its cycle, and a vehicle needs enough energy for the next journey. These requirements leave different amounts of freedom over when equipment operates. Solar panels and batteries extend that freedom by allowing some electricity to be produced at home and retained for later use. The controller's task is to arrange these choices around the services the occupants expect.
+
+Consider an \gls{ev} that returns home at 18:00 with its battery at a \gls{soc} of 30\%. The driver plans to leave at 08:00 the following morning and requests a departure \gls{soc} of 80\%. This specifies the service to be delivered, but leaves fourteen hours in which to arrange charging. Charging immediately would draw power alongside cooking, heating, and other evening uses, adding to demand at a time when the household connection may already be heavily used. If many residents charge in this way, the concentration can also increase pressure on the local network and the need for costly infrastructure reinforcement \parencite{hodge2017charging}.
+
+Those fourteen hours allow charging to be arranged around the household's other needs. \gls{ev} charging power can be reduced during the evening peak and increased after demand has fallen, or part of the required energy can be delivered during lower-price hours. This freedom to adjust consumption, storage, or supply within operating limits while preserving the required service is termed \emph{energy flexibility} \parencite{hussain2023flexibility}. One representation, the \emph{FlexOffer}, describes flexible energy amounts and timing and is discussed in Section~\ref{sec:ch2-rec-flexibility} \parencite{siksnys2019flexoffers}.
+
+For the vehicle, the available flexibility depends on how much energy is still needed, how long it will remain connected, the vehicle and charger ratings, and the capacity available at the household connection. As departure approaches, there is less room to postpone charging. Other appliances offer different choices, with a dishwasher allowing its start time to move while a heat pump must keep the indoor temperature within an acceptable range. Each resource therefore combines an opportunity to adjust energy use with a requirement that the adjustment must preserve.
+
+Local energy production changes which of those choices are attractive. Rooftop \gls{pv} panels may produce a surplus around midday, several hours before the household's evening demand. For the vehicle arriving at 18:00, a stationary battery offers a way to retain some of that production for later use. On a different day, when the same vehicle remains at home until late afternoon, charging can coincide directly with solar generation while still meeting its next departure target. A flexible appliance provides another use for the surplus. The timing of demand and storage therefore helps determine how much renewable electricity is used in the home and how much electricity must be bought or exported \parencite{hussain2023flexibility,hodge2017charging}.
+
+The relationships introduced in Section~\ref{sec:intro-marl} are visible in these household choices, where the vehicle, storage, and flexible appliances share the available energy and connection capacity over time. A household may prioritise lower expenditure, greater use of locally produced electricity, reduced demand peaks, or a chosen combination of these aims. Whichever objective is selected, comfort and the energy needed for the next journey remain service requirements. The preferred timing then depends on what the present decision makes possible later. Filling the stationary battery with cheaper grid electricity overnight may reduce subsequent purchases but leave less room for the next day's solar surplus; using its stored energy early in the evening leaves less for a later demand peak. A household controller must relate these consequences to the chosen objective, using measurements and forecasts of demand, generation, and prices \parencite{chen2022rlpower}.
+
+For a single household, these decisions can be learned through \gls{rl} by one agent managing its controllable resources \parencite{vazquezcanteli2019demandresponse}. In practice, meters, sensors, and device interfaces connect that agent to the home's equipment, providing measurements and carrying its commands. Section~\ref{sec:intro-problem} discusses the practical challenges of this sensing and control architecture.
+
+Some opportunities extend beyond the household. While its occupants are away and its panels produce a surplus, a neighbour may have an \gls{ev} ready to charge. Using that surplus introduces a coordination problem between households, extending the decisions previously considered within a single home.
+
+\subsection{Renewable Energy Communities}
+\label{sec:intro-rec}
+
+For neighbouring households to make use of such opportunities, they need an arrangement through which they can participate, share energy, and agree on the benefits they seek. \glspl{rec} provide this setting. They are autonomous legal entities with open and voluntary participation, bringing together individuals, small and medium-sized enterprises, and local authorities around renewable generation, consumption, storage, and sharing. Their primary purpose is to provide environmental, economic, or social benefits to their members and the local area \parencite{eu2018redii,portugal2022electricity}. Differences in members' routines and equipment then become a resource for coordination, allowing production at one building to meet demand at another \parencite{reis2021businessmodels}.
+
+The composition of a \gls{rec} can change both through members joining or leaving and through changes to the equipment within each household. Existing members may install new chargers, batteries, or other assets, remove equipment, or face temporary unavailability when a device fails. Vehicles connecting and disconnecting also change which resources can participate at a given time. These changes in resources, capabilities, and relationships constitute \emph{dynamic reconfiguration}, altering the opportunities for sharing and the actions available for coordination.
+
+Returning to the example of the vehicle that remains at home until late afternoon, its charging can draw on another member's solar surplus where sharing arrangements permit. \glspl{bess} at participating buildings can retain production for later needs, extending the opportunities to use renewable electricity within the \gls{rec} \parencite{faia2023energycommunity,srithapon2023predictive}. An agreed local price can make sharing beneficial to both households, giving the producer a better return than exporting the surplus and the consumer a lower cost than buying from the grid, after applicable charges \parencite{moret2019energycollectives,portugal2022electricity}. Matching demand to this production can also reduce upstream power flows and electrical losses \parencite{pohl2024distribution}, and make use of electricity that export limits would otherwise require to be curtailed \parencite{hodge2017charging}.
+
+Realising these benefits requires attention to how members' decisions interact. If every \gls{ev} owner independently chooses the cheapest charging period, their combined demand may create a new peak in grid imports \parencite{hodge2017charging}. Spreading charging across the night can avoid this concentration, but must accommodate different departure times; for example, a vehicle leaving at 06:00 may need to charge sooner than one leaving at 08:00. Coordination therefore has to reconcile the \gls{rec}'s objective with each member's service requirements. Where participation is possible, this flexibility can also support \emph{\gls{dr}}, adjusting consumption in response to prices or incentives to serve needs beyond the \gls{rec} \parencite{eu2019electricity,erse2024firme}.
+
+This need to reconcile individual requirements with shared objectives connects the household decisions in Section~\ref{sec:intro-energy-flexibility} to the multi-agent coordination introduced in Section~\ref{sec:intro-marl}. In a \gls{marl} formulation with one agent per building, each agent manages its local resources while learning how its decisions contribute to the \gls{rec}'s objective. A charging decision can then account for the driver's needs together with the availability of another household's surplus or the demand created by other vehicles. Experience of these interactions provides a basis for learning coordinated behaviour, with surveys of simulated energy systems reporting promising reductions in costs and demand peaks \parencite{keren2024energynetworks,sajid2026marldrreview}.
+
+\glspl{rec} therefore provide a setting for investigating the central problem of this thesis, which concerns putting \gls{marl} to use in the real world. Individual and shared objectives must be reconciled across members with service requirements and changing resource configurations. These and other challenges of applying \gls{marl} in real-world installations are examined in Section~\ref{sec:intro-problem}.
+
+\Needspace{12\baselineskip}
+\subsection{Institutional Setting and Partnerships}
+\label{sec:intro-research-context}
+
+The research was conducted at the \gls{softcps} laboratory of \gls{isep}, part of the Technical University of Porto. \gls{softcps} belongs to the HumanISE centre of \gls{inesctec}, the thesis host institution \parencite{softcpslaboratory}.
+
+The \gls{opeva} and \href{https://www2.isep.ipp.pt/softcps/?p=1235}{DemFlex} projects supported work on energy management and \gls{ev} charging with partners including Cleanwatts and i-charging \parencite{fonseca2025realworldrec,softcps2026demflex}. These partnerships connected controller development to the data, equipment interfaces, and service requirements of real-world installations.
+
+\section{Research Problem}
+\label{sec:intro-problem}
+\label{sec:intro-problem-statement}
+
+Promising simulation results in robotics, traffic control, complex strategy games, and energy management have encouraged interest in the wider use of \gls{marl} \parencite{gronauer2022survey,orr2023multirobot,keren2024energynetworks}. Organisations seeking to bring these methods beyond simulation and into real-world applications need controllers that work with the equipment and information available, deliver the services people rely on, and remain useful as operating conditions change. Applying \gls{marl} under these conditions requires the learning methods and the systems supporting their operation to be developed together. The following subsections discuss the challenges involved and explain the choice and meaning of scalability and dynamic reconfiguration, deployability, safety, and robustness as the four dimensions that guide this thesis.
+
+\subsection{Real-World Challenges}
+\label{sec:intro-challenges}
+
+Applying \gls{marl} in the real world involves several challenges identified in the literature but only partly examined in simulation studies. In energy management, reviews report more attention to costs and demand peaks than to robustness, transferability, and deployment conditions \parencite{keren2024energynetworks,sajid2026marldrreview}. These real-world challenges include scaling coordination to larger groups, adapting policies to different and changing resources, obtaining sufficient learning experience, reusing learned behaviour across installations, and connecting decisions to physical equipment \parencite{gronauer2022survey,orr2023multirobot,kannari2025realbuildings}. Respecting physical limits and individual service requirements while pursuing shared objectives, and maintaining control under disturbance, add further demands \parencite{gu2023safemarl,dulacarnold2021realworld}, alongside questions about fairness, explainability, privacy, and cybersecurity \parencite{moret2019energycollectives,bekkemoen2024xrl,farokhi2020smartmeterprivacy,stouffer2023otsecurity}. Chapter~\ref{chap:related-work} examines these gaps in detail. The discussion below summarises them to frame the research problem through three perspectives, (i) the practical perspective, concerning the organisations that must install, operate, and maintain controllers across different application domains, (ii) the \gls{rec} perspective, concerning their consequences for the members, equipment, and energy services introduced in Section~\ref{sec:intro-rec}, and (iii) the scientific perspective, concerning \gls{marl} algorithms and their associated challenges.
+
+\emph{Scalability and dynamic reconfiguration} become practical concerns when organisations extend coordinated control to more participants or adapt it to changing resources. Expanding a robot fleet, for example, increases the number of agents whose movements and tasks must be coordinated \parencite{orr2023multirobot}. The training time, memory, communication, and decision time required by \gls{marl} algorithms can limit how widely an organisation can apply them \parencite{charbonnier2022scalable}. From the \gls{rec} perspective, this difficulty appears in \glspl{rec} with different numbers of members and different combinations of resources, whose coordination must remain useful as the population grows \parencite{almilaify2023scalex}. These conditions raise scientific challenges for \gls{marl}. A larger population introduces more combinations of decisions, while each agent learns in an environment partly shaped by the changing behaviour of the others \parencite{gronauer2022survey,orr2023multirobot}. If a method uses a separately trained policy for each building, adding a member may also require training another policy and adapting coordination with the existing agents \parencite{wu2024dynamicvpp}.
+
+\emph{Dynamic reconfiguration} requires control to adapt as resources, capabilities, and relationships change over time. In a \gls{rec}, this includes members joining or leaving, as introduced in Section~\ref{sec:intro-rec}, and changes within a building even when the number of agents stays the same. A new charger gives its building's agent another service to manage, while removing a battery takes away actions that an earlier policy could use. The scientific difficulty lies in accommodating these changes within the learned model. If it expects a fixed collection of inputs and outputs, routine equipment changes may require modifying it and repeating part of the training. Generalisation to new actions is an established \gls{rl} problem, and energy studies examine representations for changing building populations and equipment configurations \parencite{jain2020newactions,wu2024dynamicvpp,orfanoudakis2026gnndt}.
+
+\emph{Deployability} concerns the effort an organisation needs to put a learned controller into service and maintain it across installations. Obtaining suitable learning experience may be costly or difficult, and exploring new actions on physical equipment can interfere with services already being provided \parencite{dulacarnold2021realworld}. From the \gls{rec} perspective, a new member may have little usable historical data, while differences in equipment, demand, tariffs, and occupants' routines can limit the value of experience collected elsewhere. These practical conditions raise scientific questions about how much experience \gls{marl} algorithms require and how well learned behaviour generalises beyond its training conditions. Transfer studies in simulated building populations examine reuse of learned behaviour, while reviews of real building control identify generalisation between installations as an outstanding need \parencite{nweye2023merlin,kannari2025realbuildings}.
+
+The practical demands of deployability also extend across the model's lifecycle, from collecting and preparing sensor data to training, validation, deployment, monitoring, maintenance, and updates \parencite{kreuzberger2023mlops,li2022rlops}. These stages must work together with manageable configuration and intervention effort. Integration with operational data and control systems is also needed in domains such as traffic management and telecommunications \parencite{zhang2025realworldvsl,li2022rlops}. In a \gls{rec}, the sensing and control architecture introduced in Section~\ref{sec:intro-energy-flexibility} must obtain usable measurements from different devices, associate them with the right resources, and deliver commands to the equipment. Because installations differ, deploying a controller at a new site may require repeating data preparation, model validation, and device integration \parencite{kannari2025realbuildings,fonseca2025realworldrec}. For the \gls{marl} formulation, this raises the question of whether its assumed observations and actions retain their meaning when the policy operates through these interfaces.
+
+\emph{Safety} requires operators to keep applied decisions within physical limits while preserving the services expected by users. In a robot fleet, coordinated movement must avoid collisions \parencite{orr2023multirobot}; in the \gls{rec} charging example, decisions must respect electrical limits while delivering the energy needed before departure. Representing the driver's request alongside the equipment's capabilities determines how much flexibility can actually be used \parencite{hussain2023flexibility,siksnys2019flexoffers}. For \gls{marl} algorithms, a reward may favour an economical schedule, but learning and execution must also account for actions that are physically inadmissible or leave too little time to complete charging. Safe \gls{marl} and shielding methods address how constraints enter learning and how proposed actions can be corrected before execution \parencite{gu2023safemarl,elsayedaly2021shielding}. The coordination problem also includes how those corrections affect other agents sharing the available capacity.
+
+\Needspace{3\baselineskip}
+\emph{Robustness} matters to organisations that need control to continue under disturbances and changing operating conditions, since interrupted service can require manual intervention. A mobile robot, for example, may have to continue navigating when its sensor readings become unreliable \parencite{dulacarnold2021realworld}. In a \gls{rec}, a missing measurement or failed charger removes information or actions on which a learned policy normally relies, while changes in occupants' routines can alter demand even when all equipment works correctly. Building-control reviews and operational \gls{rec} studies document the effects of data and interface problems \parencite{kannari2025realbuildings,fonseca2025realworldrec}. An unavailable charger may affect one household while other resources remain usable. From the scientific perspective, these situations require learned behaviour to remain useful with incomplete observations or changes in the effects of actions, including conditions outside the training experience \parencite{dulacarnold2021realworld}. Continued service then depends on how the policy responds and how the surrounding system recognises the disruption and maintains or restores control.
+
+\emph{Fairness} concerns how the benefits and burdens of coordination are distributed among participants. In a \gls{rec}, a lower collective cost may be accompanied by unequal savings or repeated inconvenience for some members \parencite{moret2019energycollectives}. If the same household's charging is repeatedly postponed, participants and operators need to understand the reason and whether intervention is appropriate. For \gls{marl}, these concerns involve both how the shared reward encourages particular outcomes \parencite{albrecht2024marl} and how the resulting decisions can be interpreted, motivating research on \emph{explainability} \parencite{bekkemoen2024xrl}.
+
+\emph{Privacy} and \emph{cybersecurity} require organisations to protect the information and interfaces used for coordination against unauthorised access or alteration, as in other operational control systems \parencite{stouffer2023otsecurity}. In a \gls{rec}, detailed energy measurements can reveal household routines, affecting what data can be made available for learning and exchanged during operation \parencite{farokhi2020smartmeterprivacy}. Protection also covers the links carrying measurements and equipment commands. From the scientific perspective, restrictions on information must be reflected in the observations and communication assumed by the \gls{marl} formulation.
+
+Subsection~\ref{sec:intro-lexicon} identifies and defines the dimensions selected for investigation in this thesis.
+
+\begingroup
+\raggedbottom
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}{1.2ex}{-1em}{\normalfont\normalsize\bfseries}}
+\makeatother
+\Needspace{8\baselineskip}
+\subsection{Lexical Grounding}
+\label{sec:intro-lexicon}
+
+The thesis examines scalability and dynamic reconfiguration, deployability, safety, and robustness as four dimensions of applying \gls{marl} in the real world. Their selection draws on the literature reviewed in Chapter~\ref{chap:related-work} and experience of connecting learned controllers to real-world installations in the supporting research projects. These dimensions guide the \glspl{rq} about learning methods and their supporting systems; the definitions below establish their meaning.
+
+\paragraph{Scalability and dynamic reconfiguration.}
+In this thesis, scalability denotes the ability to sustain useful control across increasing numbers and diverse combinations of agents and resources, with manageable growth in computational demand \parencite{bondi2000scalability,charbonnier2022scalable}. Dynamic reconfiguration denotes adaptation to changes in membership, equipment, or coordination relationships during operation \parencite{wu2024dynamicvpp,orfanoudakis2026gnndt}. These terms jointly cover variation in \gls{rec} populations and in the resources within each building.
 
 \paragraph{Deployability.}
-A trained policy becomes an operational controller only when its experimental assumptions and runtime dependencies remain intact. It must stay associated with the simulator, scenario, interface, reward, and software versions under which it was produced; it must be validated for the intended target; and it must be packaged, installed, monitored, updated, and recoverable. In a distributed system, these concerns apply to compatible sets of runtime components, with no model file considered in isolation. Deployability in this thesis covers the controlled path from an experimental result to continued operation on heterogeneous edge and server-side infrastructure.
+Deployability is used here for the ability to introduce and maintain a learned controller in real-world installations with manageable preparation, training, adaptation, and integration effort. Its scope covers reuse across installations \parencite{nweye2023merlin} and the model lifecycle, from data collection and preparation to training, validation, deployment, monitoring, maintenance, and updates \parencite{li2022rlops,kreuzberger2023mlops}.
 
 \paragraph{Safety.}
-Physical control imposes limits that cannot be traded away for a higher reward. Batteries, chargers, buildings, and network connections have operating constraints, while users impose service requirements such as departure charge or comfort. Safety is used here in this operational sense: preventing unacceptable actions and states through the control formulation, validation, runtime constraints, and fallback mechanisms appropriate to each stage. Cybersecurity is important to real infrastructure but is not used as a synonym for safety in this thesis.
+Safety denotes compliance with the physical, electrical, and service constraints specified in this thesis, for both applied actions and resulting states \parencite{gu2023safemarl,elsayedaly2021shielding}. These constraints cover equipment and connection limits and service commitments such as delivering the required energy before departure.
 
 \paragraph{Robustness.}
-Operational conditions do not remain identical to training conditions. Forecasts are imperfect, observations can be delayed or missing, devices can become unavailable, communication can fail, and the population or control interface can change. Robustness concerns whether useful control behaviour is maintained under these deviations and how performance degrades when assumptions no longer hold. Recovery after a disruption is treated as a related resilience concern and is addressed particularly through lifecycle and runtime mechanisms.
+Robustness refers here to retaining acceptable control performance and service under disturbances and conditions outside the training experience \parencite{dulacarnold2021realworld}. Its scope covers changing operating patterns, sensor and data faults, communication delays or losses, unavailable equipment, and execution failures. The related term \emph{resilience} denotes the capacity to recover useful operation after a disruption.
 
-These requirements interact. More communication can improve coordination while increasing dependence on connectivity; a larger policy can improve control while exceeding an edge latency budget; conservative safety mechanisms can reduce violations while limiting performance; and frequent policy updates can support adaptation while increasing validation and operational risk. The thesis evaluates the four requirements jointly where their interactions matter and separately where causal attribution is needed.
+\endgroup
 
-The detailed state-of-the-art analysis in \cref{chap:foundations} examines how these challenges have been addressed in prior work and identifies the residual gaps that motivate the contributions developed in the remainder of the thesis. Other concerns are also important to real-world \glspl{cps}, including cybersecurity and privacy, human factors and interpretability, regulatory and market constraints, maintainability, and long-term organisational adoption. They are considered where they constrain the proposed methods or their operation, but they are not investigated directly as primary dimensions of this thesis.
+% Match the separation between the dimension definitions above.
+\addvspace{1.2ex}
+These dimensions are closely related, and improvements in one can also benefit another. Greater scalability, for example, can make a system easier to apply in installations of different sizes, contributing to deployability. The thesis therefore considers these dimensions together when assessing the suitability of \gls{marl} for real-world control.
 
-\section{Thesis Proposition, Research Questions, and Scope}
-\label{sec:intro-thesis-rqs-scope}
-
-The research lies at the intersection of artificial intelligence, distributed systems, cyber-physical systems, edge computing, and intelligent energy control. Its central concern is computational: how distributed controllers can be represented, learned, evaluated, and operated when the physical and software interfaces through which they act are heterogeneous and can change. Energy is not treated as an interchangeable benchmark; asset dynamics, user requirements, shared infrastructure, and operational interfaces determine which decisions are meaningful and which evidence is required.
-
-\subsection{Thesis Proposition}
-\label{sec:intro-proposition}
-
-The central proposition evaluated by this dissertation is:
-
-\begin{quote}
-\emph{Operationalising Multi-Agent Reinforcement Learning in distributed, heterogeneous, and dynamically reconfigurable cyber-physical systems requires the integrated co-design of suitable system representations and simulation environments, scalable learning and coordination mechanisms, safe and robust control processes, and lifecycle-aware distributed deployment infrastructure.}
-\end{quote}
-
-The proposition places the learning method within the system that makes its claims meaningful. A controller is trained against a representation of the physical system, evaluated under explicit assumptions, executed through concrete observation and action interfaces, and maintained through an operational lifecycle. The thesis investigates these elements together while evaluating the individual claims in the chapters where the corresponding evidence is produced.
-
-\subsection{Research Questions}
+% Keep the section opening together with the thesis statement.
+\Needspace{16\baselineskip}
+\section{Thesis Statement and Research Questions}
 \label{sec:intro-rqs}
 
-Four research questions structure the investigation.
+The challenges discussed in Section~\ref{sec:intro-problem} lead to the thesis statement and \glspl{rq} presented below. Together, these guide the investigation of how \gls{marl} can be applied in the real world.
 
-\paragraph{RQ1 -- Dynamic and Heterogeneous Multi-Agent Control.}
+\Needspace{12\baselineskip}
+\subsection{Thesis Statement}
+\label{sec:intro-statement}
+
+The central statement examined in this thesis is:
+
 \begin{quote}
-\emph{How can MARL-based control be formulated to accommodate heterogeneous and dynamically changing agent populations, capabilities, and availability, while balancing individual and collective objectives in distributed cyber-physical systems?}
+\emph{\gls{marl} can support scalable, deployable, safe, and robust control of \glspl{rec} through the integration of reusable learning across compatible resources, explicit constraint handling, and execution supervision.}
 \end{quote}
-RQ1 concerns the representation and learning problem when agents and the entities they control are not assumed to expose one permanently fixed interface. It also addresses the coexistence of local and collective objectives under decentralised control.
 
-\paragraph{RQ2 -- Multi-Dimensional Scalability of Learning and Coordination.}
-\begin{quote}
-\emph{Under which conditions, and through which algorithmic, computational, and communication mechanisms, can MARL-based learning and coordination maintain acceptable control performance and resource use as agent population size, heterogeneity, environment complexity, and dynamic reconfiguration increase, while computational and communication resources remain constrained?}
-\end{quote}
-RQ2 treats scale as a conditional, multi-dimensional property. It considers population size, heterogeneity, representation size, simulation and training cost, communication, inference, orchestration, and the resources available at deployment time.
+\subsection{Research Questions}
+\label{sec:intro-questions}
 
-\paragraph{RQ3 -- Safe and Robust Operation.}
-\begin{quote}
-\emph{How can physical and operational safety constraints, uncertainty, faults, dynamic reconfiguration, and shifts between training and operation be incorporated into and systematically assessed for MARL-based control?}
-\end{quote}
-RQ3 addresses both the prevention of unacceptable control actions and the maintenance of useful behaviour when observations, forecasts, devices, communication, or system configuration deviate from nominal conditions.
+The four \glspl{rq} examine this proposition along the dimensions defined in Subsection~\ref{sec:intro-lexicon}.
 
-\paragraph{RQ4 -- Governed and Deployable MARL Policy-Set Lifecycle.}
-\begin{quote}
-\emph{What lifecycle abstractions and orchestration mechanisms allow coordinated MARL policy sets to be reproduced, governed, and deployed across heterogeneous and dynamically reconfigurable edge cyber-physical systems, while supporting compatibility validation, monitoring, staged updates, rollback, and failure recovery?}
-\end{quote}
-RQ4 follows the controller beyond training. It addresses experiment and environment lineage, compatibility between policies and runtime interfaces, validation and promotion, distributed deployment, monitoring, controlled updates, rollback, and recovery.
+\begin{itemize}[leftmargin=1.5em,itemsep=0.65\baselineskip,parsep=0pt,topsep=0.5\baselineskip]
+\item \textbf{\gls{rq} 1: Scalability and Dynamic Reconfiguration} -- How can \gls{marl} accommodate increasing populations and changes in agents and local resources, and how do these changes affect control performance, computational demand, and the need for further learning?
 
-\subsection{Research Objectives}
-\label{sec:intro-objectives}
+\item \textbf{\gls{rq} 2: Deployability of Learned Controllers} -- Which parts of controller preparation can be reused across heterogeneous installations, and what training, adaptation, integration, and maintenance effort is required at each installation to retain control performance?
 
-The research questions are pursued through six objectives that connect the scientific argument to the experimental and systems work developed throughout the dissertation.
+\item \textbf{\gls{rq} 3: Physical and Operational Safety} -- How can physical and service constraints be represented and enforced in \gls{marl}-based control, and how does their enforcement affect coordination, individual service delivery, and the need for protective intervention?
 
-\begin{description}[style=nextline,leftmargin=1.2cm,labelindent=0cm]
-  \item[O1 -- Characterise and formalise the control setting.]
-  Establish the requirements of distributed, heterogeneous, and dynamically reconfigurable cyber-physical control, including mixed local and collective objectives and the four cross-cutting dimensions of scalability, deployability, safety, and robustness.
+\item \textbf{\gls{rq} 4: Robustness to Real-World Disturbances} -- How do learned policies and execution supervision contribute to service continuity and sustained recovery under changing operating conditions and failures in data, communication, or equipment?
+\end{itemize}
 
-  \item[O2 -- Establish the simulation and experimental foundation.]
-  Extend and validate a reproducible environment capable of representing heterogeneous energy assets, changing participants and capabilities, physical constraints, disturbances, and the scales required for controlled learning experiments.
-
-  \item[O3 -- Develop and compare progressive control and learning solutions.]
-  Design, implement, and evaluate rule-based, optimisation-based, reinforcement-learning, and multi-agent formulations under common scenarios and metrics, identifying what each approach solves and the assumptions under which it remains effective.
-
-  \item[O4 -- Develop and evaluate TI-MARL.]
-  Design a multi-agent method that operates over entity-bound typed interfaces whose observations, action capabilities, bounds, and health can change at runtime, and assess its behaviour under heterogeneity, reconfiguration, local feasibility constraints, faults, and scale.
-
-  \item[O5 -- Develop the governed policy lifecycle and distributed runtime.]
-  Define and evaluate the lineage, compatibility, validation, packaging, deployment, monitoring, update, rollback, and recovery mechanisms required to operate learned policies and policy sets across heterogeneous edge infrastructure.
-
-  \item[O6 -- Integrate and validate the resulting approach in the energy domain.]
-  Connect the architectural, simulation, control, learning, and lifecycle contributions within EnergAIze and evaluate their interactions using Renewable Energy Communities, electric-vehicle charging, real data, external platforms, edge execution, and physical demonstrators at the evidence levels actually available.
-\end{description}
-
-
-\subsection{Scope and Assumptions}
-\label{sec:intro-scope}
-
-The methods and system abstractions are developed for distributed and reconfigurable \glspl{cps}, while the empirical evidence is concentrated in smart-energy systems: Renewable Energy Communities, flexible buildings, electric vehicles, charging installations, and related energy services. Examples from robotics, transport, or industrial systems clarify the broader class of problems but do not constitute equivalent empirical validation. Generality concerns the formulated mechanisms and abstractions; measured performance remains specific to the evaluated energy configurations.
-
-The thesis focuses on sequential operational control; long-term infrastructure planning and market design remain outside its central scope. Rule-based, optimisation-based, single-agent, and multi-agent controllers are all retained when they provide useful baselines, references, fallbacks, or solutions to particular subproblems. Simulation is used for training, controlled comparison, scaling, and disturbance injection, while real data, external platforms, edge devices, charging infrastructure, testbeds, and physical demonstrators provide additional evidence where available. The evidence classification keeps real-data simulation distinct from direct physical control.
-
-The work assumes that observations can be obtained through an operational interface and that admissible actions can be applied to the controlled system. Lower-level device protections remain active. The thesis evaluates selected physical and operational constraints, disturbances, failures, and reconfiguration events, but it does not claim universal formal safety certification. Security, privacy, regulation, and human factors are considered where they affect the architecture or operation, but they are not primary research questions unless supported by dedicated methods and evidence.
+These questions are addressed through comparisons of energy performance and service delivery alongside the computation, preparation, and intervention required to obtain them. Reconfiguration studies distinguish immediate policy reuse from performance obtained after further learning. Deployability studies separate preparation shared across installations from work repeated at each site. Safety and robustness assessments follow individual services through protective intervention, degraded operation, and recovery, accounting for the feasibility of the requested service under the available resources. The evaluation methodology in Chapter~\ref{chap:simulator} defines the corresponding indicators and comparison conditions.
 
 \section{Research Contributions and Outcomes}
 \label{sec:intro-contributions}
 
-The thesis contributes scientific methods and findings together with the software and experimental infrastructure required to realise and evaluate them. The publications and research outputs associated with these contributions are listed in the front matter; detailed provenance is recorded in the chapters where collaborative work contributes directly to the corresponding evidence.
+This research advances the study and real-world application of \gls{marl} through contributions to learning methods, control architectures, simulation, and experimental evaluation. Developed in \gls{rec} energy management, the work connects the coordination of heterogeneous resources with the conditions required to apply learned decisions in practice. Subsection~\ref{sec:intro-scientific-contributions} presents the scientific contributions, Subsection~\ref{sec:intro-software-contributions} describes the software and data outputs, and Subsection~\ref{sec:intro-societal} discusses the societal and environmental relevance of the work.
 
 \subsection{Scientific Contributions}
 \label{sec:intro-scientific-contributions}
 
-The scientific contributions form seven related families. TI-MARL is the principal algorithmic contribution, while the remaining contributions establish the empirical and systems foundations, solve complementary control problems, and provide the evidence needed to evaluate the complete thesis proposition.
+The \acrlongpl{sc} (\acrshort{sc})\glsunset{sc} developed in this thesis concern the analysis of existing research, the organisation and evaluation of control, and learning under changing configurations and operating conditions.
 
-\paragraph{C1 -- Evidence-based characterisation of operational MARL requirements.}
-The thesis develops a structured account of the conditions that separate conventional simulated MARL experiments from operational distributed \glspl{cps}. The literature analysis identifies existing solutions and counterexamples to simple absence claims, narrowing the residual challenge to the combined treatment of dynamic heterogeneity, multi-dimensional scalability, safe and robust operation, and a governed deployment lifecycle.
+\begin{description}[leftmargin=3.6em,labelwidth=3em,labelsep=0.6em,align=left,font=\normalfont\bfseries,itemsep=0.55\baselineskip,parsep=0pt,topsep=0.5\baselineskip]
+\item[SC1] \textbf{A review and gap analysis of \gls{marl} for real-world control.}\par\nobreak
+A systematised review connects evidence from \gls{rec} applications with methods addressing scalability and dynamic reconfiguration, deployability, safety, and robustness. Its comparative synthesis identifies demonstrated capabilities, limitations in their evaluation, and unresolved questions that guide the investigation (Chapter~\ref{chap:related-work}).
 
-\paragraph{C2 -- The EnergAIze integrated research architecture.}
-The thesis defines an architecture connecting data and scenario preparation, simulation, controller development, reproducible experimentation, policy governance, edge deployment, runtime monitoring, fallback, and recovery. Its contribution is the explicit organisation of responsibilities and contracts needed to study the path from a control problem to continued operation within one coherent research system.
+\item[SC2] \textbf{An architecture for multi-agent \gls{rec} control.}\par\nobreak
+This thesis presents EnergAIze, a distributed architecture that connects controller development, \gls{rec} management, and supervised operation. EnergAIze separates control decisions from installation-specific data and equipment interfaces, supporting heterogeneous installations through common descriptions of resources and services. Its modular organisation connects local control with shared data, deployment, and monitoring services (Chapter~\ref{chap:energAIze}).
 
-\paragraph{C3 -- A physically audited simulation and experimentation environment.}
-The CityLearn-derived environment is extended with heterogeneous assets, electric vehicles and chargers, electrical and community mechanisms, dynamic topology, entity-structured observations and actions, operational events, data and unit contracts, diagnostics, reproducible scenarios, and computational performance evidence. The contribution lies in their verified combination, in the class of experiments made possible by that combination, and in the continuity of evidence between training and deployment. The same versioned environment, scenario, interface, constraint, and evaluation contracts support experiment reconstruction, compatibility validation, policy promotion, packaging, and incident replay throughout the deployment lifecycle.
+\item[SC3] \textbf{A simulation model for changing \gls{rec} configurations and services.}\par\nobreak
+This thesis presents CityLearn v3, a simulation environment that represents \glspl{rec}, their members, energy assets, and service requests. The model connects changes in resource relationships and availability to energy exchanges, electrical constraints, and service delivery, supporting controlled studies of reconfiguration and disturbances before real-world application (Chapter~\ref{chap:simulator}).
 
-\paragraph{C4 -- Progressive control and learning solutions.}
-The thesis develops and evaluates a progression of rule-based, optimisation-based, single-agent, and multi-agent control methods together with mechanisms for more stable, data-efficient, reusable, and hierarchical learning. Each stage addresses a concrete control problem and contributes empirical evidence about the assumptions under which it remains effective. These results provide both independent contributions and the design evidence from which the requirements of TI-MARL are derived.
+\item[SC4] \textbf{A methodology for comparing learned \gls{rec} controllers.}\par\nobreak
+This thesis proposes a set of \glspl{kpi} and a methodology for comparing controllers during development and real-world application. The assessment combines energy performance, service delivery, computational demand, and protective interventions to identify regressions and operational difficulties. Common definitions support comparisons between learned controllers and other control approaches (Section~\ref{sec:sim-evaluation}).
 
-\paragraph{C5 -- TI-MARL as the principal algorithmic contribution.}
-TI-MARL is an optimizer-agnostic multi-agent learning method for systems in which the active agents, controlled entities, and observation--action interfaces can change. Versioned capability information and runtime health are compiled into entity-bound typed interfaces containing the observation parts, action-group instances, parameterised action ports, dependencies, validity conditions, and bounds currently available to each agent. A decentralised typed policy operates over this variable interface and produces one coherent local action bundle, while multi-agent coordination is learned through authorised shared observations, coupled outcomes, the joint physical transition, and variable-population central critics during training. The method is evaluated through controlled reconfiguration, health and disturbance tests, structural baselines, ablations, and multi-dimensional scaling.
+\item[SC5] \textbf{A formal model for \gls{marl} under dynamic reconfiguration.}\par\nobreak
+This thesis presents a Markov-game formulation that links changes in agent participation, resource capabilities, and information availability to the observations and actions available to each agent. It distinguishes persistent equipment from temporary service requests and explicitly associates observations, actions, and constraints with the resources they concern. This formulation provides a common description of reconfiguration for learning and execution (Section~\ref{sec:timarl-decision-processes}).
 
-\paragraph{C6 -- A governed lifecycle for MARL policies and policy sets.}
-The thesis develops lifecycle abstractions linking experiments, environments, scenarios, interfaces, reward definitions, policies, compatible policy sets, validation states, packages, deployment targets, and runtime observations. The contribution focuses on lineage, compatibility-aware validation and promotion, distributed deployment, monitoring, staged updates, rollback, and recovery in multi-agent operational settings.
+\Needspace{6\baselineskip}
+\item[SC6] \textbf{A modular learning method for reconfigurable multi-agent control.}\par\nobreak
+Building on SC5, this thesis presents \gls{timarl}, which uses the current resource description to construct each agent's decision interface and jointly select actions for its active equipment. The method supports investigation of policy reuse under combined changes in community membership and local equipment (Sections~\ref{sec:runtime-interface-model}--\ref{sec:tip-and-learning}).
 
-\paragraph{C7 -- Integrated real-world-oriented evidence in energy systems.}
-The preceding contributions are connected through real data, external platforms, edge devices, charging infrastructure, energy communities, and fail-safe operation. The resulting evidence captures effects that do not appear in isolated learning experiments, including interface mismatches, runtime resource constraints, data-quality failures, deployment interventions, and the limits of the achieved operational evidence.
+\item[SC7] \textbf{Safety and robustness for real-world multi-agent control.}\par\nobreak
+This thesis extends \gls{timarl} by propagating changes in equipment and information availability through declared dependencies to determine which control capabilities remain usable. Affected actions can be restricted or suspended while other resources continue under their own operating conditions, with explicit conditions governing their return (Section~\ref{sec:tcg-safety}).
 
-\subsection{System, Software, and Open-Source Contributions}
-\label{sec:intro-artifacts}
+\item[SC8] \textbf{An experimental study of strategies for improving learned \gls{rec} control.}\par\nobreak
+This thesis investigates hierarchical coordination, offline \gls{rl}, \gls{bc}, and the use of operating rules to guide learning through matched experiments. The comparisons examine their effects on learning effort, energy performance, and service delivery, identifying the conditions in which each strategy can support controller development (Sections~\ref{sec:data-efficient-hierarchy}--\ref{sec:hrl}).
 
-The scientific work is supported by a set of interconnected research artefacts whose energy-domain integration is realised through \gls{energAIze}. These include data-collection and validation components; scenario and configuration tools; the extended simulation environment; rule-based, optimisation-based, single-agent, and multi-agent controllers; TI-MARL components; experiment workers and orchestration services; manifests and registries for experiments, policies, policy sets, packages, and deployment targets; validation and deployment tooling; edge-runtime components; monitoring, fallback, rollback, and recovery mechanisms; and reproducible configurations, documentation, and open-source releases where licensing permits.
+\item[SC9] \textbf{Application of learned control to heterogeneous real-world \glspl{rec}.}\par\nobreak
+This thesis applies EnergAIze and its controllers to heterogeneous real-world \gls{rec} installations, connecting learned decisions to operational data and equipment interfaces. Integration and operational studies examine service delivery, supervision, and the effects of imperfect data and equipment availability, establishing practical requirements for applying the developed methods (Chapter~\ref{chap:real-world}).
 
-These artefacts are not treated as substitutes for scientific evidence. They provide the implementation through which the corresponding claims can be tested, reproduced, integrated, and, where appropriate, transferred to operational infrastructure. Repository, release, licence, configuration, and experiment identifiers are retained for the submitted version, with access limitations stated where partner or data restrictions apply.
+\item[SC10] \textbf{Scientific publications.}\par\nobreak
+The publications associated with these contributions include nine published papers, comprising five conference papers and four journal articles. These works, together with a further conference communication, submitted manuscripts, preprints and planned articles, are listed in the front matter (p.~\pageref{sec:thesis-publications}).
+\end{description}
+
+\subsection{Software and Data Contributions}
+\label{sec:intro-software-contributions}
+
+In addition to the scientific contributions, this thesis produced \acrlongpl{ossc} (\acrshort{ossc})\glsunset{ossc} and reusable datasets. These code modules and experimental inputs help researchers and practitioners develop and evaluate \gls{rec} control.
+
+\begin{description}[leftmargin=3.6em,labelwidth=3em,labelsep=0.6em,align=left,font=\normalfont\bfseries,itemsep=0.35\baselineskip,parsep=0pt,topsep=0.5\baselineskip]
+\Needspace{6\baselineskip}
+\item[OSSC1] \textbf{CityLearn v3 for \gls{rec} simulation and evaluation.}\par\nobreak
+The simulator development in this thesis resulted in CityLearn v3, distributed through the \href{https://pypi.org/project/citylearn/}{\gls*{pypi}} and the \href{https://github.com/citylearn-project/CityLearn}{official CityLearn repository} \parencite{citylearn2026pypi,citylearn2026official}. Its support for \gls{ev} charging, flexible loads, local sharing, and configuration changes implements the modelling and evaluation contributions in SC3--SC4 (Chapter~\ref{chap:simulator}).
+
+\item[OSSC2] \textbf{A \gls{ui} for constructing and analysing simulations.}\par\nobreak
+CityLearn UI was also developed within this thesis to support scenario construction, inspection of building and equipment time series, and comparison of \glspl{kpi}. It complements CityLearn and provides visual access to the evaluation outputs in SC4. Its source code is available in the \href{https://github.com/Soft-CPS-Research-Group/citylearn-ui}{CityLearn UI repository} \parencite{softcps2026citylearnui}.
+
+\item[OSSC3] \textbf{\gls{rec} datasets and scenario configurations.}\par\nobreak
+Real-world measurements, public energy and weather records, and generated resource and service scenarios provide controller test data. The datasets cover demand, generation, prices, charging sessions, and service requirements, supporting the comparisons in SC3--SC4 while distinguishing measured and generated inputs (Section~\ref{sec:sim-annual-dataset-suite}; Chapter~\ref{chap:real-world}).
+
+\item[OSSC4] \textbf{Controller implementations and experiment software.}\par\nobreak
+The controller implementations and configuration, training, and evaluation tools are available in the \href{https://github.com/Soft-CPS-Research-Group/Algorithms}{Algorithms repository} \parencite{softcps2026algorithms}. They implement SC4--SC8, allowing others to inspect the procedures, repeat comparisons, and apply the controllers to their own scenarios (Chapters~\ref{chap:control-benchmark}--\ref{chap:ti-marl}).
+
+\item[OSSC5] \textbf{Supporting software for operating and supervising \gls{rec} control.}\par\nobreak
+Supporting work coordinated by the author provides the EnergAIze \gls{ui}, backend services, database and domain models, data collectors, forecasting services, and operational tools. These components implement the architecture in SC2 and support the application studies in SC9. Public repositories include \href{https://github.com/Soft-CPS-Research-Group/energaize_ui}{EnergAIze UI}, \href{https://github.com/Soft-CPS-Research-Group/Percepta}{Percepta}, and \href{https://github.com/Soft-CPS-Research-Group/energAIze_inference}{EnergAIze Inference} \parencite{softcps2026energaizeui,softcps2026perceptarepo,softcps2026inferencerepo} (Chapter~\ref{chap:energAIze}).
+
+\item[OSSC6] \textbf{Distributed orchestration of training and evaluation experiments.}\par\nobreak
+The thesis also produced infrastructure for submitting, distributing, and monitoring experiments across local and remote computing resources. The \href{https://github.com/Soft-CPS-Research-Group/job_orchestrator_agent}{Job Orchestrator} manages jobs and results, while the \href{https://github.com/Soft-CPS-Research-Group/job_worker_agent}{Worker Agent} executes workloads on heterogeneous machines \parencite{softcps2026orchestratorrepo,softcps2026workerrepo}. Together, they support repeated comparisons and concurrent studies under the methodology in SC4 (Section~\ref{sec:orchestration}).
+\end{description}
 
 \subsection{Societal and Environmental Relevance}
 \label{sec:intro-societal}
 
-Renewable Energy Communities aim to give participants a more active role in the production, use, and sharing of energy. Intelligent control can help use local flexibility without requiring users to coordinate every flexible asset manually, while community-level objectives can support local renewable-energy use and reduce simultaneous peaks. The technical results of this thesis inform wider questions of flexibility, electrification, and distributed energy participation.
+The thesis supports more efficient energy management by developing methods to coordinate local generation, storage, and flexible demand. In \glspl{rec}, this coordination creates opportunities to use more locally produced renewable electricity, reduce energy expenditure, and manage demand peaks while preserving comfort and mobility \parencite{reis2021businessmodels,hussain2023flexibility}. Its environmental relevance lies in making distributed flexibility usable in everyday operation, supporting renewable integration and the transition towards low-carbon energy systems.
 
-The thesis nevertheless distinguishes measured technical outcomes from broader societal claims. Lower simulated cost does not establish long-term adoption, peak reduction in a testbed does not establish system-wide emissions impact, and edge execution does not by itself establish a complete privacy guarantee. Societal and environmental implications are discussed from the evidence actually produced and within the limits of the evaluated systems.
+\Needspace{8\baselineskip}
+The societal contribution centres on the services that energy systems provide to people. Household needs and the distribution of benefits among \gls{rec} members remain explicit considerations in control and evaluation \parencite{moret2019energycollectives}. Open software, reusable datasets, and documented methods extend the value of the work to researchers and organisations developing their own energy-management solutions. Together, these contributions support the United Nations \glspl{sdg} of affordable and clean energy (\gls{sdg}~7), sustainable cities and communities (\gls{sdg}~11), and climate action (\gls{sdg}~13) \parencite{un2015agenda2030}.
 
-\section{Research Path and Thesis Organisation}
+\Needspace{20\baselineskip}
+\section{Thesis Organisation}
+\label{sec:intro-approach}
+\label{sec:intro-graphical-abstract}
+\label{sec:intro-objectives}
 \label{sec:intro-organisation}
 
-The research developed cumulatively. Early work established the data, simulation, and experimental foundations and examined progressively more capable control formulations, from rule-based and optimisation approaches to single-agent and multi-agent reinforcement learning. Each stage addressed a concrete problem under explicit assumptions and produced results that remained useful in their own right. As the systems and experiments became more heterogeneous and dynamic, the remaining difficulty increasingly concerned how to preserve meaningful control when agents, assets, observations, actions, constraints, and operating conditions changed.
+The thesis is organised as a connected investigation of the conditions required to apply \gls{marl} in real-world systems.
 
-These findings motivated TI-MARL and, in parallel, the lifecycle and deployment mechanisms required to operate learned controllers beyond isolated experiments. The development was not a linear sequence: simulator limitations became visible during algorithm experiments, real operational data exposed assumptions in scenario design, and deployment targets introduced constraints that fed back into the control and software architecture. EnergAIze provides the common context in which these algorithmic and systems contributions are connected and evaluated.
+Chapter~\ref{chap:foundations} establishes the concepts of energy flexibility, \glspl{rec}, \gls{rl}, and policy organisation used throughout the thesis. Chapter~\ref{chap:related-work} compares existing control approaches and develops the research gaps that guide the subsequent chapters.
 
-The organisation of the dissertation follows this progression. \Cref{chap:foundations} establishes the foundations and residual gaps; \cref{chap:energAIze} presents the integrated architecture; and \cref{chap:simulator} develops the data, scenario, and simulation foundation. \Cref{chap:control-benchmark} presents the progression of control and learning solutions, leading to TI-MARL in \cref{chap:ti-marl}. \Cref{chap:lifecycle} addresses the governed lifecycle and distributed deployment of learned control, and \cref{chap:real-world} examines the integrated system in operational energy settings. Finally, \cref{chap:discussion} combines the evidence to answer the research questions, and \cref{chap:conclusions} concludes the thesis and identifies the remaining research directions.
+Chapter~\ref{chap:energAIze} presents the system architecture (EnergAIze), explaining how learning algorithms fit alongside the data, deployment, and supervision services needed for practical control. Chapter~\ref{chap:simulator} then establishes the experimental environment in which control decisions can be studied under controlled, comparable conditions. This includes the simulator extensions developed throughout the research, the datasets, and the \glspl{kpi} used to evaluate controllers.
+
+On this basis, Chapter~\ref{chap:control-benchmark} investigates the methods identified in the state-of-the-art review, examining their capabilities and the requirements that remain unresolved. These studies motivate the method presented and evaluated in Chapter~\ref{chap:ti-marl}, which brings policy reuse, coordination, and operational constraints into an integrated design.
+
+Chapter~\ref{chap:real-world} follows with deployment and operational studies in real-world installations. These studies examine the practical implications of the earlier chapters, including the effects of data availability, equipment interfaces, and operating conditions on controller integration and use.
+
+Chapter~\ref{chap:discussion} draws together the findings to answer the \glspl{rq}. Chapter~\ref{chap:conclusions} assesses the central thesis, summarises the contributions, and outlines future work. The appendices provide the detailed literature comparison and supporting experimental material.
+
+\clearpage
+\makeatletter
+\let\@textbottom\introductionoriginaltextbottom
+\let\@texttop\introductionoriginaltexttop
+\makeatother
+\setlength{\parskip}{\introductionoriginalparskip}
+\clubpenalty=\introductionoriginalclubpenalty
+\widowpenalty=\introductionoriginalwidowpenalty

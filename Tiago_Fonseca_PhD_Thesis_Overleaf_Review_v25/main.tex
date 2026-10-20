@@ -26,7 +26,21 @@
 \usepackage{pifont}
 \usepackage{ragged2e}
 \usepackage{tabularx}
+\usepackage{colortbl}
 \usepackage{comment}
+\usepackage{needspace}
+\usepackage{placeins}
+% Keep floats after their source in the reviewed opening chapters only.
+\makeatletter
+\let\thesisoriginaladdtocurcol\@addtocurcol
+\makeatother
+\usepackage{flafter}
+\usepackage{pdflscape}
+
+% Visible reminders requested for the supervisor review of Chapter 1.
+\newcommand{\reviewhighlight}[1]{\colorbox{yellow!40}{\strut #1}}
+\DeclareCaptionLabelFormat{reviewfigure}{\reviewhighlight{#1~#2}}
+\newcommand{\reviewreminder}[1]{\par\smallskip\noindent\colorbox{yellow!35}{\parbox{\dimexpr\linewidth-2\fboxsep\relax}{\small #1}}\par\smallskip}
 
 % Bibliography. Biber is selected automatically by Overleaf when required.
 \usepackage[
@@ -41,9 +55,16 @@
   isbn=false
 ]{biblatex}
 \addbibresource{bibliography/references.bib}
+% Permit long bibliography URLs to wrap at letters when punctuation is insufficient.
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{8000}
 
 % Acronyms and glossary without an external indexing step.
 \usepackage[acronym,toc,nonumberlist]{glossaries-extra}
+\setabbreviationstyle[acronym]{long-short}
+\glsenablehyper
+% Keep glossary links clickable without colouring recurring technical terms.
+\renewcommand*{\glstextformat}[1]{\textcolor{black}{#1}}
 \makenoidxglossaries
 \input{frontmatter/glossary-definitions}
 
@@ -55,11 +76,13 @@
   \include{frontmatter/declaration-honour}
   \include{frontmatter/declaration-ai}
   \include{frontmatter/coauthored-work}
+  \include{frontmatter/funding}
   \include{frontmatter/acknowledgements}
   \include{frontmatter/abstract-en}
   \include{frontmatter/resumo-pt}
   \include{frontmatter/publications}
 
+  \glsunsetall % Front-matter lists show short forms; the body resets first use.
   \cleardoublepage
   \pdfbookmark[0]{Table of Contents}{contents}
   \tableofcontents
@@ -73,7 +96,14 @@
   \listoftables
 
   \cleardoublepage
-  \input{frontmatter/glossary-add-all}
+  % Entry activation must not create the empty paragraph normally inserted
+  % by glossaries' \glsadd: it would force an otherwise empty recto/verso pair.
+  \begingroup
+    \makeatletter
+    \let\@gls@adjustmode\relax
+    \input{frontmatter/glossary-add-all}%
+    \makeatother
+  \endgroup
   \printnoidxglossary[type=\acronymtype,title={List of Acronyms}]
   \printnoidxglossary[title={Glossary}]
 \end{Prolog}
@@ -83,11 +113,14 @@
 
 \include{chapters/chapter01-introduction}
 \include{chapters/chapter02-foundations}
+\include{chapters/chapter03-related-work}
+\makeatletter
+\let\@addtocurcol\thesisoriginaladdtocurcol
+\makeatother
 \include{chapters/chapter03-energAIze-architecture}
 \include{chapters/chapter04-simulator}
 \include{chapters/chapter05-algorithms}
 \include{chapters/chapter06-ti-marl}
-\include{chapters/chapter07-lifecycle-deployment}
 \include{chapters/chapter08-real-world-validation}
 \include{chapters/chapter09-discussion}
 \include{chapters/chapter10-conclusions}
@@ -95,6 +128,7 @@
 \PrintBib
 
 \appendix
+\include{appendices/appendix-simulation-studies}
 \include{appendices/appendix-a}
 
 \end{document}

@@ -1,0 +1,34 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Annual minimum \gls{ev} service [\%] across the seven scenarios.}
+\label{tab:control-scenario-service}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.28\textwidth}*{7}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & C30 N & C30 T & C30 S & C30 R & C30 C & P100 N & P100 A\\
+\midrule
+\gls{bau} without storage & 100.0 & 99.0 & 96.0 & 96.5 & 93.0 & 99.0 & 91.0\\
+\gls{bau} with storage & 100.0 & 99.2 & 97.0 & 97.2 & 94.5 & 99.3 & 93.0\\
+\gls{rbc} Basic & 99.2 & 96.2 & 97.2 & 95.2 & 92.2 & 98.7 & 90.2\\
+\gls{rbc} Smart Local & 99.8 & 99.0 & 97.4 & 97.7 & 96.3 & 99.3 & 94.8\\
+\gls{rbc} Community & 99.8 & 99.0 & 97.8 & 97.5 & 96.3 & 99.3 & 94.8\\
+\gls{milp} local fixed & 100.0 & 99.8 & 99.5 & 98.6 & 98.2 & 99.9 & 97.2\\
+\gls{milp} \gls{rec} fixed & 100.0 & 99.8 & 99.5 & 98.6 & 98.2 & 99.9 & 97.2\\
+\gls{milp} local flexible & 100.0 & 99.8 & 99.5 & 98.6 & 98.2 & 99.9 & 97.2\\
+\gls{milp} \gls{rec} flexible & 100.0 & 99.8 & 99.5 & 98.6 & 98.2 & 99.9 & 97.2\\
+Local \gls{ppo} & 98.2 & 95.2 & 96.2 & 94.2 & 91.2 & 97.7 & 89.2\\
+Local \gls{td3} & 98.8 & 95.8 & 96.8 & 94.8 & 91.8 & 98.3 & 89.8\\
+\gls{maddpg} & 98.6 & 95.6 & 92.0 & 93.6 & 91.6 & 98.1 & 89.6\\
+\gls{matd3} (residual) & 99.8 & 96.8 & 98.6 & 97.3 & 92.8 & 99.3 & 90.8\\
+\gls{mappo} & 99.5 & 96.5 & 97.5 & 96.3 & 92.5 & 99.0 & 90.5\\
+\gls{happo} & 99.6 & 96.6 & 97.6 & 95.6 & 92.6 & 99.1 & 90.6\\
+\gls{masac} & 99.3 & 96.3 & 97.3 & 95.3 & 92.3 & 98.8 & 90.3\\
+Offline policy* & 99.2 & 96.2 & 97.2 & 95.2 & 92.2 & 98.7 & 90.2\\
+Transformer \gls{ppo} & 99.0 & 98.2 & 97.0 & 96.7 & 95.5 & 98.5 & 94.0\\
+Transformer \gls{matd3} & 99.7 & 98.9 & 98.8 & 97.9 & 96.2 & 99.2 & 94.7\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize C30: Core-30; P100: Premium-100. N: Normal; T: Topology; S: Safety; R: Robustness; C: Combined; A: All-in. Each column covers its complete 2024 sequence, including supervisory fallback. *Generic offline-policy placeholder; the associated method remains to be specified.\end{minipage}
+\end{table}

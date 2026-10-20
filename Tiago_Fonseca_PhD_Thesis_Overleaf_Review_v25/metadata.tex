@@ -2,28 +2,28 @@
 % Central metadata. Edit this file instead of searching throughout the project.
 % -----------------------------------------------------------------------------
 
-\newcommand{\ThesisAuthor}{Tiago Fonseca}
-\newcommand{\ThesisTitle}{Multi-Agent Reinforcement Learning Control of Distributed Mixed Cooperative--Competitive Real-World Cyber-Physical Systems}
-\newcommand{\ThesisSubtitle}{Case Studies in Smart Energy Management}
+\newcommand{\ThesisAuthor}{Tiago Carlos Caló Fonseca}
+\newcommand{\ThesisTitle}{Multi-Agent Reinforcement Learning Control of Renewable Energy Communities}
 \newcommand{\ThesisDegree}{Programa Doutoral em Engenharia Informática}
 \newcommand{\ThesisDate}{December 2026}
-\newcommand{\ThesisSupervisor}{Prof. Luís Miguel Moreira Lino Ferreira}
-\newcommand{\ThesisCoSupervisor}{Prof. Armando Sousa}
+\newcommand{\ThesisSupervisor}{Luís Miguel Moreira Lino Ferreira, PhD}
+\newcommand{\ThesisCoSupervisor}{Armando Jorge Sousa, PhD}
 
 \renewcommand{\preprologpages}{%
+  \cleardoublepage
   \input{frontmatter/epigraph}%
   \input{frontmatter/copyright}%
 }
 
-\title{\ThesisTitle\\[3mm]{\Large\ThesisSubtitle}}
+\title{\ThesisTitle}
 \author{\ThesisAuthor}
 \degree{\ThesisDegree}
 \thesisdate{\ThesisDate}
 % Keep the review cover visually identical to the final cover without enabling
 % the jury/committee pages before their metadata has been confirmed.
 \additionalfronttext{}
-% Copyright is placed manually after the epigraph so that the epigraph follows
-% the title page directly in the thesis front matter.
+% The title verso is blank; the epigraph opens on the next recto.
+% Copyright occupies the epigraph verso before the numbered front matter.
 \logo{uporto-feup}
 
 \supervisor{Supervisor}{\ThesisSupervisor}
@@ -37,7 +37,7 @@
 % \committeemember{Referee}{Prof. [Name]}
 
 \hypersetup{
-  pdftitle={\ThesisTitle: \ThesisSubtitle},
+  pdftitle={\ThesisTitle},
   pdfauthor={\ThesisAuthor},
   pdfsubject={Doctoral thesis in Informatics Engineering},
   pdfkeywords={multi-agent reinforcement learning, cyber-physical systems, renewable energy communities, scalability, deployability, safety, robustness},

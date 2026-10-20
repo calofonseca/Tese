@@ -1,0 +1,25 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration, Core-30 Normal. Service and distribution of coordination benefits.}
+\label{tab:control-hierarchy-service}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+\textbf{Configuration} & \textbf{\gls{ev} min.} & \textbf{\gls{ev} band} & \textbf{Corrected} & \textbf{Save / \gls{bau}} & \textbf{Save / local}\\
+ & [\%] & [\%] & [\%] & [$n/N$] & [$n/N$]\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{\gls{rbc} Smart Local}}\\
+Standalone & 99.8 & 92.0 & 4.0 & 26/30 & --\\
+Global signal & 99.8 & 93.0 & 3.8 & 28/30 & 22/30\\
+Per-member signal & 99.9 & 94.0 & 3.5 & 29/30 & 24/30\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{\gls{matd3} (residual)}}\\
+Standalone & 99.8 & 96.0 & 2.3 & 29/30 & --\\
+Global signal & 99.8 & 96.0 & 2.5 & 28/30 & 17/30\\
+Per-member signal & 99.8 & 96.0 & 2.7 & 27/30 & 19/30\\
+\bottomrule
+\end{tabular*}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Save / \gls{bau} is the common member-benefit indicator. Save / local additionally compares each member with its own standalone controller. All illustrative rows have zero residual electrical violation.\end{minipage}
+\end{table}

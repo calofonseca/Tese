@@ -1,4 +1,10 @@
-# TI-MARL Decision Log - v16
+# TI-MARL Decision Log
+
+## Implemented scope used in the thesis, 8 October 2026
+
+The implementation account in Chapter 6 supersedes the candidate design choices below. The supported learners are TI-PPO and TI-MAPPO, with a shared local typed actor and, for TI-MAPPO, a mean-pooled central set critic. The local analytic projector acts within a member. A graph critic, TI-MATD3 and a cross-member hard corrector are not part of the claimed implementation. The actor-only bundle defines the method-specific handoff; complete production serving is not certified by the current generic path. The focused suite passed 139 tests; see `verification-2026-10-08.json` and its log for the tested state. Annual comparative control results remain outstanding.
+
+## Historical v16 design record
 
 ## Frozen decisions
 

@@ -1,0 +1,20 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Preparation and execution of the three controller packages in the same Core-30 installation.}
+\label{tab:control-deployment}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.37\textwidth}*{3}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Record & \gls{rbc} Smart Local & \gls{matd3} residual & Transformer \gls{matd3}\\
+\midrule
+Configuration and integration [person-h] & 2.0 & 7.5 & 5.0\\
+First valid applied decision [h] & 2.4 & 8.1 & 5.7\\
+Replay agreement [$n/N$] & 10\,000/10\,000 & 10\,000/10\,000 & 10\,000/10\,000\\
+Successful dispatch [$n/N$] & 9\,998/10\,000 & 9\,997/10\,000 & 9\,998/10\,000\\
+Additional known charger [person-h] & 0.5 & 3.0 & 1.0\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Invented installation exercise with the same inputs, services and equipment interface. Replay uses a normalised-action tolerance of $10^{-6}$ before supervision. Dispatch counts confirmed interface hand-offs; it does not measure physical completion. Preparation includes the residual base rule where applicable.\end{minipage}
+\end{table}

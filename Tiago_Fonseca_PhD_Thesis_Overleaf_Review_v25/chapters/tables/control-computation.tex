@@ -1,0 +1,19 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Computational demand in the two Normal \glspl{rec}.}
+\label{tab:control-computation}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.3\textwidth}*{4}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & Memory [GB] & Training [h] & p95 [ms] & Late [$n/N$]\\
+\midrule
+\gls{matd3} residual / C30 & 5.6 & 18.4 & 2.8 & 12 / 1\,054\,080\\
+Transformer \gls{matd3} / C30 & 6.4 & 21.7 & 4.1 & 18 / 1\,054\,080\\
+\gls{matd3} residual / P100 & 27.0 & 86.2 & 3.5 & 84 / 3\,513\,600\\
+Transformer \gls{matd3} / P100 & 19.2 & 69.8 & 5.8 & 106 / 3\,513\,600\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Illustrative common-target assumption: 32-GB training accelerator, eight-core edge \gls{cpu} for serial building inference, batch size 256, equal update budget, and a 1-s inference deadline. Timings and deadline counts are invented; no hardware benchmark was executed. Model inference excludes upstream data acquisition.\end{minipage}
+\end{table}

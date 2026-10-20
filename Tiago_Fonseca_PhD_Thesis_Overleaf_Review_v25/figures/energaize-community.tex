@@ -1,0 +1,26 @@
+\begingroup
+\input{figures/energaize-architecture-styles}
+\begin{tikzpicture}
+\foreach \x/\name in {0/1,4.9/2,9.8/n}{
+ \draw[ea boundary] (\x-2.15,1.15) rectangle (\x+2.15,-4.55);
+ \node[ea title] at (\x,.78) {Building \name};
+ \node[ea control box,text width=30mm,minimum height=10mm] (c\name) at (\x,-.15) {\textbf{Controller}};
+ \node[ea data box,text width=30mm,minimum height=12mm] (p\name) at (\x,-1.95) {\textbf{Percepta}\\Data processing\\and routing};
+ \node[ea box,text width=30mm,minimum height=11mm] (a\name) at (\x,-3.8) {\textbf{Building equipment}};
+ \draw[ea data] (\x-.6,-3.17) -- (\x-.6,-2.66);
+ \draw[ea data] (\x-.6,-1.24) -- (\x-.6,-.75);
+ \draw[ea action] (\x+.6,-.75) -- (\x+.6,-1.24);
+ \draw[ea action] (\x+.6,-2.66) -- (\x+.6,-3.17);
+}
+\node[ea data box,text width=86mm,minimum height=15mm] (shared) at (4.9,3.15) {\textbf{Community information and shared services}\\Prices, weather, energy exchange and coordination};
+\draw[draw=eaLine,line width=.8pt] (0,1.8) -- (9.8,1.8);
+\draw[draw=eaLine,line width=.8pt] (shared.south) -- (4.9,1.8);
+\foreach \x/\name in {0/1,4.9/2,9.8/n}{
+ \draw[ea arrow,{Stealth[length=2mm]}-{Stealth[length=2mm]}] (\x,1.8) -- (\x,1.25) -- (\x+1.95,1.25) -- (\x+1.95,-.15) -- (c\name.east);
+}
+\draw[ea data] (-1.95,-5.2) -- (-1.1,-5.2);
+\node[ea label,anchor=west] at (-1.05,-5.2) {Measurements and observations};
+\draw[ea action] (5.6,-5.2) -- (6.45,-5.2);
+\node[ea label,anchor=west] at (6.5,-5.2) {Actions};
+\end{tikzpicture}
+\endgroup

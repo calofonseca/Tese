@@ -1,0 +1,21 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration, Core-30 Normal. Local learning against the strict local rule.}
+\label{tab:control-local-scorecard}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+\textbf{Configuration} & \textbf{Cost} & \textbf{CO$_2$} & \textbf{\gls{ev} min.} & \textbf{\gls{ev} band} & \textbf{Corrected}\\
+ & [EUR] & [kg] & [\%] & [\%] & [\%]\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{Local reference}}\\
+\gls{rbc} Smart Local & 21\,600 & 28\,400 & 99.8 & 92.0 & 4.0\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{Independent building learners}}\\
+Local \gls{ppo} & 22\,080 & 29\,200 & 98.2 & 81.0 & 9.5\\
+Local \gls{td3} & 21\,600 & 28\,800 & 98.8 & 85.0 & 8.0\\
+\bottomrule
+\end{tabular*}
+\end{table}

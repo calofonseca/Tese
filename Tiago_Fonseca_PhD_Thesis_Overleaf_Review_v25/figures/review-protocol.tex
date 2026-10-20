@@ -1,0 +1,49 @@
+% Original vector diagram of the thesis review protocol.
+% Sources support individual procedures; no single source prescribes this combination.
+\begingroup
+\definecolor{reviewInk}{HTML}{343B37}
+\definecolor{reviewSage}{HTML}{658374}
+\definecolor{reviewWarm}{HTML}{A96145}
+\begin{tikzpicture}[
+  x=1cm,y=0.9cm,
+  reviewstage/.style={circle,draw=reviewSage,fill=reviewSage!10,
+    minimum size=0.55cm,inner sep=0pt,font=\small\bfseries,text=reviewInk},
+  title/.style={anchor=west,inner sep=0pt,font=\small\bfseries,text=reviewInk},
+  detail/.style={anchor=west,inner sep=0pt,font=\footnotesize,text=reviewInk},
+  source/.style={anchor=west,inner sep=0pt,text width=5.0cm,
+    align=left,font=\footnotesize,text=reviewInk},
+  flow/.style={-{Stealth[length=1.6mm]},draw=reviewSage,line width=0.8pt}
+]
+\node[anchor=west,font=\scriptsize\sffamily,text=reviewInk] at (0.8,0.98) {PROCEDURE};
+\node[anchor=west,font=\scriptsize\sffamily,text=reviewInk] at (9.15,0.98) {REFERENCES};
+\foreach \n/\y in {1/0,2/-1.25,3/-2.50,4/-3.75,5/-5.00}
+  \node[reviewstage] (s\n) at (0.25,\y) {\n};
+\foreach \a/\b in {1/2,2/3,3/4,4/5}
+  \draw[flow] (s\a.south) -- (s\b.north);
+
+\node[title] at (0.85,0.12) {Search terms and sources};
+\node[detail] at (0.85,-0.28) {General and focused queries; citation searching};
+\node[source] at (9.15,0.12) {Kitchenham and Charters (2007)};
+\node[source] at (9.15,-0.28) {Wohlin (2014)};
+
+\node[title] at (0.85,-1.13) {Eligibility criteria and study selection};
+\node[detail] at (0.85,-1.53) {Link versions; assess titles, abstracts, and full texts};
+\node[source] at (9.15,-1.13) {Kitchenham and Charters (2007)};
+
+\node[title] at (0.85,-2.38) {Evidence extraction and appraisal};
+\node[detail] at (0.85,-2.78) {Methods, assumptions, evaluation, and findings};
+\node[source] at (9.15,-2.38) {Kitchenham and Charters (2007)};
+
+\node[title] at (0.85,-3.63) {Comparative synthesis};
+\node[detail] at (0.85,-4.03) {Compare mechanisms and application evidence};
+\node[source] at (9.15,-3.63) {Webster and Watson (2002)};
+
+\node[title,text=reviewWarm] at (0.85,-4.88) {Counterfactual comparison};
+\node[detail] at (0.85,-5.28) {Test proposed gaps against existing capabilities};
+\node[source] at (9.15,-4.88) {Booth et al. (2013)};
+
+\draw[flow] (s5.south) -- (0.25,-6.10) -- (0.85,-6.10);
+\node[title,text=reviewWarm] at (1.0,-6.10) {Research gaps and comparisons to investigate};
+\draw[draw=reviewSage!35,line width=0.4pt] (8.85,0.45) -- (8.85,-5.75);
+\end{tikzpicture}
+\endgroup

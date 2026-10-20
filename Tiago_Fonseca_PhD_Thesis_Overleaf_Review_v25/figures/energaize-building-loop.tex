@@ -1,0 +1,12 @@
+\begingroup
+\input{figures/energaize-architecture-styles}
+\begin{tikzpicture}
+\node[ea data box,text width=42mm,minimum height=22mm] (assets) at (0,0) {\textbf{Building equipment}\\Meters, photovoltaic panels,\\battery, vehicle and charger};
+\node[ea control box,text width=32mm,minimum height=17mm] (controller) at (8.5,0) {\textbf{Controller}\\Energy decisions};
+\node[ea data box,text width=61mm,minimum height=12mm] (context) at (7,2.7) {\textbf{Information for the decision}\\User requirements, forecasts and prices};
+\draw[ea data] (assets.east) -- node[ea label,above] {Measurements through\\installation interfaces} (controller.west);
+\draw[ea data] (context.south) -- (7,1.55) -| (controller.north);
+\draw[ea action] (controller.south) -- (8.5,-2) -- node[ea label,below] {Actions through installation interfaces} (0,-2) -- (assets.south);
+\node[ea label,anchor=north] at (0,-2.6) {Equipment response produces\\the next measurements};
+\end{tikzpicture}
+\endgroup

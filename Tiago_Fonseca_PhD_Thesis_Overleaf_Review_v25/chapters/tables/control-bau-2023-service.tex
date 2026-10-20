@@ -1,0 +1,52 @@
+\begingroup\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.08}
+\begin{longtable}{@{}lrrrrrr@{}}
+\caption{\illustrativecaption Departure service, safety, and storage use for the two \gls{bau} variants over the complete 2023 window.}
+\label{tab:control-bau-2023-service}\\
+\toprule
+\textbf{\gls{bau} variant} & \textbf{\gls{ev} min.} & \textbf{Missed \gls{ev}} & \textbf{\gls{ev} band} & \textbf{Viol.} & \textbf{Corrected} & \textbf{Battery}\\
+ & [\%] & [$n/N$] & [\%] & [kWh] & [\%] & [kWh]\\
+\midrule
+\endfirsthead
+\caption[]{\illustrativecaption Departure service, safety, and storage use for the two \gls{bau} variants over the complete 2023 window. (continued).}\\
+\toprule
+\textbf{\gls{bau} variant} & \textbf{\gls{ev} min.} & \textbf{Missed \gls{ev}} & \textbf{\gls{ev} band} & \textbf{Viol.} & \textbf{Corrected} & \textbf{Battery}\\
+ & [\%] & [$n/N$] & [\%] & [kWh] & [\%] & [kWh]\\
+\midrule
+\endhead
+\midrule
+\multicolumn{7}{r}{\emph{Continued on the next page.}}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{7}{@{}l}{\emph{Core-30 Normal}}\\*
+Without storage & 100.0 & 0/10\,000 & 18.0 & 0 & 3.4 & 0\\*
+With storage & 100.0 & 0/10\,000 & 18.0 & 0 & 3.0 & 22\,440\\
+\addlinespace[3pt]
+\multicolumn{7}{@{}l}{\emph{Core-30 Topology}}\\*
+Without storage & 99.0 & 90/9\,000 & 18.0 & 0 & 4.0 & 0\\*
+With storage & 99.2 & 72/9\,000 & 18.2 & 0 & 3.5 & 19\,380\\
+\addlinespace[3pt]
+\multicolumn{7}{@{}l}{\emph{Core-30 Safety}}\\*
+Without storage & 96.0 & 400/10\,000 & 17.0 & 0 & 14.0 & 0\\*
+With storage & 97.0 & 300/10\,000 & 17.5 & 0 & 11.0 & 21\,420\\
+\addlinespace[3pt]
+\multicolumn{7}{@{}l}{\emph{Core-30 Robustness}}\\*
+Without storage & 96.5 & 350/10\,000 & 17.0 & 0 & 10.0 & 0\\*
+With storage & 97.2 & 280/10\,000 & 17.5 & 0 & 9.0 & 19\,890\\
+\addlinespace[3pt]
+\multicolumn{7}{@{}l}{\emph{Core-30 Combined}}\\*
+Without storage & 93.0 & 630/9\,000 & 16.0 & 0 & 19.0 & 0\\*
+With storage & 94.5 & 495/9\,000 & 16.5 & 0 & 16.0 & 17\,850\\
+\addlinespace[3pt]
+\multicolumn{7}{@{}l}{\emph{Premium-100 Normal}}\\*
+Without storage & 99.0 & 300/30\,000 & 18.0 & 0 & 6.0 & 0\\*
+With storage & 99.3 & 210/30\,000 & 18.5 & 0 & 4.5 & 193\,800\\
+\addlinespace[3pt]
+\multicolumn{7}{@{}l}{\emph{Premium-100 All-in}}\\*
+Without storage & 91.0 & 2\,250/25\,000 & 16.0 & 0 & 23.0 & 0\\*
+With storage & 93.0 & 1\,750/25\,000 & 16.5 & 0 & 19.0 & 153\,000\\
+\end{longtable}
+\noindent Missed \gls{ev} gives failed minimum-service departures over an invented common eligible cohort within each pair. These counts are invented cohorts, independent of the dataset audit. \gls{v2g} is disabled. Battery denotes stationary-battery throughput. Appliance, \gls{dr}, and runtime event outcomes are illustrated separately in Tables~\ref{tab:control-runtime-events} and~\ref{tab:control-dr-results}.\par
+\endgroup

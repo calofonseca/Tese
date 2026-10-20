@@ -1,0 +1,84 @@
+{
+  "edition": "portugal-native-2023-2024-v3.1",
+  "scope": "Core-30 static base inputs and scheduled vehicle presence; no controller execution",
+  "selection": "All Monday-Friday intervals in calendar year 2024, DJF and JJA; public holidays are retained",
+  "units": "Input energy is converted to interval-average kW at 900 s; presence uses [arrival, departure)",
+  "aggregation": "Arithmetic mean by Lisbon local quarter-hour; the 24:00 point repeats the 00:00 mean",
+  "sources": {
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_001.parquet": "b95321e3856dff4b2038bbbe42ebeb5acc12f61719217794f892e32c218a7dba",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_002.parquet": "8b686e0273613ffb1fc4d4413bf43859a780dc2d2aba7c52a6ed551a38f077f9",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_003.parquet": "3b1c23b3c92db48a38eda81fc49fae5a5b06a62bb674f17d3c3e8bc6dcd008bd",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_004.parquet": "43dc6ab2a63b98fe9fdce5f1ea6637d2ff6689b020484753d3907a27117a4446",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_005.parquet": "ffb702117385630b3505eccfd1e229c54b7493e19728291d7d64bbe1ea1b436c",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_006.parquet": "2983bce2d5460d71f6e57c641fb7c3616fc8174dc273f09d881732bf113b4baa",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_007.parquet": "96ed857af9013113cd82dda02d081a4931246d4ed98f201134fea348a6b8bb57",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_008.parquet": "e907dc03430f7c2fcd82d1ea75a86171d98c9c5fca85e83015c274358a1eaecb",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_009.parquet": "87af66918eaa93af90afc95742ea58ba98dcfeec6cabf62500598ed234ae5768",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_010.parquet": "cb9f3df2884a14435862100458fe2d40c49e253de84b5cbc7029fbfe1ccbafb2",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_011.parquet": "c51e65937e87fafefa46b9682b1bcf75daa81660af2fea55170ff0b8bec7149e",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_012.parquet": "124b0873a154b4cfc28f7853f6e544cd4b344860e5782b95ddd7f1416d57bffc",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_013.parquet": "0b7828f6fc279808dd91f9b7bf00a466e81042f6a8539d171bb338e9aad536c3",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_014.parquet": "04e8c2620526c841b662a7998480260dc9f07b05c889b989577ff935144e0cca",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_015.parquet": "b7d47077f51c9e0c7bed41891dbca505d205892a394ac9ecdb2de2790c29a130",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_016.parquet": "1ca7c85fd467489f030d5ac64a242dde0591dc91fcdf73bf2890adc29191d560",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_017.parquet": "65b80798c1564f237c6b97975243dfed95efc7a34a821793de1f113efa23c60f",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_018.parquet": "283e25e889ec6688bb6d611b04d741ab947fdb1602f172fbd54473ef1c4f1e7a",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_019.parquet": "e4fd8926933c9c54fde1648e6458efb6d11fded19dc5b7f677713c711c3a627f",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_020.parquet": "826437daea85c91b44c969b965f93fe362ffe53718374cbc5d3dcdaa2642d13c",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_021.parquet": "32dde0813d59326d7737d212c4f23a0a1b8b486b5f05b7b891d489380224661c",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_022.parquet": "44d94bbb94ccfa6e15c5f2663626f082eba6591e112ecd445d0425bd6e71ff47",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_023.parquet": "28ed9a13990ef9b7c8737f8a53611480807d4c7516ef994d76f5f79e1dc7a47a",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_024.parquet": "ca8591d3a1bd77a4a45802ce635c13c036286eb6ec7fa8057910a94b374b8d75",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_025.parquet": "cbd7e83b86a1d2218536062f85e1c4f75229658e4eadb5e572f65e4b19a7fc11",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_026.parquet": "ad7a2cf1c0ac2f2674dae14d767a307d8509c4bbbd18e058dfd672d65b788d43",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_027.parquet": "042e5949e1a89331a1feba92d3faeed7b4a464014e9eeb8fadd1a5c83a3e104f",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_028.parquet": "2ceed5899a57f441cb65b5f417ac0df630266ef32a9ecd1e1d77fb40a5b6ff5d",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_029.parquet": "e4d0bc309b0e356dfa1709df8aadb310228e7545bf363b8dd0bbdb25bc83d2bf",
+    "/home/tiago/dev/Simulator/data/datasets/rec_pt_2023_core_30_v2/timeseries/Member_030.parquet": "de7c04afefb23bb092a7029daf06017a4298d42ad615015002633707a67d1b22",
+    "/home/tiago/dev/Simulator/docs/portugal_rec_native/dataset_description/sessions.csv": "b49770ad2cfbb93d90a91640c40034a1c7dfb292767cfcf28b83cc6d15eff70e"
+  },
+  "summary": {
+    "Winter": {
+      "days": 66,
+      "mean_daily_input_kwh": {
+        "Demand": 520.2862153648624,
+        "PV": 215.67074036336624
+      },
+      "peak_hour": {
+        "Demand": 18.75,
+        "PV": 12.75,
+        "Residential": 7.0,
+        "Service": 9.75
+      },
+      "mean_connected_at_12h": {
+        "Residential": 4.2272727272727275,
+        "Service": 3.6818181818181817
+      },
+      "mean_connected_at_20h": {
+        "Residential": 7.0606060606060606,
+        "Service": 0.0
+      }
+    },
+    "Summer": {
+      "days": 65,
+      "mean_daily_input_kwh": {
+        "Demand": 415.93759752520936,
+        "PV": 495.50881542502634
+      },
+      "peak_hour": {
+        "Demand": 13.25,
+        "PV": 12.5,
+        "Residential": 7.25,
+        "Service": 14.0
+      },
+      "mean_connected_at_12h": {
+        "Residential": 4.2,
+        "Service": 2.876923076923077
+      },
+      "mean_connected_at_20h": {
+        "Residential": 7.323076923076923,
+        "Service": 0.0
+      }
+    }
+  }
+}

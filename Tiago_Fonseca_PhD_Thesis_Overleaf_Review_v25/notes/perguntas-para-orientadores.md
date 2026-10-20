@@ -16,56 +16,57 @@
 
 ### 1. Introduction
 
-- 1.1 Context and Motivation
-  - 1.1.1 Distributed and Dynamically Reconfigurable Cyber-Physical Systems
-  - 1.1.2 Renewable Energy Communities as Representative Cyber-Physical Systems
-  - 1.1.3 MARL for Mixed Cooperative--Competitive Decentralised Control
-- 1.2 Requirements for MARL in Real-World CPS
-- 1.3 Thesis Proposition, Research Questions, and Scope
-  - 1.3.1 Thesis Proposition
-  - 1.3.2 Research Questions
-  - 1.3.3 Research Objectives
-  - 1.3.4 Scope and Assumptions
-- 1.4 Research Contributions and Outcomes
-  - 1.4.1 Scientific Contributions
-  - 1.4.2 System, Software, and Open-Source Contributions
-  - 1.4.3 Societal and Environmental Relevance
-- 1.5 Research Path and Thesis Organisation
+- 1.1 Context and Research Problem
+  - 1.1.1 Renewable Energy Communities and Energy Management
+  - 1.1.2 Distributed Control in Evolving Communities
+  - 1.1.3 Multi-Agent Reinforcement Learning for Community Energy Control
+  - 1.1.4 Real-World Control Challenges
+- 1.2 Introductory Lexical Grounding
+- 1.3 Graphical Abstract
+- 1.4 Thesis Statement and Research Questions
+  - 1.4.1 Thesis Statement
+  - 1.4.2 Research Questions
+  - 1.4.3 Research Objectives
+- 1.5 Research Contributions and Outcomes
+  - 1.5.1 Scientific Contributions
+  - 1.5.2 System, Software, and Open-Source Contributions
+  - 1.5.3 Societal and Environmental Relevance
+- 1.6 Thesis Structure
 
-### 2. Real-World Multi-Agent Control in Cyber-Physical Systems: Foundations, State of the Art, and Research Gaps
+### 2. Foundations and Research Gaps for Real-World Multi-Agent Control in Cyber-Physical Systems
 
-- 2.1 Literature Scope and Evidence Approach
+- 2.1 Literature Scope, Review Method, and Evidence Levels
   - 2.1.1 Scope and Sources
   - 2.1.2 Evidence Synthesis and Limitations
+  - 2.1.3 Evidence Levels from Simulation to Real-World Control
 - 2.2 Distributed, Heterogeneous, and Dynamically Reconfigurable Cyber-Physical Systems
-  - 2.2.1 Distributed Control and Operational Constraints
+  - 2.2.1 Distributed Control Structures
   - 2.2.2 Heterogeneous Agents, Assets, and Interfaces
   - 2.2.3 Dynamic Populations, Capabilities, and Reconfiguration
-- 2.3 Renewable Energy Communities as Representative CPSs
-  - 2.3.1 Participants, Assets, and Heterogeneity
+  - 2.2.4 Physical and Systems Constraints
+- 2.3 Renewable Energy Communities as Cyber-Physical Systems
+  - 2.3.1 Members, Assets, and Heterogeneity
   - 2.3.2 Flexibility, Temporal Coupling, and Dynamic Availability
   - 2.3.3 Individual and Community Objectives and Physical Constraints
-- 2.4 Control Approaches for Distributed Energy Systems and Related CPS
-  - 2.4.1 Explicit Control: Rules, Optimisation, and Predictive Control
+- 2.4 Control Approaches for Distributed Energy Systems
+  - 2.4.1 Explicit Control through Rules, Optimisation, and Prediction
   - 2.4.2 Reinforcement Learning and Multi-Agent Control
-  - 2.4.3 Structured, Federated, Transfer, Hybrid, and Hierarchical Approaches
-  - 2.4.4 When MARL Adds Value across CPS Domains
-- 2.5 Foundations of Reinforcement Learning and MARL Used in This Thesis
+  - 2.4.3 Structured and Hybrid Learning Approaches
+  - 2.4.4 When Multi-Agent Reinforcement Learning Adds Value across Cyber-Physical Domains
+- 2.5 Foundations of Reinforcement Learning and Multi-Agent Control
   - 2.5.1 Sequential Decision-Making and Partial Observability
   - 2.5.2 Reinforcement Learning and Actor--Critic Methods
-  - 2.5.3 Markov Games, MARL, and CTDE
-  - 2.5.4 MARL Challenges Relevant to This Thesis
-- 2.6 Simulation and Levels of Real-World Evidence
-- 2.7 Critical Analysis of the State of the Art
-  - 2.7.1 RQ1: Dynamic and Heterogeneous Multi-Agent Control
-  - 2.7.2 RQ2: Multi-Dimensional Scalability of Learning and Coordination
-  - 2.7.3 RQ3: Safe and Robust Operation
-  - 2.7.4 RQ4: Governed and Deployable MARL Lifecycle
-- 2.8 Adjacent Challenges and Scope Boundaries
-  - 2.8.1 Supporting Requirements and Evaluation Conditions
-  - 2.8.2 Important Challenges Beyond the Central Scope
-- 2.9 Synthesis of Residual Gaps and Thesis Requirements
-- 2.10 Chapter Summary
+  - 2.5.3 Markov Games and Centralised Training with Decentralised Execution
+  - 2.5.4 Multi-Agent Reinforcement Learning Challenges Relevant to This Thesis
+- 2.6 Supporting Requirements and Scope Boundaries
+  - 2.6.1 Supporting Requirements and Evaluation Conditions
+  - 2.6.2 Important Challenges Beyond the Central Scope
+- 2.7 Critical Synthesis and Research Gaps
+  - 2.7.1 Scalability of Heterogeneous and Reconfigurable Multi-Agent Control
+  - 2.7.2 Deployability across Training, Retraining, and Runtime Operation
+  - 2.7.3 Physical and Service Safety
+  - 2.7.4 Robustness to Real-World Disturbances
+  - 2.7.5 Residual Requirements and Evidence Required from the Thesis
 
 ### 3. EnergAIze: An Integrated Framework for Intelligent Energy Management
 
@@ -75,11 +76,9 @@
   - 3.3.1 Percepta and the Data Provider
   - 3.3.2 Prediction, PulseCharge, and User Flexibility
   - 3.3.3 Algorithms, Inference, and the Fail-Safe Supervisor
-- 3.4 Controller Development and Runtime Operation
-  - 3.4.1 CityLearn, EVLearn, and Experimental Development
-  - 3.4.2 Runtime Topologies and Deployment Boundary
-- 3.5 Architectural Rationale and Thesis Map
-- 3.6 Chapter Summary
+  - 3.3.4 Experimental Development and Runtime Boundaries
+- 3.4 Architectural Claims and Required Evidence
+- 3.5 Chapter Summary
 
 ### 4. CityLearn v3: A Simulation and Evaluation Environment for Renewable Energy Communities
 
@@ -111,7 +110,7 @@
   - 4.5.2 Core Scorecard and Result Exports
 - 4.6 Chapter Synthesis
 
-### 5. Control and Learning Methods for Renewable Energy Communities
+### 5. Development and Evaluation of Community Energy Controllers
 
 - 5.1 Research Progression
 - 5.2 Common Control Problem and Experimental Protocol
@@ -217,7 +216,7 @@
   - 7.5.2 energAIze Inference Runtime
   - 7.5.3 Inference Targets and Bundle Management
 - 7.6 Monitoring, Failure Handling, and Recovery
-- 7.7 Systems Evaluation, Availability, and Contribution to RQ4
+- 7.7 Systems Evaluation, Availability, and Contribution to RQ2
 - 7.8 Chapter Summary
 
 ### 8. EnergAIze in Operation: Real-World Deployment and Validation
@@ -235,10 +234,10 @@
 ### 9. General Discussion and Answers to the Research Questions
 
 - 9.1 What the Combined Evidence Establishes
-- 9.2 Answer to RQ1: Dynamic and Heterogeneous Multi-Agent Control
-- 9.3 Answer to RQ2: Multi-Dimensional Scalability of Learning and Coordination
-- 9.4 Answer to RQ3: Safe and Robust Operation
-- 9.5 Answer to RQ4: Governed and Deployable MARL Lifecycle
+- 9.2 Answer to RQ1: Scalability of Heterogeneous Multi-Agent Control
+- 9.3 Answer to RQ2: Deployability and Governed MARL Lifecycle
+- 9.4 Answer to RQ3: Physical and Operational Safety
+- 9.5 Answer to RQ4: Robustness to Real-World Disturbances
 - 9.6 Interactions among the Four Requirements
 - 9.7 Scientific Contributions, Generality, and Responsible Use
 - 9.8 Limitations and Threats to Validity
@@ -249,7 +248,7 @@
 - 10.1 What the Research Established
 - 10.2 Answers to the Research Questions
 - 10.3 Principal Contributions
-- 10.4 Assessment of the Central Proposition
+- 10.4 Assessment of the Central Statement
 - 10.5 Limits of the Conclusions
 - 10.6 Future Research Directions
 - 10.7 Closing Remarks
@@ -314,7 +313,7 @@ Pontos a confirmar:
 - O Capítulo 8 deve manter OPEVA e DemFlex como demonstradores separados?
 - O material de reprodutibilidade está corretamente concentrado no Appendix A?
 
-Decisão:
+Decisão registada em 2026-09-10: manter apenas a versão principal, com a estrutura existente de dez capítulos e `main.tex` como único ponto de entrada.
 
 ### 3. Páginas depois da epígrafe
 

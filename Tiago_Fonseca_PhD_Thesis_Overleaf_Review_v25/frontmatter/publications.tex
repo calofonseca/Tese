@@ -1,29 +1,68 @@
 \frontmatterchapter{Publications and Research Outputs Arising from the Thesis}
+\label{sec:thesis-publications}
 
-The table maps the publications and research outputs associated with the thesis to their principal chapters. Publication status and the relationship between each output and the corresponding thesis contribution follow the available publication and project records.
+The following references group the publications associated with this thesis by publication type and identify the chapters to which they principally relate. Submitted manuscripts, preprints, planned articles, software and datasets are listed separately. Yellow rows identify planned articles that have not yet been completed or submitted. Their titles are provisional, with Tiago Fonseca as first author and the remaining authors and publication venues to be confirmed.
 
 \begingroup\small
-\begin{longtable}{@{}p{0.06\textwidth}p{0.51\textwidth}p{0.16\textwidth}p{0.10\textwidth}@{}}
+% Restrict monochrome links to this list; short underlined labels identify external links.
+\hypersetup{allcolors=black}
+\newcommand{\publicationlink}[2]{\href{#1}{\underline{#2}}}
+\setlength{\LTpre}{0.5\baselineskip}
+\begin{longtable}{@{}p{0.06\textwidth}>{\raggedright\arraybackslash}p{\dimexpr0.84\textwidth-4\tabcolsep\relax}>{\raggedright\arraybackslash}p{0.10\textwidth}@{}}
 \toprule
-\textbf{ID} & \textbf{Publication or output} & \textbf{Status} & \textbf{Chapter} \\
+\textbf{ID} & \textbf{Bibliographic reference} & \textbf{Chapter} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{ID} & \textbf{Publication or output} & \textbf{Status} & \textbf{Chapter} \\
+\textbf{ID} & \textbf{Bibliographic reference} & \textbf{Chapter} \\
 \midrule
 \endhead
-P1 & \emph{Flexible Loads Scheduling Algorithms for Renewable Energy Communities} & Published, 2022 & 2, 5 \\
-P2 & \emph{EnergAIze: Multi Agent Deep Deterministic Policy Gradient for Vehicle to Grid Energy Management} & Preprint, 2024 & 3, 5, 8 \\
-P3 & \emph{EVLearn: Extending the CityLearn Framework with Electric Vehicle Simulation} & Published, 2025 & 4 \\
-P4 & \emph{Control of Renewable Energy Communities using AI and Real-World Data} & Preprint, 2025 & 5, 8 \\
-P5 & \emph{TI-MARL: Typed-Interface Multi-Agent Reinforcement Learning for Reconfigurable Cyber-Physical Systems} & Manuscript in preparation & 6 \\
-P6 & Progressive control, MATD3, hierarchy, data-efficient learning, and TI-MARL structural and reconfiguration studies & Experiment and manuscript family in preparation & 5--6 \\
-P7 & EnergAIze experiment and MARL policy-set lifecycle orchestration & System contribution in preparation & 7 \\
-P8 & \emph{CityLearn v3 / SoftCPS REC Simulator}: public simulator, scenario, documentation, benchmark, and release record associated with the thesis & Public software/output record & 3--8 \\
+\multicolumn{3}{@{}l}{\textbf{Journal articles}} \\*[0.4em]
+P1 & \textbf{T.~Fonseca}, L.~L.~Ferreira, J.~Landeck, L.~Klein, P.~Sousa and F.~Ahmed (2022). Flexible Loads Scheduling Algorithms for Renewable Energy Communities. \emph{Energies}, 15(23), 8875. \publicationlink{https://doi.org/10.3390/en15238875}{DOI}. & \ref{chap:foundations}, \ref{chap:control-benchmark} \\[0.6em]
+P2 & \textbf{T.~Fonseca}, L.~L.~Ferreira, B.~Cabral, R.~Severino, K.~Nweye, D.~Ghose and Z.~Nagy (2025). EVLearn: Extending the CityLearn Framework with Electric Vehicle Simulation. \emph{Energy Informatics}, 8, 16. \publicationlink{https://doi.org/10.1186/s42162-024-00445-w}{DOI}. & \ref{chap:simulator} \\[0.6em]
+P3 & K.~Nweye, K.~Kaspar, G.~Buscemi, \textbf{T.~Fonseca}, G.~Pinto, D.~Ghose, S.~Duddukuru, P.~Pratapa, H.~Li, J.~Mohammadi, L.~L.~Ferreira, T.~Hong, M.~Ouf, A.~Capozzoli and Z.~Nagy (2025). CityLearn v2: Energy-Flexible, Resilient, Occupant-Centric, and Carbon-Aware Management of Grid-Interactive Communities. \emph{Journal of Building Performance Simulation}, 18(1), 17--38. \publicationlink{https://doi.org/10.1080/19401493.2024.2418813}{DOI}. & \ref{chap:simulator} \\[0.6em]
+P4 & \textbf{T.~Fonseca}, C.~Sousa, L.~Ferreira, P.~Rodrigues, P.~Paiva, R.~Ven\^{a}ncio, R.~Severino and L.~Matos (2026). Can Intelligent Renewable Energy Communities Deliver on Equity for a Just Energy Transition? A Policy Oriented Demonstrator Analysis. \emph{Energy Research \& Social Science}, 133, 104584. \publicationlink{https://doi.org/10.1016/j.erss.2026.104584}{DOI}. & \ref{chap:real-world} \\[0.6em]
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Conference papers and communications}} \\*[0.4em]
+P5 & \textbf{T.~Fonseca}, L.~L.~Ferreira, L.~Klein, J.~Landeck and P.~Sousa (2022). Flexigy Smart-grid Architecture. In \emph{Proceedings of the 11th International Conference on Sensor Networks (SENSORNETS)}, pp.~176--183. SciTePress. \publicationlink{https://doi.org/10.5220/0010918400003118}{DOI}. & \ref{chap:energAIze}, \ref{chap:control-benchmark} \\[0.6em]
+P6 & \textbf{T.~Fonseca}, L.~L.~Ferreira, B.~Cabral, R.~Severino and I.~Pra\c{c}a (2024). EnergAIze: Multi Agent Deep Deterministic Policy Gradient for Vehicle-to-Grid Energy Management. In \emph{IEEE International Conference on Communications, Control, and Computing Technologies for Smart Grids (SmartGridComm)}, pp.~232--237. IEEE. \publicationlink{https://doi.org/10.1109/SmartGridComm60555.2024.10738095}{DOI}. & \ref{chap:energAIze}, \ref{chap:control-benchmark}, \ref{chap:real-world} \\[0.6em]
+P7 & B.~Cabral, R.~Ven\^{a}ncio, P.~Costa, \textbf{T.~Fonseca}, L.~L.~Ferreira, R.~Severino and A.~Barros (2024). Multiprotocol Middleware Translator for IoT. In \emph{27th Euromicro Conference on Digital System Design (DSD)}, pp.~327--334. IEEE. \publicationlink{https://doi.org/10.1109/DSD64264.2024.00051}{DOI}. & \ref{chap:energAIze} \\[0.6em]
+P8 & \textbf{T.~Fonseca}, C.~Sousa, R.~Ven\^{a}ncio, P.~Pires, R.~Severino, P.~Rodrigues, P.~Paiva and L.~L.~Ferreira (2025). Control of Renewable Energy Communities using AI and Real-World Data. In \emph{IEEE 30th International Conference on Emerging Technologies and Factory Automation (ETFA)}, pp.~1--8. IEEE. \publicationlink{https://doi.org/10.1109/ETFA65518.2025.11205562}{DOI}. & \ref{chap:control-benchmark}, \ref{chap:real-world} \\[0.6em]
+P9 & C.~Sousa, \textbf{T.~Fonseca}, L.~L.~Ferreira, R.~Ven\^{a}ncio and R.~Severino (2025). Percepta: High Performance Stream Processing at the Edge. In \emph{IEEE 30th International Conference on Emerging Technologies and Factory Automation (ETFA)}, pp.~1--4. IEEE. \publicationlink{https://doi.org/10.1109/ETFA65518.2025.11205806}{DOI}. & \ref{chap:energAIze}, \ref{chap:real-world} \\[0.6em]
+P10 & R.~Ven\^{a}ncio, C.~A.~Sousa, P.~Pires, \textbf{T.~Fonseca} and L.~L.~Ferreira (2025). PulseCharge: Enabling Interoperability in EV Data. \emph{16th INForum -- Simp\'osio de Inform\'atica}, \'Evora, Portugal. Conference communication. \publicationlink{https://2025.inforum.pt/index.php/programa/}{Programme}; \publicationlink{https://www.researchgate.net/publication/396270768}{Manuscript}. & \ref{chap:energAIze}, \ref{chap:real-world} \\[0.6em]
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Submitted manuscripts and preprints}} \\*[0.4em]
+P11 & \textbf{T.~Fonseca}, L.~L.~Ferreira, A.~Sousa, A.~Mohammadi and Z.~Nagy (2026). CityLearn v3: A Configurable Simulation and Evaluation Framework for Realistic Control Studies of Renewable Energy Communities. Submitted manuscript; arXiv:2609.21570. \publicationlink{https://arxiv.org/abs/2609.21570}{Preprint}. & \ref{chap:simulator} \\[0.6em]
+P12 & B.~Cabral, \textbf{T.~Fonseca}, C.~Sousa and L.~L.~Ferreira (2024). FlexiGen: Stochastic Dataset Generator for Electric Vehicle Charging Energy Flexibility. Preprint, arXiv:2411.07040. \publicationlink{https://arxiv.org/abs/2411.07040}{Preprint}. & \ref{chap:simulator} \\[0.6em]
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Planned articles}} \\*[0.4em]
+\rowcolor{yellow!35}
+P13 & \textbf{T.~Fonseca} (co-authors to be confirmed). TI-MARL: Typed-Interface Multi-Agent Reinforcement Learning for Reconfigurable Cyber-Physical Systems. & \ref{chap:ti-marl} \\[0.6em]
+\rowcolor{yellow!35}
+P14 & \textbf{T.~Fonseca} (co-authors to be confirmed). Comparative Evaluation of Control Strategies for Renewable Energy Communities. & \ref{chap:control-benchmark} \\[0.6em]
+\rowcolor{yellow!35}
+P15 & \textbf{T.~Fonseca} (co-authors to be confirmed). EnergAIze: An Integrated Architecture for Renewable Energy Community Control. & \ref{chap:energAIze}, \ref{chap:real-world} \\[0.6em]
+\rowcolor{yellow!35}
+P16 & \textbf{T.~Fonseca} (co-authors to be confirmed). Datasets for Control of Heterogeneous Renewable Energy Communities. & \ref{chap:simulator} \\[0.6em]
+% Collaborative offline-learning study associated with Guilherme Sousa's dissertation.
+\rowcolor{yellow!35}
+P17 & \textbf{T.~Fonseca} (co-authors to be confirmed). Offline Reinforcement Learning and Policy Reuse in Renewable Energy Communities. & \ref{chap:control-benchmark} \\[0.6em]
+% Collaborative dynamic-resource study associated with Gustavo Jorge's dissertation.
+\rowcolor{yellow!35}
+P18 & \textbf{T.~Fonseca} (co-authors to be confirmed). Multi-Agent Control of Renewable Energy Communities with Variable Asset Configurations. & \ref{chap:control-benchmark} \\[0.6em]
+% Collaborative hierarchical-coordination study associated with Pedro's dissertation.
+\rowcolor{yellow!35}
+P19 & \textbf{T.~Fonseca} (co-authors to be confirmed). Hierarchical Coordination of Local Controllers in Renewable Energy Communities. & \ref{chap:control-benchmark} \\[0.6em]
+\rowcolor{yellow!35}
+P20 & \textbf{T.~Fonseca} (co-authors to be confirmed). Multi-Agent Reinforcement Learning for Renewable Energy Communities: A Review of Simulation and Real-World Operation. & \ref{chap:related-work} \\[0.6em]
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Software and datasets}} \\*[0.4em]
+P21 & CityLearn Project (2026). \emph{CityLearn v3}. Open-source simulation software, documentation and benchmarks. \publicationlink{https://www.citylearn.net/guides/releases.html}{Release history}. & \ref{chap:energAIze}--\ref{chap:real-world} \\[0.6em]
+P22 & \emph{Renewable Energy Community datasets}. Heterogeneous assets and operating scenarios at 15-minute resolution. Dataset release; creators and public record to be confirmed. & \ref{chap:simulator}--\ref{chap:ti-marl} \\
 \bottomrule
 \end{longtable}
 \endgroup
 
-The publications document parts of the research, while the dissertation provides the complete contributions. It harmonises terminology and experimental assumptions across the outputs, incorporates extended and negative results where relevant, and provides the cross-cutting synthesis required to answer the research questions.
+\reviewreminder{Provide the creators and public location of the datasets in P22.}
 
-\draftnote{Confirm the complete list, DOI/venue, publication state, co-authors, relation to thesis claims, and availability of code/data. Remove working manuscripts that are not sufficiently mature at submission.}
+\draftnote{Confirm the remaining co-authors and target venues of the planned articles, the submission venue of P11, and the dataset release record. Remove planned articles that are not sufficiently mature at thesis submission.}

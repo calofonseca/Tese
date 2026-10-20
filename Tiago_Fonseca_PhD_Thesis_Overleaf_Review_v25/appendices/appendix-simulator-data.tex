@@ -1,0 +1,163 @@
+\section{Portugal 2023--2024 Dataset Analysis and Audit}
+\label{app:portugal-current-audit}
+
+This section records the construction, descriptive analysis, and verification of the collection introduced in Section~\ref{sec:sim-annual-dataset-suite}. The edition is \texttt{portugal-native-2023-2024-v3.1}, prepared for the simulator runtime identified by commit \texttt{978be68b}. The four scenario bases support nine configurations across 731 consecutive days. Each series has 70,176 quarter-hour records, with a regular \gls{utc} time axis and a corresponding Lisbon civil calendar. The descriptive quantities below are calculated from inventories, input series, service schedules, and configured events.
+
+Three counting rules apply throughout. The complete inventory describes the resources present in a Normal configuration; the active inventory follows participation and equipment events; and a service request describes an obligation supplied to a controller. Energy delivered, self-consumption, grid exchange, and constraint outcomes are calculated from subsequent simulation. The member populations are constructed \glspl{rec} with shared generation rules and external signals, so totals across bases are not treated as independent population samples.
+
+\subsection{Source Data, Preparation, and Reproduction}
+
+The preparation combines public Portuguese energy information with fictional households and service premises. Consumption profiles use activity and occupancy routines with simplified end-use components. E-REDES profiles inform their temporal shape, while Portuguese aggregate statistics anchor consumption levels \parencite{dgegconsumption2023,pordataconsumption2023}. The household atlas gives readable descriptions of the same routines and equipment used to construct the data.
+
+Solar inputs use the archived \gls{pvgis} resource for Lisbon, including the installed module area, tilt, orientation, shading, and inverter limit. Hourly resource inputs are interpolated to the quarter-hour clock. The 2024 weather preparation uses temperature, wind, and humidity from the fifth-generation European Centre for Medium-Range Weather Forecasts atmospheric reanalysis (ERA5) through Open-Meteo; nine missing solar instants, including seven daytime instants, were filled from the same-period ERA5 data and recorded individually. Humidity in 2023 follows a synthetic temperature-based approximation, whereas 2024 uses ERA5. The source ledger retains this difference when the two years are compared.
+
+\gls{omie} supplies the hourly Portuguese day-ahead price series. Its market periods are interpreted in Madrid civil time before \gls{utc} alignment. Every member uses the same \gls{btn} bi-hourly indexed purchase reference. The reconstruction applies the declared supplier, loss, access-tariff, and tax components for the appropriate year; fixed charges and \gls{vat} are outside the variable-energy comparison. Realised prices retain their sign. The minimum final variable purchase price in the 2024 reference is 0.02644~EUR/kWh.
+
+Operational carbon intensity is derived from the \gls{ren} generation and interchange chronology, with \gls{ree} Spanish production intensity used for the imports proxy. The thermal coefficient is calibrated to the \gls{apa} mainland production factor for 2023 and retained for 2024. The resulting input represents an estimated average operational intensity. It supplies a consistent emissions accounting signal alongside price, while its source and calibration remain identifiable.
+
+Raw source files, acquisition metadata, preparation scripts, and checksums accompany the collection. The current package contains 4,015 files. Its manifest identifies the data edition, runtime, archived 2023 predecessor, and descriptive report. Reproduction uses the archived sources and generation settings. The two-year scenario inputs preserve the 2023 demand, production, realised prices, weather, and carbon values; forecast targets at the year boundary are updated to follow the continuous chronology.
+
+\subsection{Resource Diversity and Energy Profiles}
+
+Core-4 and Core-15 are residential. Core-30 contains 24 households and six services; Premium-100 contains 80 households and 20 services. Premium includes four offices, four retail shops, three clinics, three cafes, three workshops, a sports centre, a grocery store, and a care home. Residential floor areas range from 55 to 179~m$^2$ in Premium, whose households contain one to five residents. Opening calendars distinguish working days, weekends, holidays, and continuous services.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Generation, storage, and appliance inventories in the complete static bases.}
+\label{tab:app-portugal-assets}
+\begin{tabularx}{\textwidth}{@{}Xrrrr@{}}
+\toprule
+\textbf{Quantity} & \textbf{Core-4} & \textbf{Core-15} & \textbf{Core-30} & \textbf{Premium}\\
+\midrule
+\gls{pv} capacity [kWp] & 3.78 & 16.80 & 89.46 & 312.48\\
+Battery capacity [kWh] & 10.24 & 10.24 & 25.60 & 220.16\\
+Battery rated power [kW] & 5.00 & 5.00 & 12.68 & 108.40\\
+Single-phase sites & 4 & 14 & 23 & 72\\
+Three-phase sites & 0 & 1 & 7 & 28\\
+Controllable appliances & 2 & 10 & 19 & 64\\
+Fixed appliances & 5 & 18 & 27 & 84\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Installed capacities vary independently of the price convention. Premium has nine batteries of 5.12~kWh, nine of 10.24~kWh, and two of 40.96~kWh. A household with a single-phase connection has different charging headroom from a service site with several ports and a three-phase connection. The electrical model maps the declared connection ratings to active-power ceilings under its unity-power-factor convention, using Portuguese connection classes as reference settings \parencite{ersecontractedpower,eredesconnectionmanual}.
+
+Table~\ref{tab:app-portugal-energy} separates non-shiftable demand, \gls{pv} input, and requested controllable-cycle energy. Fixed appliance energy is already part of the background demand and is counted once. \gls{ev} charging and stationary-battery dispatch enter the energy balance when a controller is executed.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Annual input energy in the complete static bases, in MWh.}
+\label{tab:app-portugal-energy}
+\begin{tabularx}{\textwidth}{@{}Xrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{\textbf{Non-shiftable demand}} & \multicolumn{2}{c}{\textbf{\gls{pv} production}} & \textbf{Cycles}\\
+\textbf{Base} & \textbf{2023} & \textbf{2024} & \textbf{2023} & \textbf{2024} & \textbf{2024}\\
+\midrule
+Core-4 & 12.10 & 11.79 & 5.44 & 5.37 & 0.29\\
+Core-15 & 43.82 & 42.58 & 25.19 & 24.81 & 1.39\\
+Core-30 & 164.94 & 158.39 & 131.38 & 129.07 & 3.62\\
+Premium-100 & 583.81 & 560.19 & 476.60 & 469.16 & 11.78\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The monthly profiles in Figure~\ref{fig:sim-dataset-profiles} expose seasonal differences that annual totals conceal. Figure~\ref{fig:app-portugal-member-energy} additionally shows the spread across individual members. Consumption-only participants and larger service premises create an uneven relationship between demand and generation. This diversity matters when interpreting a \gls{rec} total: an improvement can arise in a small number of resource-rich members while others experience little change.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{simulator-portugal-member-energy.pdf}
+\caption{Member-level non-shiftable demand and \gls{pv} production in 2024. Each point represents one member of a complete static base; the dotted line denotes equal annual demand and production.}
+\label{fig:app-portugal-member-energy}
+\end{figure}
+
+\subsection{Charging and Appliance-Service Distributions}
+
+The complete catalogues contain 2, 6, 19, and 85 vehicle identities, associated with 2, 6, 15, and 65 connectors in Core-4, Core-15, Core-30, and Premium, respectively. Connector discharge power is zero in these datasets. The simulator's \gls{v2g} capability therefore remains available for other configurations, while the current collection studies charging under its published equipment specifications.
+
+Sessions are reconstructed from the Normal configuration's connection records. A visit spanning New Year remains one session attributed to its starting year. Complete visits exclude those censored at the beginning or end of the two-year record. Table~\ref{tab:app-portugal-sessions} reports the visit counts and complete-session service distributions.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Charging-session counts and service distributions across the two-year catalogues.}
+\label{tab:app-portugal-sessions}
+\begin{tabularx}{\textwidth}{@{}Xrrrr@{}}
+\toprule
+\textbf{Quantity} & \textbf{Core-4} & \textbf{Core-15} & \textbf{Core-30} & \textbf{Premium}\\
+\midrule
+Visits starting in 2023 & 620 & 1,925 & 4,826 & 20,524\\
+Visits starting in 2024 & 617 & 1,919 & 4,865 & 20,764\\
+Complete visits, both years & 1,233 & 3,832 & 9,673 & 41,214\\
+Median target \gls{soc} [\%] & 83.7 & 78.3 & 78.5 & 78.5\\
+Targets at 100\% [\%] & 2.84 & 1.28 & 0.95 & 0.77\\
+Median dwell [h] & 14.75 & 15.00 & 13.25 & 13.00\\
+90th-percentile dwell [h] & 40.75 & 43.25 & 29.75 & 37.00\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The connection time distribution distinguishes residential parking from service visits. Long residence at a connector creates a scheduling window, although part of that interval may remain unused after the target is reached. Vehicle identity supports repeated visits and selected home--work links. Arrival \gls{soc} is supplied per session; the native runtime simulates charging from that boundary rather than propagating a complete transport-energy model between sites.
+
+Controllable appliances are washing machines and dishwashers with integrated programme profiles. Across 2023 and 2024, the four bases contain 681, 3,443, 7,641, and 25,521 requests. Median start-window slack is six hours in Core-4 and Core-15 and three hours in Core-30 and Premium. Median programme duration ranges from 3.25 to 3.50 hours. Figure~\ref{fig:app-portugal-services} relates the distribution of vehicle targets to the scheduling freedom in appliance requests. These describe different forms of flexibility and retain different service measures in evaluation.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{simulator-portugal-services.pdf}
+\caption{Complete-session departure targets and appliance start-window slack in the two-year collection. Boxes show the interquartile range and median; whiskers reach the furthest values within 1.5 interquartile ranges. Outliers are omitted.}
+\label{fig:app-portugal-services}
+\end{figure}
+
+\subsection{Events, Forecasts, and Experimental Boundaries}
+
+The event schemas determine the active \gls{rec}. Core-30 Topology and Combined each admit four members and remove three, changing the active population from 26 to 27. Premium All-in changes from 80 to 88 active members. The 2023 participation and asset events remain effective throughout 2024. Separate health, outage, noise, and demand-response campaigns recur in the second year while preserving their declared duration and severity.
+
+The union of scheduled outage intervals spans 32 hours over both years in each configuration with outages. Affected site-hours additionally depend on how many members are interrupted at once and whether they remain active. The native backup representation is aggregate; delivered energy during an outage depends on stored energy and the executed decisions. Permanent departure ends the member's simulated participation and its subsequent \gls{rec} obligations.
+
+Fault schedules distinguish development from confirmation. For example, the development price-bias event adds 0.025~EUR/kWh for six hours in each year; the reserved event uses a bias of $-0.035$~EUR/kWh for eight hours. Multiple channel rows can describe one event, so row counts and exposure duration are recorded separately. The native interface can expose health-event information. A controller experiment must consequently declare the selected observation fields and compare policies under the same information boundary.
+
+Price forecasts use published \gls{omie} values after the conservative 13:00 Lisbon publication boundary, with persistence before publication. Ninety-six support records for 1 January 2025 complete price forecast targets at the end of 2024 without extending the simulated period. Weather follows daily persistence. Table~\ref{tab:app-portugal-forecasts} reports selected stored-input errors against the realised target value, excluding the first and last day and excluding inactive night periods from solar-error summaries.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Selected forecast mean absolute errors in the stored inputs.}
+\label{tab:app-portugal-forecasts}
+\begin{tabularx}{\textwidth}{@{}Xrrrrl@{}}
+\toprule
+\textbf{Signal} & \textbf{Year} & \textbf{1 h} & \textbf{6 h} & \textbf{24 h} & \textbf{Unit}\\
+\midrule
+Temperature & 2023 & 1.160 & 1.159 & 1.156 & $^\circ$C\\
+Temperature & 2024 & 1.252 & 1.251 & 1.250 & $^\circ$C\\
+Direct irradiance, daytime & 2023 & 179.512 & 179.512 & 179.440 & W/m$^2$\\
+Direct irradiance, daytime & 2024 & 186.206 & 186.206 & 185.590 & W/m$^2$\\
+Purchase price & 2023 & 0.031 & 0.039 & 1.391 & cent/kWh\\
+Purchase price & 2024 & 0.028 & 0.028 & 1.282 & cent/kWh\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Persistence uses the same previous-day value for a given target, explaining the similar weather errors across horizons. Published day-ahead prices make the short-horizon price errors smaller. The derived consumption and \gls{pv} forecast path in the original engine clips its target at the loaded episode boundary before applying persistence. Stored price and weather forecasts retain their intended targets, while experiments using the derived channels need a common treatment of the shortened terminal horizons.
+
+Demand-response requests retain the native preceding-hour-mean reference. The operational candidates request 80~kW reduction or 40~kW absorption for one hour; the separate 1500~kW reduction request lasts four hours and is labelled as impossible stress. A comparison reports contractual response against the native reference and additional response against a paired no-activation replay. The earlier calibrated multi-day reference and private-service accounting belong to retired evaluation designs and are not part of this edition.
+
+\subsection{Audit Results and Evaluation Record}
+
+The current evidence consists of input checks and descriptive calculations. Table~\ref{tab:app-portugal-current-checks} gives the checked object and result. The runtime is pinned in the manifest, so software verification and new controller execution can be associated with the same data edition when those experiments are conducted.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Verification records for the current Portugal collection.}
+\label{tab:app-portugal-current-checks}
+\begin{tabularx}{\textwidth}{@{}p{0.24\textwidth}X p{0.19\textwidth}@{}}
+\toprule
+\textbf{Record} & \textbf{Checked quantities} & \textbf{Reported result}\\
+\midrule
+Two-year integrity & Time axis, leap day and daylight saving, common prices, preserved 2023 physical inputs, inventory, sessions, cycle windows, events, checksums, and unchanged runtime core. & 2,828 checks; zero failures.\\
+Forecasts and member histories & Publication-aware price targets, end-of-year support, forecast statistics, and correspondence between narratives and scenario events. & 213 checks; zero failures.\\
+Individual \gls{ev} requests & Complete 2024 sessions checked against accepted charging power, losses, battery taper, and connection duration. & 28,111 sessions checked.\\
+Descriptive report & Inventory, energy aggregation, service counts, event summaries, and source identities. & 34 consistency checks.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Individual session feasibility establishes that the declared request can fit its own charging opportunity under the checked assumptions. Concurrent household demand, other charging sessions, electrical limits, and disturbances enter the joint simulation. The two-year data release contains no new annual controller evaluation. Earlier \gls{bau} and rule-based results therefore remain attached to the historical records in the following section.
+
+For each subsequent experiment, the evaluation record identifies the data and simulator versions, resolved schema, controller input fields, service denominators, initial states, training and scored intervals, seeds, reference policy, and market settings. Warm-up and recovery are retained separately from scored actions. A run reports the number of executed transitions and its terminal-state convention. This record implements the common protocol in Section~\ref{sec:sim-evaluation}, while the controller chapters define the method-specific selection and comparison settings.

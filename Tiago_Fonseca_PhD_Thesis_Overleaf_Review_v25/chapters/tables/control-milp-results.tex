@@ -1,0 +1,19 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Perfect-information scheduling over the complete Core-30 Normal test year.}
+\label{tab:control-milp-results}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.32\textwidth}*{4}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Scope & Cost [EUR] & Daily [kW] & \gls{ev} min. [\%] & \gls{ev} band [\%]\\
+\midrule
+local fixed & 21\,480 & 53.7 & 100.0 & 18.0\\
+\gls{rec} fixed & 21\,000 & 52.5 & 100.0 & 18.0\\
+local flexible & 19\,560 & 48.9 & 100.0 & 98.0\\
+\gls{rec} flexible & 18\,720 & 46.8 & 100.0 & 98.0\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Fixed-service scopes retain ordinary \gls{ev} and appliance schedules. Flexible scopes schedule those services. Perfect information supplies future inputs within each scheduling horizon; energy state and obligations continue between horizons.\end{minipage}
+\end{table}

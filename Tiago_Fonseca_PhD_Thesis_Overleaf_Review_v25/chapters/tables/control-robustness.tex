@@ -1,0 +1,35 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration. Paired Core-30 Normal and Robustness settings.}
+\label{tab:control-robustness-results}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+\textbf{Scenario} & \textbf{Cost} & \textbf{\gls{ev} min.} & \textbf{\gls{ev} band} & \textbf{Corrected} & \textbf{Viol.}\\
+ & [EUR] & [\%] & [\%] & [\%] & [kWh]\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{\gls{rbc} Smart Local}}\\
+Normal & 21\,600 & 99.8 & 92.0 & 4.0 & 0.0\\
+Robustness & 23\,520 & 97.7 & 87.0 & 12.0 & 0.0\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{\gls{maddpg}}}\\
+Normal & 20\,880 & 98.6 & 84.0 & 14.0 & 0.0\\
+Robustness & 24\,720 & 93.6 & 71.0 & 29.0 & 0.0\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{\gls{matd3} (residual)}}\\
+Normal & 19\,680 & 99.8 & 96.0 & 2.3 & 0.0\\
+Robustness & 22\,080 & 97.3 & 90.0 & 8.5 & 0.0\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{\gls{mappo}}}\\
+Normal & 20\,640 & 99.5 & 91.0 & 5.5 & 0.0\\
+Robustness & 23\,520 & 96.3 & 83.0 & 15.0 & 0.0\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{Transformer \gls{matd3}}}\\
+Normal & 20\,160 & 99.7 & 95.5 & 2.0 & 0.0\\
+Robustness & 21\,840 & 97.9 & 92.0 & 6.5 & 0.0\\
+\bottomrule
+\end{tabular*}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Each pair retains the controller and underlying \gls{rec}; the Robustness setting adds the declared disturbances. Rates cover the complete window.\end{minipage}
+\end{table}

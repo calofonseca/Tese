@@ -1,0 +1,22 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Annual energy-purchase cost [EUR] of the additional training and hierarchy variants.}
+\label{tab:control-variant-coverage}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.28\textwidth}*{7}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & C30 N & C30 T & C30 S & C30 R & C30 C & P100 N & P100 A\\
+\midrule
+\gls{matd3} unguided & 21\,840 & 22\,408 & 21\,998 & 25\,520 & 25\,123 & 87\,360 & 104\,095\\
+\gls{matd3} guided exploration & 20\,880 & 21\,423 & 21\,031 & 24\,398 & 24\,019 & 83\,520 & 99\,519\\
+\gls{matd3} demonstrations & 20\,400 & 20\,930 & 20\,548 & 23\,837 & 23\,467 & 81\,600 & 97\,232\\
+\gls{rbc} Smart Local global & 20\,880 & 20\,332 & 21\,031 & 22\,686 & 22\,202 & 83\,520 & 91\,428\\
+\gls{rbc} Smart Local per-member & 20\,640 & 20\,098 & 20\,790 & 22\,425 & 21\,947 & 82\,560 & 90\,377\\
+\gls{matd3} residual global & 19\,920 & 20\,438 & 20\,064 & 23\,277 & 22\,915 & 79\,680 & 94\,944\\
+\gls{matd3} residual per-member & 20\,160 & 20\,684 & 20\,306 & 23\,557 & 23\,191 & 80\,640 & 96\,088\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize C30: Core-30; P100: Premium-100. N: Normal; T: Topology; S: Safety; R: Robustness; C: Combined; A: All-in. Each column covers its complete 2024 sequence, including supervisory fallback. *Generic offline-policy placeholder; the associated method remains to be specified.\end{minipage}
+\end{table}

@@ -1,0 +1,20 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Operational \gls{dr} in Premium-100 All-in, complete 2024 illustration.}
+\label{tab:control-dr-results}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.32\textwidth}*{4}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & Requested [kWh] & Delivered [kWh] & Shortfall [kWh] & Credit [EUR]\\
+\midrule
+\gls{bau} without storage & 12\,000 & 0 & 12\,000 & 0.00\\
+\gls{bau} with storage & 12\,000 & 0 & 12\,000 & 0.00\\
+\gls{rbc} Smart Local & 12\,000 & 8\,376 & 3\,624 & 1\,005.12\\
+\gls{matd3} (residual) & 12\,000 & 10\,104 & 1\,896 & 1\,212.48\\
+Transformer \gls{matd3} & 12\,000 & 11\,256 & 744 & 1\,350.72\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Invented operational cohort and EUR 0.12/kWh credit; \gls{bau} makes no requested response adjustment. Energy-purchase cost is reported before this separate settlement. Deliberately excessive stress requests are excluded from this operational cohort and its compliance denominator.\end{minipage}
+\end{table}

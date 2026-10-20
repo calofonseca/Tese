@@ -1,0 +1,34 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Annual energy-purchase cost [EUR] across the seven scenarios.}
+\label{tab:control-scenario-coverage}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.28\textwidth}*{7}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & C30 N & C30 T & C30 S & C30 R & C30 C & P100 N & P100 A\\
+\midrule
+\gls{bau} without storage & 27\,000 & 25\,400 & 26\,600 & 27\,200 & 25\,500 & 111\,000 & 105\,000\\
+\gls{bau} with storage & 24\,000 & 22\,800 & 23\,700 & 24\,600 & 23\,200 & 96\,000 & 93\,000\\
+\gls{rbc} Basic & 23\,040 & 23\,639 & 23\,207 & 26\,922 & 26\,504 & 92\,160 & 109\,814\\
+\gls{rbc} Smart Local & 21\,600 & 21\,033 & 21\,757 & 23\,520 & 22\,968 & 86\,400 & 94\,581\\
+\gls{rbc} Community & 21\,120 & 20\,566 & 21\,273 & 22\,947 & 22\,458 & 84\,480 & 92\,479\\
+\gls{milp} local fixed & 21\,480 & 20\,610 & 21\,318 & 24\,219 & 22\,633 & 85\,920 & 94\,056\\
+\gls{milp} \gls{rec} fixed & 21\,000 & 20\,150 & 20\,841 & 23\,678 & 22\,127 & 84\,000 & 91\,954\\
+\gls{milp} local flexible & 19\,560 & 18\,768 & 19\,412 & 22\,054 & 20\,610 & 78\,240 & 85\,648\\
+\gls{milp} \gls{rec} flexible & 18\,720 & 17\,962 & 18\,578 & 21\,107 & 19\,725 & 74\,880 & 81\,970\\
+Local \gls{ppo} & 22\,080 & 22\,654 & 22\,240 & 25\,800 & 25\,399 & 88\,320 & 105\,239\\
+Local \gls{td3} & 21\,600 & 22\,162 & 21\,757 & 25\,240 & 24\,847 & 86\,400 & 102\,951\\
+\gls{maddpg} & 20\,880 & 21\,423 & 21\,031 & 24\,720 & 24\,019 & 83\,520 & 99\,519\\
+\gls{matd3} (residual) & 19\,680 & 20\,192 & 19\,823 & 22\,080 & 22\,639 & 77\,400 & 93\,800\\
+\gls{mappo} & 20\,640 & 21\,177 & 20\,790 & 23\,520 & 23\,743 & 82\,560 & 98\,375\\
+\gls{happo} & 20\,400 & 20\,930 & 20\,548 & 23\,837 & 23\,467 & 81\,600 & 97\,232\\
+\gls{masac} & 20\,640 & 21\,177 & 20\,790 & 24\,118 & 23\,743 & 82\,560 & 98\,375\\
+Offline policy* & 21\,240 & 21\,792 & 21\,394 & 24\,819 & 24\,433 & 84\,960 & 101\,235\\
+Transformer \gls{ppo} & 21\,360 & 20\,799 & 21\,515 & 23\,208 & 22\,713 & 85\,440 & 93\,530\\
+Transformer \gls{matd3} & 20\,160 & 19\,631 & 20\,306 & 21\,840 & 21\,437 & 78\,300 & 88\,276\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize C30: Core-30; P100: Premium-100. N: Normal; T: Topology; S: Safety; R: Robustness; C: Combined; A: All-in. Each column covers its complete 2024 sequence, including supervisory fallback. *Generic offline-policy placeholder; the associated method remains to be specified.\end{minipage}
+\end{table}

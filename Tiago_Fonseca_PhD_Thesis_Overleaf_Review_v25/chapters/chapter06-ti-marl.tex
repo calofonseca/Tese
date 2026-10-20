@@ -1,53 +1,22 @@
-\chapter{TI-MARL: Typed-Interface Multi-Agent Reinforcement Learning for Reconfigurable Cyber-Physical Systems}
+\chapter{Typed-Interface Multi-Agent Reinforcement Learning: TI-MARL}
 \label{chap:ti-marl}
-\markboth{TI-MARL}{TI-MARL}
+\markboth{\gls{timarl}}{\gls{timarl}}
+\edef\timarlpostdisplaypenalty{\the\postdisplaypenalty}
+\postdisplaypenalty=10000
 
-Chapter~\ref{chap:control-benchmark} followed the controller research from transparent rules and optimisation to single-agent RL, conventional MARL, entity-structured policies, knowledge reuse, and hierarchical coordination. That progression solved real parts of the energy-control problem, but its learning interfaces remained partly fixed. A controller could learn to schedule the assets it had been given; changing the number of agents, the instances owned by one agent, the meaning of an observation, or the set of safe actions could still invalidate the model or the software around it.
+Chapter~\ref{chap:control-benchmark} examined how control and learning methods contribute to the practical use of \gls{marl} in \glspl{rec}. The remaining problem concerns their combined performance: sustaining useful coordination with manageable computation and integration effort, respecting physical and service constraints, and retaining service under disturbance. This chapter develops \gls{timarl} as an integrated response to the scalability, deployability, safety, and robustness requirements defined in Chapter~\ref{chap:introduction}.
 
-The distinction matters in an operational community. Adding a second charger does not merely append another number to the state. It introduces a physical module, an independently occupied connection, a new EV session, another action group, and new competition for the same total and per-phase electrical limits. A stale EV state of charge does not have the same consequence as a missing price forecast. The first can make V2G unsafe; the second can leave local operation available under poorer economic information. When a member joins or leaves, the population changes without erasing the temporal history of the members that remain. Fixed vectors, masks, and manually rebuilt heads can represent bounded versions of these cases, but they do not by themselves preserve what each value and action means.
+The explanation follows a household controller into operation and through changes affecting its resources and measurements. Another charger is installed, a required measurement becomes unavailable, and another building joins the \gls{rec}. These situations connect representation and learning to constraint handling, fault response, and deployment. The chapter develops each mechanism before examining their relationship to the algorithmic approaches reviewed in Chapter~\ref{chap:related-work} and the common comparison in Chapter~\ref{chap:control-benchmark}.
 
-\Gls{timarl} was developed to make that changing interface an explicit part of the control problem. The implemented method begins with one technology-neutral typed contract for each registered member. A deterministic compiler binds that contract to the entities, runtime values, topology events, and health evidence supplied by the simulator. A parameter-shared local actor then processes the variable set of observations and active action groups, while an analytic projector applies the local electrical and service constraints derived from the same interface. TI-PPO uses a local typed critic; TI-MAPPO replaces it with a permutation-equivariant central set critic during training. Both execute through decentralised actors.
-
-The running example is a building with two EV chargers, a stationary battery, and a deferrable service. One charger may be V2G-capable while the other is charge-only. Their EV sessions have different arrival states, targets, and departure times, yet both chargers share the building connection and can lie on different phases. This example exposes the four requirements used throughout the thesis. Dynamic instances and stable semantic types address heterogeneous control; shared parameters and variable-cardinality encoders address scalability; health closure and local projection address safety and robustness; versioned interfaces, compatibility signatures, checkpoints, and execution traces establish the algorithm-side basis for deployability.
-
-This chapter explains the method as it exists in the Algorithms repository rather than as a list of possible extensions. It identifies the contribution precisely, develops the compiler--actor--projector--learner path, records the engineering decisions needed to train it, and fixes the experimental protocol. Quantitative control results remain provisional until the confirmation campaign is frozen. Verified software and runtime evidence is reported separately from those pending comparisons.
-
-\draftnote{The implementation account is aligned with Algorithms commit \texttt{58fb6370} and \texttt{softcpsrecsimulator==1.8.0}. The final submission must replace the provisional quantitative ledger with the frozen confirmation campaign and update both identifiers if the implementation changes. TI-MATD3, a graph critic, a central shared-constraint corrector, and production TI-MARL serving are not part of the verified v1 implementation and are not claimed here.}
-
-\section{Scientific Positioning and Problem Formulation}
+\section{Problem Formulation and Method Overview}
 \label{sec:timarl-positioning}
-
-\subsection{Closest Approaches and the Residual Problem}
 \label{sec:timarl-closest-work}
 
-Several neighbouring research lines already solve parts of the problem. Parameterised-action methods combine a discrete action type with continuous parameters \parencite{xiong2018pdqn,li2022hyar}. Variable-action policies can process action candidates whose cardinality, order, or semantic content changes \parencite{jain2020newactions,sinii2024headless}. Modular and cross-embodiment policies reuse one controller across different sensors, actuators, and morphologies \parencite{huang2020smp,luketina2025compositional,doshi2025crossformer}. Heterogeneous and task-open MARL address different action semantics, changing tasks, and dynamic populations \parencite{yu2024uas,anil2025mohito}. Sensor-dropout training improves robustness to missing modalities \parencite{liu2017sensordropout}, while joint-action shields prevent unsafe combinations of actions \parencite{elsayedaly2021shielding}.
+A useful controller must preserve the relationship between the policy evaluated in development and the decisions applied in an installation. Its inputs must describe the intended resources; its commands must respect their electrical and service conditions; and the loss of information or equipment must leave an explicit path for continued operation or fallback. These responsibilities exist in the original installation and persist as its composition and operating conditions change.
 
-Variable action sets, parameterised actions, heterogeneous agents, changing populations, graph encoders, actor--critic optimisation, and safety monitors are established classes of mechanism. TI-MARL contributes the relationship among them. The same runtime contract should identify the active entities, bind observations to their sources, instantiate the action groups and ports that currently exist, propagate health and dependency changes into port validity and bounds, preserve local information boundaries, and remain meaningful to the policy, critic, safety logic, deployment validator, and explanation trace.
+\gls{timarl} connects them through a common typed description used by the learner, local constraint handling, health-dependent action availability, compatibility checks, and execution records. Shared processing and population-aware value estimation support reuse across compatible resources. The method's scientific question is whether these mechanisms together improve continued control across the four research dimensions. An interface whose size can change is one representational capability within that method; the assessment concerns the complete control process.
 
-This position is especially important for assets that enter and leave. A padded universal vector can reserve ten charger slots and mask the unused positions. Such a representation is often sufficient when the maximum topology and all action semantics are known in advance. It becomes less natural when a newly admitted module brings a coherent observation--action contract, when several instances of the same type must be distinguished, or when a failed observation changes the safe domain of only the dependent actions. TI-MARL tests whether an explicit entity-bound typed interface provides a useful inductive and operational structure in those cases.
-
-The method builds on the progression established in \cref{chap:control-benchmark}. \Cref{tab:timarl-progression} identifies the problem solved by each family and the assumption that TI-MARL relaxes.
-
-\begin{table}[htbp]
-\centering
-\caption{TI-MARL as a cumulative extension of the controller progression in \cref{chap:control-benchmark}.}
-\label{tab:timarl-progression}
-\begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}p{0.27\textwidth}p{0.27\textwidth}X@{}}
-\toprule
-\textbf{Stage} & \textbf{Problem addressed} & \textbf{Assumption that remained} & \textbf{TI-MARL extension} \\
-\midrule
-RBC and fallback control & Feasible, transparent, low-cost operation & Rules and device interfaces are manually fixed & Health-aware interface compilation and typed fallback scope \\
-MILP and optimisation & Explicit objectives and constraints & Variables and system dimensions are defined before solving & Runtime entity/action instances and typed local constraints \\
-PPO and TD3 & Adaptive control without a complete online optimiser & One agent and one fixed observation--action signature & TI-RL as the one-agent typed-interface reduction \\
-IPPO, MAPPO, HAPPO, MADDPG, MATD3, and MASAC & Independent and centralised-training multi-agent control & Fixed agent/action layout and fixed-vector central training inputs & Local typed actors with either local critics or a central set critic over active agents \\
-Entity-structured PPO and MATD3 & Variable counts of known asset instances and signature-aware learning & Known type catalogue, fixed feature semantics, and building-count rebuild & Runtime typed observations, action ports, dependencies, and health-aware compilation \\
-Behaviour cloning and actor pretraining & Reuse of expert and historical data & Demonstrations are tied to a particular interface layout & Schema- and port-referenced trajectories and replay \\
-Hierarchical coordination & Separation of local and community objectives & Participants, roles, and signals are predefined & Community signals as authorised typed observations under dynamic membership \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-The scientific claim concerns decision problems in which the interface itself is a time-varying structured object. The novelty is not PPO, attention, parameter sharing, health rules, or action projection in isolation. It lies in their executable connection: a versioned per-agent contract is compiled into entity-bound observations and action groups; the shared actor consumes that compiled object; validity, dynamic bounds, health closure, and local feasibility use the same semantics; and stable identities carry transitions, checkpoints, compatibility decisions, and traces across topology change. The experiments in \cref{sec:timarl-methodology,sec:timarl-results} test whether this connection offers value beyond masked, entity-structured, and conventional dynamic-population baselines.
+The neighbouring methods supply substantive algorithmic references. Task-open and compositional learning address coordination and reuse; graph-based energy policies relate resource structure to decisions; safety layers and shielding constrain actions; fault-tolerant training prepares policies for adverse conditions \parencite{anil2025mohito,luketina2025compositional,orfanoudakis2026gnndt,dalal2018safe,mguni2025faulttolerant}. Their mechanisms and supporting processes enter the comparison through the same energy, service, computation, and operational requirements.
 
 \subsection{Typed-Interface Decision Processes}
 \label{sec:timarl-decision-processes}
@@ -62,7 +31,7 @@ The one-agent reduction isolates interface reconfiguration from cross-agent lear
 \label{eq:timdp-tuple}
 \end{equation}
 
-where $\mathcal{S}$ is the physical and operational state space, $\Sigma_t$ is the current versioned capability schema, $\mathcal{H}_t$ is the runtime health state, $\mathcal{C}$ is the Typed Interface Compiler, and $\Gamma^{\mathrm{loc}}_t$ is the local typed relation and constraint graph. $P_{\Sigma}$ represents interface events such as module addition, module removal, sensor degradation, or recovery. Learning in this one-agent model is denoted \gls{tirl}. It supports controlled evaluation of multiple chargers, variable action groups, health-aware contraction, and local bundle feasibility without introducing multi-agent credit assignment.
+where $\mathcal{S}$ is the physical and operational state space; $\Sigma$ and $\mathcal{H}$ are the families of capability schemas and health states; $\mathcal{C}$ is the \gls{tic}; and $\Gamma^{\mathrm{loc}}$ describes local resource relations and constraints. The kernel $P$ governs physical transitions, while $P_{\Sigma}$ governs changes to the interface state, including topology and health. The reward function is $R$, and $\gamma\in[0,1)$ discounts future rewards. Their time-indexed instances, such as $\Sigma_t$ and $\mathcal{H}_t$, describe the current interface. Learning in this one-agent model is denoted \gls{tirl}.
 
 A \gls{timg} adds an active agent population, local information boundaries, coupled outcomes, and shared resources:
 
@@ -74,7 +43,7 @@ A \gls{timg} adds an active agent population, local information boundaries, coup
 \label{eq:timg-tuple}
 \end{equation}
 
-At time $t$, $\mathcal{N}_t\subseteq\mathcal{N}$ denotes the active population. Each agent $i$ has a schema $\Sigma_{i,t}$ and health state $\mathcal{H}_{i,t}$. The physical state is augmented with the active population and interface state:
+Here $\mathcal{N}$ is the population of possible agent identities, $\Gamma$ includes local and shared relations, and $R_i$ is the reward function of agent $i$; the remaining objects retain their preceding roles. At time $t$, $\mathcal{N}_t\subseteq\mathcal{N}$ denotes the active population. Each agent $i$ has a schema $\Sigma_{i,t}$ and health state $\mathcal{H}_{i,t}$. The physical state is augmented with the active population and interface state:
 
 \begin{equation}
 \tilde{s}_t =
@@ -87,7 +56,7 @@ At time $t$, $\mathcal{N}_t\subseteq\mathcal{N}$ denotes the active population. 
 \label{eq:timg-augmented-state}
 \end{equation}
 
-The compiler produces the policy-facing interface of agent $i$:
+Here $s_t$ is the physical state, and $\tilde{s}_t$ retains the active members, their schemas and health states, and the current relations $\Gamma_t$. This is an augmented modelling state; each actor observes only its authorised view. The compiler produces the policy-facing interface of agent $i$:
 
 \begin{equation}
 \mathcal{I}_{i,t}
@@ -143,7 +112,7 @@ where $p_{i,g,t}$ is a selected valid port and $\eta_{i,g,t}$ is its parameter v
 \label{eq:local-feasible-bundle}
 \end{equation}
 
-The multi-agent joint action is
+Here $\Phi_i$ is the local construction rule, $\bar a_{i,t}$ is its output, and $\mathcal A^{\mathrm{loc}}_{i,t}$ is the feasible set defined by the current local constraints. The multi-agent joint action is
 
 \begin{equation}
 \bar{\mathbf{a}}_t
@@ -154,7 +123,7 @@ The multi-agent joint action is
 \label{eq:joint-action}
 \end{equation}
 
-In the implemented v1 path, $\bar{\mathbf{a}}_t$ is encoded into simulator commands and the simulator remains authoritative for the applied action and residual physical violation. The analytic projector acts within each member and therefore enforces declared local total and per-phase headroom; it does not redistribute power between members. A future shared corrector could be expressed as $\mathcal{S}_{\Gamma}(\bar{\mathbf{a}}_t,\Gamma_t)$, but no result in this chapter relies on one. The physical transition is
+The bold symbol $\bar{\mathbf a}_t$ collects the constructed bundles of the active agents. Each bundle is encoded into resource commands, with execution feedback retaining the action actually applied. The physical transition is
 
 \begin{equation}
 s_{t+1}
@@ -166,7 +135,7 @@ P
 \label{eq:timg-transition}
 \end{equation}
 
-Local and community outcomes are coupled through this joint transition. A representative reward decomposition is
+The transition kernel $P$ gives the distribution of the next physical state $s_{t+1}$ conditional on $s_t$ and the joint constructed action. Local and \gls{rec} outcomes are coupled through this transition. A representative reward decomposition is
 
 \begin{equation}
 r_{i,t}
@@ -181,97 +150,56 @@ r^{\mathrm{loc}}_{i,t}
 \label{eq:timarl-reward}
 \end{equation}
 
-where local terms capture cost, service, comfort, or degradation; the community term captures peak, ramping, renewable utilisation, or a shared demand-response objective; and the constraint terms distinguish local and shared violations or interventions. When $|\mathcal{N}_t|=1$ and $\Gamma_t$ contains only local relations, the model reduces to TI-RL.
+Here $r_{i,t}$ is the reward of agent $i$, $r^{\mathrm{loc}}_{i,t}$ measures its local outcome, and $r^{\mathrm{com}}_t$ measures the \gls{rec} outcome. The non-negative costs $c^{\mathrm{loc}}_{i,t}$ and $c^{\mathrm{shared}}_t$ represent declared local and shared constraint penalties. The coefficients $\alpha_i$, $\beta_i$, and $\eta_i$ set their relative weights. Local terms can include energy cost and service; \gls{rec} terms can include peak, ramping, renewable utilisation, or a demand-response objective. When $|\mathcal{N}_t|=1$ and $\Gamma_t$ contains only local relations, the model reduces to \gls{tirl}.
 
-The formal objects are domain-independent. In energy, a module can be a charger or battery, an entity can be an EV session, a community observation can be transformer loading, and a port can be \textsc{charge-ev}$(p)$. In robotics, the same structure can represent a sensor module, a manipulated object, workspace occupancy, and a parameterised grasp action. The thesis evaluates the method in energy systems while preserving this broader interpretation.
+The energy formulation uses one building controller per agent. Chargers, batteries, meters, and service sessions are entities within that boundary. Admission concerns new instances or compositions of recognised semantic types. Introducing an unfamiliar physical capability requires its type, interpretation, and control support to be defined before it can participate.
 
-The reduction also clarifies the experimental sequence. TI-PPO tests whether the typed local interface and its reconfiguration can be learned without central training. TI-MAPPO keeps the same actor and execution path but uses the active population during value estimation. Differences between the two can therefore be attributed to centralised training rather than to a different deployed controller.
+The reduction also clarifies the experimental sequence. \gls{tippo} tests whether the typed local interface and its reconfiguration can be learned without central training. \gls{timappo} keeps the same actor and execution path but uses the active population during value estimation. Differences between the two can therefore be attributed to centralised training rather than to a different deployed controller.
 
-\clearpage
-\section{Implemented TI-MARL Architecture}
+\subsection{Method Overview}
 \label{sec:timarl-architecture-overview}
+
+
+
+\Cref{fig:timarl-architecture} separates the runtime path from the training path. Each actor evaluation receives one compiled local interface and authorised aggregate signals. It does not receive the raw private state of another member. \gls{timappo}'s critic pools the active agent set during training; \gls{tippo} uses only the local interface. The actor, compiler, projector, and command codec are otherwise the same.
 
 \begin{figure}[H]
 \centering
-\resizebox{0.98\textwidth}{!}{%
-\begin{tikzpicture}[
-  box/.style={draw,rounded corners,align=center,minimum width=3.65cm,minimum height=0.9cm,font=\small},
-  wide/.style={draw,rounded corners,align=center,minimum width=7.9cm,minimum height=0.95cm,font=\small},
-  arrow/.style={-Latex,thick},
-  feedback/.style={-Latex,thick,dashed},
-  group/.style={draw,dashed,rounded corners,inner sep=0.28cm}
-]
-  \node[box,fill=blue!9] (schemaA) at (0,0) {Agent $A$ schema, entities,\\ runtime values and health};
-  \node[box,fill=blue!9] (schemaB) at (8.2,0) {Agent $B$ schema, entities,\\ runtime values and health};
-  \node[box,fill=cyan!10] (ticA) at (0,-1.7) {Typed Interface Compiler};
-  \node[box,fill=cyan!10] (ticB) at (8.2,-1.7) {Typed Interface Compiler};
-  \node[box,fill=green!9] (graphA) at (0,-3.4) {Compiled interface snapshot\\ observations, groups, health, bounds, constraints};
-  \node[box,fill=green!9] (graphB) at (8.2,-3.4) {Compiled interface snapshot\\ observations, groups, health, bounds, constraints};
-  \node[box,fill=orange!12] (tipA) at (0,-5.1) {Shared typed actor\\ local latent + contextual group embeddings};
-  \node[box,fill=orange!12] (tipB) at (8.2,-5.1) {Shared typed actor\\ local latent + contextual group embeddings};
-  \node[box,fill=yellow!16] (bundleA) at (0,-6.8) {Raw hybrid local bundle};
-  \node[box,fill=yellow!16] (bundleB) at (8.2,-6.8) {Raw hybrid local bundle};
-  \node[wide,fill=purple!10] (joint) at (4.1,-8.7) {Active local bundles and stable agent identities};
-  \node[wide,fill=red!9] (shield) at (4.1,-10.35) {Per-agent analytic projection, command codec, and execution record};
-  \node[wide,fill=gray!12] (env) at (4.1,-12.0) {Physical or simulated CPS: local and community outcomes};
-  \node[wide,fill=teal!10] (critic) at (4.1,-13.75) {Training only: local typed critic (TI-PPO) or central set critic (TI-MAPPO)};
-
-  \draw[arrow] (schemaA) -- (ticA);
-  \draw[arrow] (ticA) -- (graphA);
-  \draw[arrow] (graphA) -- (tipA);
-  \draw[arrow] (tipA) -- (bundleA);
-  \draw[arrow] (schemaB) -- (ticB);
-  \draw[arrow] (ticB) -- (graphB);
-  \draw[arrow] (graphB) -- (tipB);
-  \draw[arrow] (tipB) -- (bundleB);
-  \draw[arrow] (bundleA) -- (joint);
-  \draw[arrow] (bundleB) -- (joint);
-  \draw[arrow] (joint) -- (shield);
-  \draw[arrow] (shield) -- (env);
-  \draw[arrow] (env) -- (critic);
-  \draw[feedback] (critic.west) -- ++(-2.45,0) |- (tipA.west);
-  \draw[feedback] (critic.east) -- ++(2.45,0) |- (tipB.east);
-  \draw[feedback] (env.west) -- ++(-3.10,0) |- (schemaA.west);
-  \draw[feedback] (env.east) -- ++(3.10,0) |- (schemaB.east);
-
-  \node[group,fit=(schemaA)(ticA)(graphA)(tipA)(bundleA),label={[font=\small\bfseries]left:Decentralised agent $A$}] {};
-  \node[group,fit=(schemaB)(ticB)(graphB)(tipB)(bundleB),label={[font=\small\bfseries]right:Decentralised agent $B$}] {};
-\end{tikzpicture}%
-}
-\caption{Implemented TI-MARL architecture. Each active member is compiled into an entity-bound snapshot and evaluated by the same typed actor. The raw hybrid bundle is projected against that member's service and electrical constraints before command encoding. TI-MAPPO uses the active set of member summaries only during training.}
+\input{figures/timarl-architecture-vector.tex}
+\caption{\gls{timarl} decision path within each building. Local construction precedes execution; the \gls{rec} critic participates only in training.}
 \label{fig:timarl-architecture}
 \end{figure}
 
-\Cref{fig:timarl-architecture} separates the runtime path from the training path. Each actor evaluation receives one compiled local interface and authorised aggregate signals. It does not receive the raw private state of another member. TI-MAPPO's critic pools the active agent set during training; TI-PPO uses only the local interface. The actor, compiler, projector, and command codec are otherwise the same.
-
-The method contains five principal components.
+Table~\ref{tab:timarl-components} identifies the role of each component. The same interface snapshot accompanies the decision through these stages, so a charger retains its identity when its observations become actor inputs and its selected power becomes an equipment command.
 
 \begin{table}[htbp]
 \centering
-\caption{Main TI-MARL components and their interpretation in the running energy example.}
+\caption{Main \gls{timarl} components and their interpretation in the running energy example.}
 \label{tab:timarl-components}
 \begin{tabularx}{\textwidth}{@{}p{0.22\textwidth}p{0.38\textwidth}X@{}}
 \toprule
 \textbf{Component} & \textbf{Generic role} & \textbf{Energy example} \\
 \midrule
-Typed Interface Compiler & Binds deployment-neutral member contracts to current entities, observations, events, health, groups, bounds, and constraints & Adds a known charger group when it becomes active; scopes failure to the affected group; contracts V2G when its evidence is stale \\
+\gls{tic} & Binds deployment-neutral member contracts to current entities, observations, events, health, groups, bounds, and constraints & Adds a known charger group when it becomes active; scopes failure to the affected group; contracts \gls{v2g} when its evidence is stale \\
 Hierarchical typed encoder & Aggregates observations by channel and sensor before forming a local latent state & Keeps two charger sessions distinct through semantic and structural identities without learning an embedding for a concrete charger identifier \\
 Shared hybrid actor & Produces one categorical mode and one bounded continuous fraction for each active group & Controls two chargers, one battery, and one deferrable service with shared group-type heads rather than an asset-specific output head \\
-Analytic local projector & Applies validity, dynamic bounds, service floors, and joint total/per-phase headroom & Preserves an urgent EV or mandatory deferrable start while scaling competing charging decisions to the available connection capacity \\
-Local or central set critic & Supplies TI-PPO local values or TI-MAPPO values conditioned on the active member set & Retains the same decentralised actor while comparing independent and community-aware value estimation \\
+Analytic local projector & Applies validity, dynamic bounds, service floors, and joint total/per-phase headroom & Preserves an urgent \gls{ev} or mandatory deferrable start while scaling competing charging decisions to the available connection capacity \\
+Local or central set critic & Supplies \gls{tippo} local values or \gls{timappo} values conditioned on the active member set & Retains the same decentralised actor while comparing independent and \gls{rec}-aware value estimation \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The architecture is deliberately asymmetric between training and operation. The actor remains local in both phases. Centralisation is introduced only in TI-MAPPO's value function and the experiment infrastructure, where it can improve credit assignment without creating a runtime dependency on unrestricted global state. Community observations remain typed observation parts with explicit scope, provenance, time, and health.
+The architecture is deliberately asymmetric between training and operation. The actor remains local in both phases. Centralisation is introduced only in \gls{timappo}'s value function and the experiment infrastructure, where it can improve credit assignment without creating a runtime dependency on unrestricted global state. \gls{rec} observations remain typed observation parts with explicit scope, provenance, time, and health.
 
-\section{Entity-Bound Runtime Typed Interfaces}
+\section{Typed Interfaces and Runtime Compilation}
 \label{sec:runtime-interface-model}
+
+The interface provides a stable vocabulary for a changing installation. A schema declares what a resource means and which capabilities it can expose; compilation binds that declaration to the resources and evidence present at the current step. This separates a new instance of a familiar charger from a new kind of equipment requiring additional control semantics.
 
 \subsection{Schemas, Entities, and Dynamic Module Instances}
 \label{sec:timarl-entities}
 
-A capability schema describes the potential interface of an agent. It identifies the agent role, module types, observation templates, action-group templates, constraints, compatibility requirements, and fallback semantics. Runtime state identifies which module instances and controlled entities are active now. Separating the two prevents fast-changing values such as SoC or connection state from being treated as schema revisions.
+A capability schema describes the potential interface of an agent. It identifies the agent role, module types, observation templates, action-group templates, constraints, compatibility requirements, and fallback semantics. Runtime state identifies which module instances and controlled entities are active now. Separating the two prevents fast-changing values such as \gls{soc} or connection state from being treated as schema revisions.
 
 A building can contain several instances of the same module type. In the running example, agent $A$ contains two charger instances, one stationary battery, one deferrable-service module, and one main meter:
 
@@ -286,27 +214,31 @@ A building can contain several instances of the same module type. In the running
 \label{eq:running-modules}
 \end{equation}
 
-Each charger can be related to a currently connected EV session. The observation
+Here $\mathcal M_{A,t}$ is the module set of building $A$ at time $t$; the superscripts identify module types and the subscripts distinguish their instances. Each charger can be related to a currently connected \gls{ev} session. The following observation identifies the \gls{soc} source for one such session:
 
 \begin{quote}\small
+\begin{minipage}{\linewidth}
 \texttt{semantic type: EV\_SOC}\\
 \texttt{entity: ev\_session\_17}\\
 \texttt{source module: charger\_1}
+\end{minipage}
 \end{quote}
 
-cannot be confused with the SoC of the vehicle connected to \texttt{charger\_2}. The corresponding action group is similarly bound:
+The source and session identities distinguish this measurement from the \gls{soc} of the vehicle connected to \texttt{charger\_2}. The corresponding action group is similarly bound:
 
 \begin{quote}\small
+\begin{minipage}{\linewidth}
 \texttt{group type: EV\_CHARGER\_MODE}\\
 \texttt{owner module: charger\_1}\\
 \texttt{target entity: ev\_session\_17}
+\end{minipage}
 \end{quote}
 
 The compiler represents these relationships as typed edges such as \texttt{owns}, \texttt{connected\_to}, \texttt{observes}, \texttt{controls}, and \texttt{requires}. Entity binding is encoded in the interface semantics and does not depend on position in a flat vector.
 
-When \texttt{charger\_3} is installed, a module-addition event creates a new module node, its observation parts, one EV-charger action-group instance, valid port instances, and the relevant constraint edges. The neural network is not extended with a new permanent head. The same group and port decoder used for the existing chargers is applied to the new instance. Removing the charger removes that subgraph. A semantically unknown module is admitted only when a compatible parent type and decoder are available; otherwise its learned control path remains inactive and fallback semantics apply.
+When \texttt{charger\_3} is installed, a module-addition event creates a new module node, its observation parts, one \gls{ev}-charger action-group instance, valid port instances, and the relevant constraint edges. The neural network is not extended with a new permanent head. The same group and port decoder used for the existing chargers is applied to the new instance. Removing the charger removes that subgraph. A semantically unknown module is admitted only when a compatible parent type and decoder are available; otherwise its learned control path remains inactive and fallback semantics apply.
 
-The implementation deliberately separates four identifiers that flat action layouts often conflate. A member owns the local controller boundary; a charger identifies installed infrastructure; an EV identifies a vehicle; and a session records the temporary occupancy of one charger by one EV. A domestic charger can retain the same vehicle over many sessions, whereas one office charger can serve several vehicles in one day. The action group belongs to the physical charger, while service observations belong to the currently bound session. Session replacement therefore rebinds runtime values without rebuilding an unchanged charger structure.
+The implementation deliberately separates four identifiers that flat action layouts often conflate. A member owns the local controller boundary; a charger identifies installed infrastructure; an \gls{ev} identifies a vehicle; and a session records the temporary occupancy of one charger by one \gls{ev}. A domestic charger can retain the same vehicle over many sessions, whereas one office charger can serve several vehicles in one day. The action group belongs to the physical charger, while service observations belong to the currently bound session. Session replacement therefore rebinds runtime values without rebuilding an unchanged charger structure.
 
 \subsection{Typed Observation Parts and Community Context}
 \label{sec:timarl-observations}
@@ -331,17 +263,19 @@ o_k
 \label{eq:observation-part}
 \end{equation}
 
-where $\tau_k$ is the semantic type, $x_k$ the value, $u_k$ the unit, $q_k$ quality or uncertainty metadata, $h_k$ the health state, $t_k$ the timestamp, and $s_k$ the scope. The scope can be self, local, neighbourhood, community, or global. The source can be a physical sensor, derived signal, forecast, external platform, or coordinator message.
+where $k$ indexes an observation part, $\mathrm{id}_k$ identifies that part, $\mathrm{entity}_k$ identifies the entity described, and $\mathrm{source}_k$ identifies its source. The remaining entries are $\tau_k$, the semantic type, $x_k$ the value, $u_k$ the unit, $q_k$ quality or uncertainty metadata, $h_k$ the health state, $t_k$ the timestamp, and $s_k$ the scope. The scope can be self, local, neighbourhood, \gls{rec}, or global. The source can be a physical sensor, derived signal, forecast, external platform, or coordinator message.
 
-Community information is represented through the same object model. A building may receive numerical aggregates such as community net demand, transformer loading, remaining headroom, photovoltaic surplus, a price multiplier, or a demand-response target. These values do not reveal the raw private state of another building. Their provenance and health remain explicit:
+\gls{rec} information is represented through the same object model. A building may receive numerical aggregates such as \gls{rec} net demand, transformer loading, remaining headroom, \gls{pv} surplus, a price multiplier, or a demand-response target. These values do not reveal the raw private state of another building. Their provenance and health remain explicit:
 
 \begin{quote}\small
+\begin{minipage}{\linewidth}
 \texttt{semantic type: COMMUNITY\_TRANSFORMER\_LOADING}\\
 \texttt{scope: community; source: platform\_service}\\
 \texttt{unit: percent; health: HEALTHY}
+\end{minipage}
 \end{quote}
 
-TI-MARL does not require flexibility to be represented through an explicit negotiation object. In the energy instantiation, an EV connected from 08:00 until 18:00 with a current SoC, target SoC, maximum charging power, and departure requirement already exposes the information from which a policy can learn temporal flexibility. Useful derived quantities such as time to departure, remaining required energy, or required average charging power can be supplied as typed observation parts when they improve learning or interpretability. Their use is an experimental design choice and introduces no separate offer phase or community allocator.
+In the energy instantiation, an \gls{ev} connected from 08:00 until 18:00 with a current \gls{soc}, target \gls{soc}, maximum charging power, and departure requirement already exposes the information from which a policy can learn temporal flexibility. Useful derived quantities such as time to departure, remaining required energy, or required average charging power can be supplied as typed observation parts when they improve learning or interpretability. Their inclusion is fixed by the experimental configuration.
 
 \Cref{tab:timarl-running-observations} lists representative observation parts for the running example.
 
@@ -355,13 +289,13 @@ TI-MARL does not require flexibility to be represented through an explicit negot
 \textbf{Semantic type} & \textbf{Entity/source} & \textbf{Value} & \textbf{Scope} & \textbf{Decision meaning} \\
 \midrule
 House net power & main meter & 2.1 kW & self & Current aggregate import used to evaluate local electrical limits \\
-EV SoC & session 17 / charger 1 & 0.35 & local & Energy state of the EV controlled through charger 1 \\
-EV target SoC & session 17 & 0.80 & local & Minimum service target at departure \\
+\gls{ev} \gls{soc} & session 17 / charger 1 & 0.35 & local & Energy state of the \gls{ev} controlled through charger 1 \\
+\gls{ev} target \gls{soc} & session 17 & 0.80 & local & Minimum service target at departure \\
 Departure time & session 17 & 10 h & local & Temporal slack available to the charging policy \\
-EV SoC & session 28 / charger 2 & 0.62 & local & Distinct SoC bound to charger 2 and its connected session \\
-Battery SoC & battery 1 & 0.70 & local & Available storage state \\
-Community headroom & platform service & 5.5 kW & community & Aggregate remaining shared capacity made visible to all authorised agents \\
-Community peak state & platform service & high & community & Community context used by local actors and the reward \\
+\gls{ev} \gls{soc} & session 28 / charger 2 & 0.62 & local & Distinct \gls{soc} bound to charger 2 and its connected session \\
+Battery \gls{soc} & battery 1 & 0.70 & local & Available storage state \\
+\gls{rec} headroom & platform service & 5.5 kW & \gls{rec} & Aggregate remaining shared capacity made visible to all authorised agents \\
+\gls{rec} peak state & platform service & high & \gls{rec} & \gls{rec} context used by local actors and the reward \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -380,7 +314,7 @@ The output interface is organised around action-group instances. Each controllab
 &=\{\textsc{idle},\textsc{start}\}.
 \end{align}
 
-An action port is a typed callable capability:
+Each set $\mathcal P$ lists the ports of the named resource at time $t$. In these examples, the argument $p$ denotes a requested physical power; the deferrable service has a discrete start decision. An action port itself is a typed callable capability:
 
 \begin{equation}
 p
@@ -400,7 +334,7 @@ K_p
 \label{eq:action-port}
 \end{equation}
 
-where $\Theta_p$ is the parameter schema, $U_p$ the units, $B_{p,t}$ the current parameter domain, $V_{p,t}$ the validity state, $D_p$ the observation and capability dependencies, and $K_p$ the resource effects used by local constraints, critics, and optional safety checks.
+where $\tau_p$ is the port type, $\mathrm{id}_p$ its identity, $\mathrm{group}_p$ the action group to which it belongs, and $\mathrm{owner}_p$ its owning module. The remaining entries are $\Theta_p$, the parameter schema, $U_p$ the units, $B_{p,t}$ the current parameter domain, $V_{p,t}$ the validity state, $D_p$ the observation and capability dependencies, and $K_p$ the resource effects used by local constraints, critics, and optional safety checks.
 
 A new charger creates another instance of the charger action group. It does not create another set of network parameters. The implemented actor emits a categorical mode and a Beta-distributed fraction in $[0,1]$ for every active group. The fraction is relative to the currently compiled physical upper bound and is converted to a signed simulator command only once by the codec. This convention avoids applying a health-dependent or topology-dependent bound twice. A deferrable start is indivisible: after \textsc{start} is selected, its typed cycle profile determines the subsequent demand rather than a continuous power fraction.
 
@@ -413,55 +347,27 @@ A new charger creates another instance of the charger action group. It does not 
 \toprule
 \textbf{Port} & \textbf{Owner/target} & \textbf{Parameter} & \textbf{Current validity and bounds} & \textbf{Dependencies and local effects} \\
 \midrule
-Charge EV & charger 1 / session 17 & power [kW] & valid, $[0,7.2]$ & connected session; increases house import \\
-Discharge EV & charger 1 / session 17 & power [kW] & valid, $[0,4.0]$ & V2G, trustworthy SoC, reserve; reduces house import \\
-Charge EV & charger 2 / session 28 & power [kW] & valid, $[0,11.0]$ & distinct connection and EV state; increases house import \\
-Discharge EV & charger 2 / session 28 & power [kW] & absent & charger 2 has no V2G capability \\
-Discharge battery & battery 1 & power [kW] & valid, $[0,3.0]$ & battery SoC and reserve; reduces house import \\
+Charge \gls{ev} & charger 1 / session 17 & power [kW] & valid, $[0,7.2]$ & connected session; increases house import \\
+Discharge \gls{ev} & charger 1 / session 17 & power [kW] & valid, $[0,4.0]$ & \gls{v2g}, trustworthy \gls{soc}, reserve; reduces house import \\
+Charge \gls{ev} & charger 2 / session 28 & power [kW] & valid, $[0,11.0]$ & distinct connection and \gls{ev} state; increases house import \\
+Discharge \gls{ev} & charger 2 / session 28 & power [kW] & absent & charger 2 has no \gls{v2g} capability \\
+Discharge battery & battery 1 & power [kW] & valid, $[0,3.0]$ & battery \gls{soc} and reserve; reduces house import \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-For example, suppose \texttt{charger\_1} is rated at 7.4~kW but the current connection and EV state reduce its compiled charging bound to 4.0~kW. A sampled fraction of 0.75 requests 3.0~kW. The network output remains in the same numerical domain when the available bound later changes; the interface gives the output its current physical meaning. The trace stores the selected mode, fraction, compiled bound, requested command, projected command, and applied simulator value separately.
+For example, suppose \texttt{charger\_1} is rated at 7.4~kW but the current connection and \gls{ev} state reduce its compiled charging bound to 4.0~kW. A sampled fraction of 0.75 requests 3.0~kW. The network output remains in the same numerical domain when the available bound later changes; the interface gives the output its current physical meaning. The trace stores the selected mode, fraction, compiled bound, requested command, projected command, and applied simulator value separately.
 
-\subsection{Health-Aware Causal Compilation}
-\label{sec:timarl-health}
-
-Health is part of the interface semantics and is also available to the neural network. The implemented states are \textsc{healthy}, \textsc{degraded}, \textsc{stale}, \textsc{missing}, \textsc{failed}, and \textsc{unknown}. Fault evidence remains a separate record. A simulator event such as \texttt{dropout} or \texttt{stuck} is not mapped to one universal health label; the compiler considers event duration, freshness, criticality, declared availability, channel semantics, and recovery hysteresis.
-
-A charger failure disables only the associated charger group and its ports. Other modules controlled by the member remain active. A stale EV SoC can preserve charging while blocking V2G because the discharge reserve can no longer be established. Failure of the main house meter has a wider consequence: the complete member is isolated when aggregate import or phase headroom cannot be verified. Loss of a community signal removes that coordination input but leaves the local controller available. During a grid outage, charging, V2G, and a new deferrable start are blocked; safe stationary-storage discharge may remain available when its local dependencies still hold.
-
-The compiler computes the transitive effect of a health event through a dependency closure:
-
-\begin{equation}
-\mathcal{H}^{\star}_{i,t}
-=
-\operatorname{Closure}
-\left(
-\mathcal{H}_{i,t},D_{i,t}
-\right),
-\label{eq:health-closure}
-\end{equation}
-
-which identifies affected observations, ports, groups, bounds, local constraints, and operational modes. For the EV SoC example, the closure can be summarised as
-
-\begin{align}
-\textsc{healthy} &\Rightarrow \textsc{discharge-ev}\in[0,P^{\mathrm{v2g}}_{\max,t}],\\
-\textsc{stale} &\Rightarrow \textsc{discharge-ev}\notin\mathcal{P}_{i,t}^{\mathrm{valid}},\\
-\textsc{failed} &\Rightarrow \textsc{discharge-ev}\notin\mathcal{P}_{i,t}^{\mathrm{valid}}.
-\end{align}
-
-This behaviour differs from replacing a missing value with zero and asking the policy to infer the safety consequence. The dependency rule changes the decision interface itself. Recovery is explicit: a group or port returns only after its declared fresh-data and hysteresis conditions hold. The closure log records the subject, state, rule, consequence, and duration used in that decision.
-
-The compiler rebuilds structural plans only when topology changes. Values, health evidence, session identity, validity, and bounds are refreshed at every step without treating routine runtime churn as a new neural architecture. This separation is important in the 15-second stress case, where value and session updates occur far more frequently than asset installation or removal.
-
-\section{Local Typed-Interface Policies}
+\section{Policy Architecture and Multi-Agent Learning}
 \label{sec:tip-and-learning}
+\label{sec:timarl-multiagent-learning}
 
-\subsection{Local Information Boundaries and Parameter Sharing}
+Once the interface has been compiled, the actor must interpret its current observations and produce a decision for each controllable group. Shared processing allows another known charger to reuse the existing policy. Centralised training can then account for the interaction between buildings while preserving the local information available during operation.
+
+\subsection{Local Information and Hierarchical Encoding}
 \label{sec:timarl-local-info}
 
-Each agent executes a logically local \gls{tip}. A building actor receives its compiled interface, optional memory, and authorised aggregate community observations. It does not receive the raw loads, EV states, or private service requirements of other buildings. This boundary is identical during evaluation and deployment; privileged information used by a central critic during training is not silently passed to the actor.
+Each agent executes a logically local \gls{tip}. A building actor receives its compiled interface, optional memory, and authorised aggregate \gls{rec} observations. It does not receive the raw loads, \gls{ev} states, or private service requirements of other buildings. This boundary is identical during evaluation and deployment; privileged information used by a central critic during training is not silently passed to the actor.
 
 The current implementation shares one actor across all compatible members:
 
@@ -475,14 +381,13 @@ The current implementation shares one actor across all compatible members:
 \label{eq:role-sharing}
 \end{equation}
 
-Parameter sharing does not imply shared observations. House $A$ and House $B$ execute the same weights on different local snapshots, and member role remains an encoded feature. The compiler rejects unknown semantic or action-group types rather than silently allocating a random representation. This keeps zero-shot admission limited to new instances and compositions of known contracts.
+Here $\pi_i$ is the policy instance of agent $i$, $\pi_\theta$ is the shared actor with parameters $\theta$, $\mathcal I_{i,t}$ is its local snapshot, and $m_{i,t}$ is optional local memory. Parameter sharing preserves separate observations. House $A$ and House $B$ execute the same weights on different local snapshots, and member role remains an encoded feature. The compiler rejects unknown semantic or action-group types rather than silently allocating a random representation. This keeps zero-shot admission limited to new instances and compositions of known contracts.
 
 This structure supports population changes without a permanent actor slot per agent. A new building instantiates the appropriate local policy family after schema compatibility has been checked. Removing a building removes its actor instance from the active population; the shared parameter set and the actors of the remaining agents are unchanged.
 
-\subsection{Hierarchical Typed Encoding and Local Latent State}
 \label{sec:timarl-local-encoder}
 
-The compiled local interface is encoded as variable-cardinality typed sets. The hierarchy follows the simulator's measurement structure: observation parts are grouped into channels, channels into sensors, and sensors into the local member representation. Structural relations remain available when an action group asks for its relevant observations. This is narrower than a general graph neural network and matches the implementation used in the experiments.
+The compiled local interface is encoded as variable-cardinality typed sets. The hierarchy follows the simulator's measurement structure: observation parts are grouped into channels, channels into sensors, and sensors into the local member representation. Structural relations remain available when an action group asks for its relevant observations. This hierarchy follows the implemented measurement structure and preserves the binding needed by the decoder.
 
 Each observation token combines its normalised value with quality and validity indicators, health, semantic type, sensor type, channel type, unit, scope, declared use, a deterministic semantic fingerprint, and temporal-horizon features. The first mapping is
 
@@ -496,7 +401,7 @@ e_{u_k},e_{s_k},e_{\mathrm{use}},f^{\mathrm{id}}_k,f^{\mathrm{time}}_k
 \right).
 \end{align}
 
-Permutation-equivariant relational layers aggregate observation tokens within their channels and sensors, followed by learned pooling over the local sensor set:
+Here $z^o_k$ is the embedding of observation part $k$, and $E^o_\theta$ is its learned encoder. The values $x_k$, $q_k$, and $h_k$ retain the meanings in Equation~\ref{eq:observation-part}; each $e$ is an embedding of the named metadata field. The features $f^{\mathrm{id}}_k$ and $f^{\mathrm{time}}_k$ encode semantic identity and temporal information. Permutation-equivariant relational layers aggregate observation tokens within their channels and sensors, followed by learned pooling over the local sensor set:
 
 \begin{equation}
 z_{i,t}
@@ -508,11 +413,11 @@ F_{\theta}
 \label{eq:tip-encoder}
 \end{equation}
 
-The common latent $z_{i,t}$ summarises the complete local decision context. Concrete asset identifiers are not learned as permanent embeddings. Instance distinction is carried by the compiled structural binding and deterministic observation identity, while semantic families determine reusable parameters. Reordering observations, chargers, or members therefore does not change the intended meaning.
+The mapping $F_\theta$ aggregates the nested sets: $k$ indexes observation parts, $c$ channels, and $s$ sensors belonging to member $i$. The common latent $z_{i,t}$ summarises the complete local decision context. Concrete asset identifiers are not learned as permanent embeddings. Instance distinction is carried by the compiled structural binding and deterministic observation identity, while semantic families determine reusable parameters. Reordering observations, chargers, or members therefore does not change the intended meaning.
 
 Each active action group starts from its type embedding and the local latent. In the action-conditioned variant, the group also queries observation tokens related to its owner, target entity, and dependencies. The two chargers can use the same mode and fraction heads while attending to different sessions. Attention across the active group set then exposes local competition before decoding. Adding a charger adds one group evaluation; it does not change the actor or critic parameter count.
 
-During replay and behaviour-cloning updates, immutable type indices and set membership are prepared once and reused across optimisation epochs. Runtime values and health are never cached as static input. Packed evaluation removes repeated per-agent device transfers while preserving the same set semantics. These changes affect throughput, not the mathematical information surface.
+During replay and \gls{bc} updates, immutable type indices and set membership are prepared once and reused across optimisation epochs. Runtime values and health are never cached as static input. Packed evaluation removes repeated per-agent device transfers while preserving the same set semantics. These changes affect throughput, not the mathematical information surface.
 
 \subsection{Dynamic Grouped Action Decoding}
 \label{sec:timarl-action-decoder}
@@ -529,7 +434,7 @@ f^{\mathrm{select}}_{\theta}
 \label{eq:port-logit}
 \end{equation}
 
-and the categorical mode is selected after invalid modes have been masked:
+Here $\ell_{i,g,m,t}$ is the logit for candidate mode $m$ of group $g$, $z_{i,g,t}$ is its contextual embedding, $e_{\tau_g}$ represents its type, and $f^{\mathrm{select}}_\theta$ is the shared selection head. The categorical mode is selected after invalid modes have been masked:
 
 \begin{equation}
 \Pr
@@ -544,7 +449,7 @@ and the categorical mode is selected after invalid modes have been masked:
 \label{eq:port-selection}
 \end{equation}
 
-A second head generates positive Beta parameters. Sampling $u_{i,g,t}\sim\operatorname{Beta}(\alpha_{i,g,t},\beta_{i,g,t})$ gives the bounded fraction
+Here $m_{i,g,t}$ is the selected mode, $\mathcal M^{\mathrm{valid}}_{i,g,t}$ is its admissible candidate set, and Softmax normalises the corresponding logits into probabilities. A second head generates positive Beta parameters. Sampling $u_{i,g,t}\sim\operatorname{Beta}(\alpha_{i,g,t},\beta_{i,g,t})$ gives the bounded fraction
 
 \begin{equation}
 \eta_{i,g,t}
@@ -557,7 +462,7 @@ d_{\tau_g}(z_{i,g,t}).
 \label{eq:port-parameters}
 \end{equation}
 
-The log probability used by PPO is the sum of the categorical and Beta terms. At training time the two parts are sampled. Deterministic replay can use categorical argmax or an \texttt{expected\_signed} rule that combines charge and discharge probabilities, the Beta mean, a configurable gain, a deadband, and a non-idle logit margin. These controls were added because an apparently small stochastic preference can become an implausibly persistent deterministic charge or discharge command after export.
+The decoder $d_{\tau_g}$ produces positive shape parameters $\alpha_{i,g,t}$ and $\beta_{i,g,t}$ for the Beta distribution; its sample $u_{i,g,t}$ supplies the fraction $\eta_{i,g,t}$. The log probability used by \gls{ppo} is the sum of the categorical and Beta terms. At training time the two parts are sampled. Deterministic replay can use categorical argmax or an \texttt{expected\_signed} rule that combines charge and discharge probabilities, the Beta mean, a configurable gain, a deadband, and a non-idle logit margin. These controls were added because an apparently small stochastic preference can become an implausibly persistent deterministic charge or discharge command after export.
 
 All groups are decoded as one bundle from the same local context. A representative raw bundle is
 
@@ -575,14 +480,152 @@ a^{\mathrm{raw}}_{A,t}
 \label{eq:running-raw-bundle}
 \end{equation}
 
-The bundle-level representation allows the actor to learn priorities among the two EV sessions, battery use, a pending service, and community conditions. It does not by itself guarantee that the combined power remains within local electrical limits or that an urgent service remains feasible. Those requirements are handled by the final local construction.
+Here $a^{\mathrm{raw}}_{A,t}$ collects the four proposed decisions for building $A$ at time $t$; their powers are illustrative. The bundle-level representation allows the actor to learn priorities among the two \gls{ev} sessions, battery use, a pending service, and \gls{rec} conditions. It does not by itself guarantee that the combined power remains within local electrical limits or that an urgent service remains feasible. Those requirements are handled by the final local construction.
+
+\subsection{Centralised Training and Local Execution}
+\label{sec:timarl-joint-training}
+
+\gls{timarl} does not require a \gls{rec} controller agent. Each building acts independently from its own compiled interface and authorised \gls{rec} observations. The method becomes multi-agent because the local bundles form one joint action, the physical transition depends on that joint action, local actions compete for shared resources, and rewards include local and \gls{rec} consequences.
+
+At each training step, the constructed local bundles form the joint action in Equation~\ref{eq:joint-action}. Its transition produces the next interfaces, local rewards, and \gls{rec} outcomes. Simultaneous charging can reduce shared headroom even when both buildings satisfy their own connection limits. Repeated interaction supplies the experience from which local actors learn those collective consequences.
+
+Joint training means that actor updates are derived from the same joint transition. It does not mean that actors share private runtime inputs or that one global actor replaces them. Stable member identities govern the rollout when population changes. A joining member has no predecessor in Generalised Advantage Estimation; a departing member receives a terminal boundary; members that remain can bootstrap across the topology event. The rollout is not cleared and the networks are not resized.
+
+\label{sec:timarl-central-critic}
+
+A conventional central critic often concatenates all agent observations. That representation is tied to a fixed order and population. \gls{tippo} avoids centralisation and estimates $V_i$ from the local typed snapshot. \gls{timappo} retains the same actor but estimates values from the variable active set.
+
+The implemented central critic encodes each member with the same typed snapshot encoder, mean-pools the active local latents into a \gls{rec} summary, and evaluates each stable member identity from its local and \gls{rec} representations:
+
+\begin{equation}
+V_{\phi,i,t}
+=
+g_{\phi}
+\left(
+z_{i,t},
+\frac{1}{|\mathcal{N}_t|}
+\sum_{j\in\mathcal{N}_t}z_{j,t}
+\right).
+\label{eq:graph-critic}
+\end{equation}
+
+Here $V_{\phi,i,t}$ is the value estimate for member $i$, $g_\phi$ is the learned value mapping, and $z_{j,t}$ is the encoded snapshot of active member $j$. The mean contains all $|\mathcal N_t|$ active members. The mapping is permutation equivariant: reordering members reorders their values but does not alter their association. Cardinality can change without reconstructing a joint input layer. Mean pooling supplies a compact \gls{rec} context. Distinct feeder neighbourhoods with identical aggregate summaries receive the same pooled representation. Representing those neighbourhoods explicitly would require a richer critic input or aggregation rule.
+
+\subsection{Proximal Policy Optimisation with Typed Interfaces}
+\label{sec:timarl-backbones}
+
+\gls{timarl} defines the interface, actor structure, local bundle semantics, and population handling. The current learner supports two controlled \gls{ppo} variants.
+
+\paragraph{TI-PPO.}
+The shared actor and a parameter-shared local critic are updated from local member trajectories. This is the typed one-agent learner applied independently across the active population. It isolates the effect of the interface and actor from centralised value estimation.
+
+\paragraph{TI-MAPPO.}
+The actor is paired with the central set critic in \cref{eq:graph-critic}. The critic may use the active joint training context; the actor retains its local information boundary. A checkpoint pins the backbone and critic kind, so a \gls{tippo} state cannot be loaded into \gls{timappo} by accident.
+
+For a transition generated by old parameters $\theta_{\mathrm{old}}$, the hybrid group probability ratio is
+
+\begin{equation}
+r_{i,g,t}(\theta)
+=
+\exp\left[
+\log\pi_{\theta}(m_{i,g,t},\eta_{i,g,t}\mid\mathcal{I}_{i,t})
+-
+\log\pi_{\theta_{\mathrm{old}}}(m_{i,g,t},\eta_{i,g,t}\mid\mathcal{I}_{i,t})
+\right].
+\label{eq:timarl-ratio}
+\end{equation}
+
+Here $r_{i,g,t}(\theta)$ compares the current and collection-policy probabilities for the same recorded mode, fraction, and interface. The parameters $\theta_{\mathrm{old}}$ identify the collection policy. With joint-agent credit, the clipped \gls{ppo} objective uses the sum of group log probabilities for that member. With typed-group credit, the ratio and advantage remain attached to group $g$:
+
+\begin{equation}
+L^{\mathrm{group}}(\theta)
+=
+\mathbb{E}_{i,g,t}
+\left[
+\min\left(
+r_{i,g,t}(\theta)\hat{A}_{i,g,t},
+\operatorname{clip}(r_{i,g,t}(\theta),1-\epsilon,1+\epsilon)
+\hat{A}_{i,g,t}
+\right)
+\right].
+\label{eq:timarl-group-ppo}
+\end{equation}
+
+Here $\hat A_{i,g,t}$ is the advantage estimate assigned to group $g$, $\epsilon$ is the clipping tolerance, and the expectation averages recorded agent--group transitions. The operator $\operatorname{clip}$ bounds the ratio to $[1-\epsilon,1+\epsilon]$. The group critic supplies a matching baseline. \gls{ev} service and charger-constraint consequences are routed to the responsible charger family; stationary-storage consequences reach the storage group; deferrable completion reaches its start group. Economic settlement and genuinely shared grid effects remain common. This avoids teaching the second charger that it caused a service failure belonging to the first, while preserving \gls{rec} coupling.
+
+The comparison with \gls{matd3} in Chapter~\ref{chap:control-benchmark} retains a practical reference from a different learning family. Attribution to the interface is assessed more directly through \gls{ppo}-based controls with matched actor inputs, training budgets, and protection.
+
+\subsection{Training Data and Time Resolution}
+\label{sec:timarl-learning-engineering}
+
+Moving the controller to 15-minute data increased the effective learning horizon and exposed numerical failures that were less visible in the earlier hourly experiments. \gls{timarl} therefore treats the physical duration of a transition as part of the learner contract. When $\gamma_{\mathrm{ref}}$ and $\lambda_{\mathrm{ref}}$ are declared for reference duration $\Delta t_{\mathrm{ref}}$, the factors used at runtime are
+
+\begin{equation}
+\gamma_{\Delta t}=\gamma_{\mathrm{ref}}^{\Delta t/\Delta t_{\mathrm{ref}}},
+\qquad
+\lambda_{\Delta t}=\lambda_{\mathrm{ref}}^{\Delta t/\Delta t_{\mathrm{ref}}}.
+\label{eq:timarl-timebase}
+\end{equation}
+
+Here $\Delta t$ is the transition duration and $\Delta t_{\mathrm{ref}}$ the reference duration. The factors $\gamma$ and $\lambda$ control reward discounting and Generalised Advantage Estimation respectively, preserving their declared time basis as the step changes. The implementation normalises critic targets, uses a Huber value loss by default, clips policy ratios and gradient norms, and records approximate \gls{kl} divergence, clipping fraction, explained variance, and finite-gradient checks. Advantages can be normalised globally or per stable member identity. Entropy coefficients can differ by action-group family; a charger and a deferrable start do not need the same exploration pressure. A policy anchor can constrain movement from a selected actor and can be reset deliberately when a checkpoint is resumed.
+
+The rollout is on-policy and retains the raw typed decision, projected decision, intervention scope, stable agent and group identities, reward decomposition, termination semantics, current and next snapshot hashes, and simulator execution feedback. Teacher actions and auxiliary-planning examples never enter that \gls{ppo} rollout. This boundary matters: an update remains attributable to experience generated by the current policy even when demonstrations are used elsewhere in training.
+
+\label{sec:timarl-prior-knowledge}
+
+The use of prior knowledge in Section~\ref{sec:control-ablations} motivates an optional \gls{bc} warm start with \gls{rbc} Smart Local (the implementation class \texttt{RBCSmartPolicy}). The teacher acts on the physical simulator interface; its requested commands are decoded back into the active typed groups and stored with the exact interface snapshot on which they were valid. Pretraining updates the actor only. The critic is not trained from teacher returns, and the complete demonstration snapshots are discarded after pretraining.
+
+Idle actions dominate many annual trajectories. A plain average cross-entropy loss can therefore learn an impressive cloning accuracy while missing the charge, discharge, \gls{v2g}, or start events that make the teacher useful. The implementation supports bounded inverse-frequency weighting and a hierarchical mode mean. It can run a final unweighted calibration phase so that balancing rare actions does not permanently distort the deployed prior.
+
+Two optional causal auxiliaries were added after the warm-start experiments exposed sparse service decisions. The \gls{ev} planner labels typed states using only current service variables and declared forecasts: urgent charging, price-aware delay, authorised \gls{v2g} with departure reserve, or idle. The storage planner identifies \gls{pv} capture, low-price charging, high-price discharge, and idle from the same deployment-visible surface. Each auxiliary predicts both mode and fraction, trains the actor only, and keeps a bounded reservoir stratified by decision reason. Rare urgent or arbitrage examples therefore survive without contaminating the \gls{ppo} rollout.
+
+These planners supply training labels; runtime decisions remain with the actor and analytic projector. Pure \gls{timappo}, \gls{bc} warm start, \gls{ev} auxiliary, storage auxiliary, and their combinations remain separate ablations. This separation makes the contribution of prior knowledge testable: prior knowledge is attached to a typed and causal state, while the learned actor still owns execution.
+
+\section{Constraint Handling and Degraded Operation}
+\label{sec:tcg-safety}
+
+The compiled interface serves two connected purposes in protection. It determines which decisions remain meaningful under the current evidence, then supplies the physical and service constraints used to construct their joint local effect. A charger fault and a building power limit therefore enter different stages of the same decision path.
+
+\subsection{Health-Aware Causal Compilation}
+\label{sec:timarl-health}
+
+Health is part of the interface semantics and is also available to the neural network. The implemented states are \textsc{healthy}, \textsc{degraded}, \textsc{stale}, \textsc{missing}, \textsc{failed}, and \textsc{unknown}. Fault evidence remains a separate record. A simulator event such as \texttt{dropout} or \texttt{stuck} is not mapped to one universal health label; the compiler considers event duration, freshness, criticality, declared availability, channel semantics, and recovery hysteresis.
+
+A charger failure disables only the associated charger group and its ports. Other modules controlled by the member remain active. A stale \gls{ev} \gls{soc} can preserve charging while blocking \gls{v2g} because the discharge reserve can no longer be established. Failure of the main house meter has a wider consequence: the complete member is isolated when aggregate import or phase headroom cannot be verified. Loss of a \gls{rec} signal removes that coordination input but leaves the local controller available. During a grid outage, charging, \gls{v2g}, and a new deferrable start are blocked; safe stationary-storage discharge may remain available when its local dependencies still hold.
+
+The compiler computes the transitive effect of a health event through a dependency closure:
+
+\begin{equation}
+\mathcal{H}^{\star}_{i,t}
+=
+\operatorname{Closure}
+\left(
+\mathcal{H}_{i,t},D_{i,t}
+\right),
+\label{eq:health-closure}
+\end{equation}
+
+where $D_{i,t}$ is the declared dependency relation, $\operatorname{Closure}$ propagates the observed health state $\mathcal H_{i,t}$ through it, and $\mathcal H^\star_{i,t}$ records the resulting consequences. These consequences concern observations, ports, groups, bounds, local constraints, and operational modes. For the \gls{ev} \gls{soc} example, the closure can be summarised as
+
+\begin{equation}
+\mathcal P^{\mathrm{valid}}_{i,t}
+\leftarrow
+\mathcal P^{\mathrm{valid}}_{i,t}\setminus
+\{p:\tau_p=\textsc{discharge-ev},\ \mathrm{owner}_p=\texttt{charger\_1}\}.
+\label{eq:timarl-health-port-removal}
+\end{equation}
+Here $\mathcal P^{\mathrm{valid}}_{i,t}$ is the valid port set of member $i$, $\tau_p$ is a port's type, and $\mathrm{owner}_p$ identifies its equipment. Set subtraction removes only the discharge capability of the affected charger. Charging remains available only if its own dependencies and service constraints can still be established.
+
+The dependency rule changes the decision interface itself, giving the policy an explicit account of the capabilities still available. Recovery is explicit: a group or port returns only after its declared fresh-data and hysteresis conditions hold. The closure log records the subject, state, rule, consequence, and duration used in that decision.
+
+The compiler rebuilds structural plans only when topology changes. Values, health evidence, session identity, validity, and bounds are refreshed at every step without treating routine runtime churn as a new neural architecture. This separation is important in the 15-second stress case, where value and session updates occur far more frequently than asset installation or removal.
 
 \subsection{Constraint-Aware Local Bundle Construction}
 \label{sec:timarl-local-feasibility}
 
-Local hard constraints should not depend exclusively on a negative reward. An actor can learn to reduce violations, but safety-critical electrical and service limits require explicit semantics. TI-MARL keeps the learned preference in the raw bundle and applies a constraint-aware parameterisation to obtain the final local bundle.
+Local hard constraints should not depend exclusively on a negative reward. An actor can learn to reduce violations, but safety-critical electrical and service limits require explicit semantics. \gls{timarl} keeps the learned preference in the raw bundle and applies a constraint-aware parameterisation to obtain the final local bundle.
 
-Let $a^{\mathrm{raw}}_{i,t}$ denote the decoded bundle and $\mathcal{F}^{\mathrm{loc}}_{i,t}$ the feasible set induced by the local typed graph. The construction is
+Let $a^{\mathrm{raw}}_{i,t}$ denote the decoded bundle and $\mathcal{A}^{\mathrm{loc}}_{i,t}$ the feasible set induced by the local typed graph. The construction is
 
 \begin{equation}
 \bar{a}_{i,t}
@@ -590,14 +633,14 @@ Let $a^{\mathrm{raw}}_{i,t}$ denote the decoded bundle and $\mathcal{F}^{\mathrm
 \Phi_i
 \left(
  a^{\mathrm{raw}}_{i,t},
- \mathcal{F}^{\mathrm{loc}}_{i,t}
+ \mathcal{A}^{\mathrm{loc}}_{i,t}
 \right),
 \qquad
-\bar{a}_{i,t}\in\mathcal{F}^{\mathrm{loc}}_{i,t}.
+\bar{a}_{i,t}\in\mathcal{A}^{\mathrm{loc}}_{i,t}.
 \label{eq:local-bundle-construction}
 \end{equation}
 
-The v1 mapping is an analytic joint projector. It first rejects a removed or invalid group, applies a forced typed fallback when one exists, clips the learned fraction to $[0,1]$, and respects the minimum operating power declared by the selected port. It then reserves mandatory deferrable starts and the EV charging power needed to remain within the configured service schedule. Remaining charge and discharge requests are jointly scaled against total and phase-specific import or export headroom. A command that falls below its typed operating floor after scaling returns to \textsc{idle}.
+Here $\Phi_i$ constructs the final bundle $\bar a_{i,t}$ from the raw decisions and the current local feasible set. The implementation uses an analytic joint projector. It first rejects a removed or invalid group, applies a forced typed fallback when one exists, clips the learned fraction to $[0,1]$, and respects the minimum operating power declared by the selected port. It then reserves mandatory deferrable starts and the \gls{ev} charging power needed to remain within the configured service schedule. Remaining charge and discharge requests are jointly scaled against total and phase-specific import or export headroom. A command that falls below its typed operating floor after scaling returns to \textsc{idle}.
 
 For the running example, one local constraint is
 
@@ -614,186 +657,39 @@ P^{\max}_{A,t}.
 \label{eq:running-local-constraint}
 \end{equation}
 
-This total limit is evaluated together with phase incidence. If both chargers lie on L1, unused headroom on L3 cannot make their combination feasible. A three-phase service contributes to all three phase rows according to its declared incidence. The projector can retain a configurable headroom reserve and a completion margin for deferrables. It does not compare one member with another or optimise the community objective.
+Here $P^{\mathrm{ch1}}_t$ and $P^{\mathrm{ch2}}_t$ are the two charging powers, $P^{\mathrm{def}}_t$ is the deferrable load, and $P^{\mathrm{bess,dis}}_t$ is stationary-battery discharge. The quantity $P^{\max}_{A,t}$ is the remaining import headroom after accounting for the other loads and generation of building $A$. This total limit is evaluated together with phase incidence. If both chargers lie on L1, unused headroom on L3 cannot make their combination feasible. A three-phase service contributes to all three phase rows according to its declared incidence. The projector can retain a configurable headroom reserve and a completion margin for deferrables. This construction resolves competition within the member; \gls{rec} coordination remains with the learned policies.
 
 Two diagnostics distinguish a useful feasibility mechanism from one that hides poor policy learning:
 
 \begin{align}
 I^{\mathrm{loc}}_t
-&=\mathbb{1}\left[a^{\mathrm{raw}}_{i,t}\notin\mathcal{F}^{\mathrm{loc}}_{i,t}\right],\\
+&=\mathbb{1}\left[a^{\mathrm{raw}}_{i,t}\notin\mathcal{A}^{\mathrm{loc}}_{i,t}\right],\\
 D^{\mathrm{loc}}_t
 &=\left\|\bar{a}_{i,t}-a^{\mathrm{raw}}_{i,t}\right\|.
 \end{align}
 
-Frequent or large adjustments indicate reliance on the projector and weak learning of coherent bundles. Requested, projected, and applied actions remain separate in the transition record, so a physically safe trajectory cannot conceal an infeasible raw policy. The optional shield-aware update removes an intervened group from the PPO policy loss and can distil the final feasible decision into that group; unrelated groups remain eligible for learning.
+Here $I^{\mathrm{loc}}_t$ uses the indicator $\mathbb 1$ to record an infeasible raw bundle, and $D^{\mathrm{loc}}_t$ measures its adjustment. The norm is evaluated on the common physical-command vector after decoding; discrete mode changes are counted separately. Frequent or large adjustments indicate reliance on the projector and weak learning of coherent bundles. Requested, projected, and applied actions remain separate in the transition record, so a physically safe trajectory cannot conceal an infeasible raw policy. The optional shield-aware update removes an intervened group from the \gls{ppo} policy loss and can distil the final feasible decision into that group; unrelated groups remain eligible for learning.
 
-\section{Multi-Agent Learning and Community Coordination}
-\label{sec:timarl-multiagent-learning}
-
-\subsection{Joint Training and Decentralised Execution}
-\label{sec:timarl-joint-training}
-
-TI-MARL does not require a community controller agent. Each building acts independently from its own compiled interface and authorised community observations. The method becomes multi-agent because the local bundles form one joint action, the physical transition depends on that joint action, local actions compete for shared resources, and rewards include local and community consequences.
-
-At one training step,
-
-\begin{equation}
-\bar{\mathbf{a}}_t
-=
-\left(
-\pi_1(\mathcal{I}_{1,t}),
-\ldots,
-\pi_n(\mathcal{I}_{n,t})
-\right)
-\end{equation}
-
-is applied to the shared environment. The transition produces the next local interfaces, local rewards, and common community outcomes. A low community headroom followed by simultaneous charging from two buildings can increase peak and ramping penalties or create a residual simulator violation. Over repeated interaction, the agents learn how local state and authorised aggregate signals relate to the behaviour of the other agents.
-
-Joint training means that actor updates are derived from the same joint transition. It does not mean that actors share private runtime inputs or that one global actor replaces them. Stable member identities govern the rollout when population changes. A joining member has no predecessor in Generalised Advantage Estimation; a departing member receives a terminal boundary; members that remain can bootstrap across the topology event. The rollout is not cleared and the networks are not resized.
-
-\subsection{Local and Central Set Critics}
-\label{sec:timarl-central-critic}
-
-A conventional central critic often concatenates all agent observations. That representation is tied to a fixed order and population. TI-PPO avoids centralisation and estimates $V_i$ from the local typed snapshot. TI-MAPPO retains the same actor but estimates values from the variable active set.
-
-The implemented central critic encodes each member with the same typed snapshot encoder, mean-pools the active local latents into a community summary, and evaluates each stable member identity from its local and community representations:
-
-\begin{equation}
-V_{\phi,i,t}
-=
-g_{\phi}
-\left(
-z_{i,t},
-\frac{1}{|\mathcal{N}_t|}
-\sum_{j\in\mathcal{N}_t}z_{j,t}
-\right).
-\label{eq:graph-critic}
-\end{equation}
-
-The mapping is permutation equivariant: reordering members reorders their values but does not alter their association. Cardinality can change without reconstructing a joint input layer. Mean pooling is intentionally modest. It captures community context and supports the current single-REC experiments, but it does not distinguish several feeder neighbourhoods with identical aggregate summaries. A typed resource-graph critic is a reasonable extension for that case and is not claimed as part of v1.
-
-\subsection{TI-PPO and TI-MAPPO}
-\label{sec:timarl-backbones}
-
-TI-MARL defines the interface, actor structure, local bundle semantics, and population handling. The current learner supports two controlled PPO variants.
-
-\paragraph{TI-PPO.}
-The shared actor and a parameter-shared local critic are updated from local member trajectories. This is the typed one-agent learner applied independently across the active population. It isolates the effect of the interface and actor from centralised value estimation.
-
-\paragraph{TI-MAPPO.}
-The actor is paired with the central set critic in \cref{eq:graph-critic}. The critic may use the active joint training context; the actor retains its local information boundary. A checkpoint pins the backbone and critic kind, so a TI-PPO state cannot be loaded into TI-MAPPO by accident.
-
-For a transition generated by old parameters $\theta_{\mathrm{old}}$, the hybrid group probability ratio is
-
-\begin{equation}
-r_{i,g,t}(\theta)
-=
-\exp\left[
-\log\pi_{\theta}(m_{i,g,t},\eta_{i,g,t}\mid\mathcal{I}_{i,t})
--
-\log\pi_{\theta_{\mathrm{old}}}(m_{i,g,t},\eta_{i,g,t}\mid\mathcal{I}_{i,t})
-\right].
-\label{eq:timarl-ratio}
-\end{equation}
-
-With joint-agent credit, the clipped PPO objective uses the sum of group log probabilities for that member. With typed-group credit, the ratio and advantage remain attached to group $g$:
-
-\begin{equation}
-L^{\mathrm{group}}(\theta)
-=
-\mathbb{E}_{i,g,t}
-\left[
-\min\left(
-r_{i,g,t}(\theta)\hat{A}_{i,g,t},
-\operatorname{clip}(r_{i,g,t}(\theta),1-\epsilon,1+\epsilon)
-\hat{A}_{i,g,t}
-\right)
-\right].
-\label{eq:timarl-group-ppo}
-\end{equation}
-
-The group critic supplies a matching baseline. EV service and charger-constraint consequences are routed to the responsible charger family; stationary-storage consequences reach the storage group; deferrable completion reaches its start group. Economic settlement and genuinely shared grid effects remain common. This avoids teaching the second charger that it caused a service failure belonging to the first, while preserving community coupling.
-
-TI-MATD3 was considered because Chapter~\ref{chap:control-benchmark} found value in deterministic twin-critic methods. It would require a principled relaxation of the categorical mode and a variable-population twin critic. That implementation is not part of the present contribution and is retained as future comparative work rather than a method evaluated here.
-
-\subsection{Community Observations, Rewards, and Learned Coordination}
-\label{sec:timarl-community-learning}
-
-Community coordination is learned from numerical aggregate observations and coupled outcomes. Typical community-scoped parts include transformer loading, remaining headroom, net community demand, photovoltaic surplus, current peak state, price multipliers, and demand-response targets. They are ordinary typed observations with explicit source, timestamp, health, and scope.
-
-The policy receives no symbolic flexibility offer. An EV's current SoC, target SoC, departure time, charging limits, connection state, and local price or community context are sufficient for the actor to learn whether charging can be delayed or reduced. Derived features such as remaining required energy and time to departure can be included when supported by the experimental protocol. They remain observation parts and introduce no separate negotiation mechanism.
-
-The local and community reward terms expose the trade-off to the learning algorithm. A building can reduce its own cost while contributing to a community peak, or preserve community headroom while missing an EV service target. Reporting keeps participant outcomes, community outcomes, service, constraint interventions, and distributional effects separate. A single scalar return is used for optimisation where required, with the underlying metrics still visible.
-
-\subsection{Training Stability and Time Resolution}
-\label{sec:timarl-learning-engineering}
-
-Moving the controller to 15-minute data increased the effective learning horizon and exposed numerical failures that were less visible in the earlier hourly experiments. TI-MARL therefore treats the physical duration of a transition as part of the learner contract. When $\gamma_{\mathrm{ref}}$ and $\lambda_{\mathrm{ref}}$ are declared for reference duration $\Delta t_{\mathrm{ref}}$, the factors used at runtime are
-
-\begin{equation}
-\gamma_{\Delta t}=\gamma_{\mathrm{ref}}^{\Delta t/\Delta t_{\mathrm{ref}}},
-\qquad
-\lambda_{\Delta t}=\lambda_{\mathrm{ref}}^{\Delta t/\Delta t_{\mathrm{ref}}}.
-\label{eq:timarl-timebase}
-\end{equation}
-
-The implementation normalises critic targets, uses a Huber value loss by default, clips policy ratios and gradient norms, and records approximate KL divergence, clipping fraction, explained variance, and finite-gradient checks. Advantages can be normalised globally or per stable member identity. Entropy coefficients can differ by action-group family; a charger and a deferrable start do not need the same exploration pressure. A policy anchor can constrain movement from a selected actor and can be reset deliberately when a checkpoint is resumed.
-
-The rollout is on-policy and retains the raw typed decision, projected decision, intervention scope, stable agent and group identities, reward decomposition, termination semantics, current and next snapshot hashes, and simulator execution feedback. Teacher actions and auxiliary-planning examples never enter that PPO rollout. This boundary matters: an update remains attributable to experience generated by the current policy even when demonstrations are used elsewhere in training.
-
-\subsection{Reusing Prior Knowledge without Extending Runtime Authority}
-\label{sec:timarl-prior-knowledge}
-
-The work in Chapter~\ref{chap:control-benchmark} showed that a capable rule-based controller can make early training markedly less erratic. TI-MARL reuses \texttt{RBCSmart} through a typed behaviour-cloning warm start. The teacher acts on the physical simulator interface; its requested commands are decoded back into the active typed groups and stored with the exact interface snapshot on which they were valid. Pretraining updates the actor only. The critic is not trained from teacher returns, and the complete demonstration snapshots are discarded after pretraining.
-
-Idle actions dominate many annual trajectories. A plain average cross-entropy loss can therefore learn an impressive cloning accuracy while missing the charge, discharge, V2G, or start events that make the teacher useful. The implementation supports bounded inverse-frequency weighting and a hierarchical mode mean. It can run a final unweighted calibration phase so that balancing rare actions does not permanently distort the deployed prior.
-
-Two optional causal auxiliaries were added after the warm-start experiments exposed sparse service decisions. The EV planner labels typed states using only current service variables and declared forecasts: urgent charging, price-aware delay, authorised V2G with departure reserve, or idle. The storage planner identifies PV capture, low-price charging, high-price discharge, and idle from the same deployment-visible surface. Each auxiliary predicts both mode and fraction, trains the actor only, and keeps a bounded reservoir stratified by decision reason. Rare urgent or arbitrage examples therefore survive without contaminating the PPO rollout.
-
-These planners are training devices, not runtime controllers. They neither issue commands nor override the analytic projector. Pure TI-MAPPO, behaviour-cloning warm start, EV auxiliary, storage auxiliary, and their combinations remain separate ablations. This separation makes the improvement over Chapter~\ref{chap:control-benchmark} testable: prior knowledge is attached to a typed and causal state, while the learned actor still owns execution.
-
-\section{Typed Constraints, Safety, and Runtime Robustness}
-\label{sec:tcg-safety}
-
-\subsection{Typed Constraint Relations}
+\subsection{Shared Limits and Operational Supervision}
 \label{sec:timarl-tcg}
-
-The \gls{tcg} records the physical relations required to interpret a typed action. Its objects represent members, modules, controlled entities, action groups, resources, and constraints. A charger port carries its contribution to building import and the phases it occupies. Health and topology events can remove that contribution or change its domain.
-
-Within a member, these relations supply the analytic projector and the trace. At community level they define what the aggregate observations, reward components, and residual violation KPIs refer to. The current set critic does not perform message passing over the TCG. This distinction prevents the data contract from being mistaken for an implemented graph-learning architecture.
-
-For two buildings sharing one transformer, a hard constraint can be written as
-
-\begin{equation}
-\sum_{i\in\mathcal{N}_t}
-K^{\mathrm{import}}_i
-\left(
-\bar{a}_{i,t}
-\right)
-\leq
-P^{\max}_{\mathrm{transformer},t}.
-\label{eq:running-shared-constraint}
-\end{equation}
-
-The actors receive aggregate indications such as community loading or headroom and learn coordinated behaviour through the reward and, for TI-MAPPO, the set critic. The TCG gives the KPI and assurance layers an unambiguous definition of the resource being shared.
-
-\subsection{Boundary of Shared-Constraint Enforcement}
 \label{sec:timarl-shared-monitor}
-
-Decentralised policies and a central training critic do not provide a hard guarantee on a constraint coupled across members. The implemented projector can guarantee only the local feasible set encoded for one member. Shared limits are represented in the simulator, exposed through authorised aggregate observations, penalised in the reward where declared, and measured from applied trajectories. A residual shared violation therefore remains a failed safety outcome, even when every local bundle was feasible.
-
-An external minimum-correction monitor is a deployment option, not part of the evaluated v1 algorithm. Adding it would require an allocation rule for competing members and service obligations; that rule would itself affect fairness and performance. The thesis does not hide this unresolved choice behind a generic ``shield''. The final experiments report what the learned joint action achieved before any such future cross-member correction.
-
-\subsection{Runtime Assurance and Degraded Modes}
 \label{sec:timarl-runtime-assurance}
 
-Runtime assurance handles conditions that cannot be delegated to policy quality. These include incompatible schema versions, unknown action types, compiler failure, missing safety-critical sensors, inference timeout, and actuator failure. Responses are scoped according to the dependency relations.
+The \gls{tcg} records ownership, connection, dependency, and constraint relations. A charger contributes power to its building and to the phases on which it operates. These relations supply local construction and identify the shared resources affected by the resulting commands. The central set critic uses member summaries; the \gls{tcg} is the physical description supporting the decision process.
 
-The compiler's concrete responses are group enablement, forced mode and fraction, dynamic bound contraction, and member isolation. A failed charger disables one group and leaves the others active. A stale SoC blocks the dependent discharge port. A failed main meter can isolate the complete member because its local limit can no longer be verified. A missing community signal retains local operation. Recovery requires the declared health and consistency conditions; one unverified sample is insufficient.
+For buildings sharing a transformer, the \gls{rec} limit can be written as
+\begin{equation}
+\sum_{i\in\mathcal N_t}K_i^{\mathrm{import}}(\bar a_{i,t})
+\leq P^{\max}_{\mathrm{transformer},t}.
+\label{eq:running-shared-constraint}
+\end{equation}
+Here $K_i^{\mathrm{import}}$ maps member $i$'s constructed action to its resulting import under the current physical state, and $P^{\max}_{\mathrm{transformer},t}$ is the permitted aggregate import. The sum spans the active members $\mathcal N_t$. Satisfaction of each building's local limit alone does not establish this shared inequality. In the current method, \gls{rec} observations, coupled rewards, and centralised value estimation support learned coordination; residual shared violations remain part of the evaluation.
 
-The runtime-assurance decision and the learned action remain separate records. Scientific evaluation and real-world audits can assess the policy without attributing fallback actions to it.
+Operational supervision sits outside this learned coordination. The Fail-Safe Supervisor described in Chapter~\ref{chap:energAIze} validates equipment requests, limits them when necessary, and supplies a rapid rule-based fallback when inference is unavailable. Within \gls{timarl}, dependency closure can already disable an affected group or isolate a member whose essential measurements are missing. The execution record distinguishes those interface decisions, local projection, supervisory intervention, and the final equipment response. Later retraining can therefore retain the circumstances of an intervention without attributing the fallback's outcome to an action the actor never executed.
 
-\section{Compatibility and Typed Explainability}
+This division preserves a precise scope of authority. The local construction enforces the encoded member constraints when the feasible set is non-empty, the physical model is correct, and the procedure terminates normally. An infeasible service obligation is recorded as unmet; electrical protection cannot create missing capacity or charging time. \gls{rec}-wide hard enforcement would require a declared allocation or jointly certified constraint mechanism in addition to the local projector.
+
+\section{Compatibility and Deployment}
 \label{sec:timarl-compatibility-explainability}
 
 \subsection{Interface Snapshots and Admission}
@@ -803,14 +699,14 @@ Every decision is associated with an immutable interface snapshot containing act
 
 Before a checkpoint is restored, its compatibility signature is checked against the current contract, schema, type registry, health rules, learning backbone, critic, actor context, and credit-assignment mode. A new instance of a known charger type can be admitted without changing network architecture. A semantically unknown type is rejected. Compiler migration requires explicit opt-in and matching contract hashes; tensor compatibility alone is insufficient.
 
-This contract links the algorithmic method to Deployability. It prevents a model from being resumed or moved merely because tensor dimensions happen to match. The lifecycle mechanisms in Chapter~\ref{chap:lifecycle} build on the same distinction.
+For a second installation, these checks identify whether the trained controller can be loaded as it stands or requires a revised interface and evaluation. It prevents a model from being resumed or moved merely because tensor dimensions happen to match. The packaging and deployment process in Chapter~\ref{chap:energAIze} uses this distinction at the model handoff.
 
 \subsection{Checkpoint, Export, and Actor-Only Handoff}
 \label{sec:timarl-persistence}
 
-The \texttt{ti\_marl\_checkpoint\_v1} format stores the actor, critic, optional typed-group critic, optimisers, rollout, random-number states, compiler state, behaviour-cloning state, resolved configuration, software versions, and compatibility signature. Checkpoint replacement is atomic. Restoring to a different compatible member composition is allowed because stable semantic types, rather than the active population, determine network shape.
+The \texttt{ti\_marl\_checkpoint\_v1} format stores the actor, critic, optional typed-group critic, optimisers, rollout, random-number states, compiler state, \gls{bc} state, resolved configuration, software versions, and compatibility signature. Checkpoint replacement is atomic. Restoring to a different compatible member composition is allowed because stable semantic types, rather than the active population, determine network shape.
 
-Two exports have different purposes. The research artefact retains actor and critic state for evaluation and is marked \texttt{deployable: false}. A separate \texttt{ti\_marl\_deployment\_bundle\_v1} omits the critic and optimisation state and carries the actor, resolved typed interfaces, compiler and health rules, projector configuration, normalisation declaration, versions, and compatibility signature. This actor-only bundle defines the intended handoff to the inference lifecycle, but the current generic serving path does not yet certify it as a production TI-MARL deployment. Chapter~\ref{chap:lifecycle} preserves that boundary.
+Two exports have different purposes. The research artefact retains actor and critic state for evaluation and is marked \texttt{deployable: false}. A separate \texttt{ti\_marl\_deployment\_bundle\_v1} omits the critic and optimisation state and carries the actor, resolved typed interfaces, compiler and health rules, projector configuration, normalisation declaration, versions, and compatibility signature. This actor-only bundle defines the intended handoff to the inference lifecycle, but the current generic serving path does not yet certify it as a production \gls{timarl} deployment. Section~\ref{sec:energaize-contract} describes the general model contract and its relationship to method-specific runtime requirements.
 
 \subsection{Execution-Level Decision Traces}
 \label{sec:timarl-explainability}
@@ -819,7 +715,7 @@ Typed interfaces support explanations grounded in the actual decision path. A tr
 
 \begin{itemize}
   \item the active entities, modules, and schema versions;
-  \item the local and community observations available to the actor;
+  \item the local and \gls{rec} observations available to the actor;
   \item observations that were degraded, stale, missing, or failed;
   \item the action groups and ports that existed at that step;
   \item invalid ports and the dependency or health rule that invalidated them;
@@ -829,9 +725,9 @@ Typed interfaces support explanations grounded in the actual decision path. A tr
   \item the final action executed by each asset.
 \end{itemize}
 
-For example, a trace can state that \texttt{charger\_1} selected \textsc{charge-ev} while \textsc{discharge-ev} was unavailable because the bound EV SoC source was stale. It can separately record that \texttt{charger\_2} was scaled to preserve the L1 headroom and whether the simulator applied the resulting request. These statements follow compiler and constraint semantics; they are not inferred from attention weights.
+For example, a trace can state that \texttt{charger\_1} selected \textsc{charge-ev} while \textsc{discharge-ev} was unavailable because the bound \gls{ev} \gls{soc} source was stale. It can separately record that \texttt{charger\_2} was scaled to preserve the L1 headroom and whether the simulator applied the resulting request. These statements follow compiler and constraint semantics; they are not inferred from attention weights.
 
-Transitions are written to buffered gzip-compressed JSONL chunks. Each transition references the current and next content-addressed snapshots. Complete snapshots are deduplicated and emitted periodically or when topology and health events require them. This keeps the audit trail useful on long high-frequency runs without serialising the complete interface graph at every step.
+Transitions are written to buffered gzip-compressed \gls{jsonl} chunks. Each transition references the current and next content-addressed snapshots. Complete snapshots are deduplicated and emitted periodically or when topology and health events require them. This keeps the audit trail useful on long high-frequency runs without serialising the complete interface graph at every step.
 
 \subsection{Formal and Operational Properties}
 \label{sec:timarl-properties}
@@ -845,7 +741,7 @@ Every observation and action instance identifies its source, owner, and target e
 A compiled valid port has an active owner module, satisfied hard dependencies, and a recognised parameter schema. Health-dependent contraction is deterministic under a fixed snapshot.
 
 \paragraph{Local bundle feasibility.}
-The final local bundle belongs to the local feasible set when the construction layer terminates normally and the encoded constraints are correct.
+The final local bundle belongs to the encoded local feasible set when that set is non-empty, the construction terminates normally, and the encoded constraints describe the physical system correctly.
 
 \paragraph{Information-boundary preservation.}
 The deployed actor consumes only local interface objects and authorised aggregate observations. Privileged critic information is excluded from the actor package.
@@ -856,231 +752,215 @@ Unknown or incompatible schema elements do not become executable action ports me
 \paragraph{Trace consistency.}
 The explanation record references the same interface snapshot, selected ports, constraint rules, and final action used by execution.
 
-These properties do not prove global optimality, universal robustness, or the correctness of every physical model. They define testable invariants that separate interface and runtime correctness from empirical policy quality.
+These properties define testable invariants for compilation, admission, execution, and persistence. Energy and service performance are assessed through the experimental comparisons that follow.
 
-\section{Experimental Methodology and Baselines}
+\section{Experimental Methodology}
 \label{sec:timarl-methodology}
 
-\subsection{Comparison Design and Reference Methods}
+The evaluation assesses the complete \gls{timarl} controller and its individual mechanisms through the four dimensions defined in Section~\ref{sec:intro-lexicon}. A controller must first provide useful energy control in the original installation. Resource changes and disturbances then test whether that performance can be retained, how much intervention is needed, and what work is required to continue operation. Chapters~\ref{chap:simulator} and~\ref{chap:control-benchmark} supply the common scenarios, annual comparison window, and scorecard.
+
+\subsection{Reference Methods and Attribution}
 \label{sec:timarl-comparison-design}
 
-TI-MARL uses the information boundaries, reward lineage, scorecard, and annual datasets established in Chapters~\ref{chap:simulator} and~\ref{chap:control-benchmark}. A stable-interface comparison is required before any reconfiguration advantage is claimed. The subsequent comparisons alter one declared dimension at a time: local interface, population, health, physical pressure, or combined operation.
+\gls{bau} with storage represents conventional operation, while \gls{rbc} Smart Local supplies a causal, inspectable control reference. The selected residual \gls{matd3} configuration supplies the practical learned reference developed in Chapter~\ref{chap:control-benchmark}. Transformer \gls{ppo} and \gls{matd3} examine reuse across known local resource instances. The \gls{milp} reference has a separate role: perfect-information scheduling indicates the opportunity within its declared optimisation model and horizon. Only a solver output replayed over the same scored window can enter the annual physical comparison.
 
-The executable reference set is intentionally smaller than the Chapter~\ref{chap:control-benchmark} inventory. BAU and \texttt{RBCSmart} anchor cost, service, and feasibility. The selected fixed-layout PPO/MAPPO or MATD3 configuration represents conventional learning where its interface is compatible. \texttt{AgentTransformerPPO} and \texttt{AgentTransformerMATD3} test variable counts of known entity types. TI-PPO and TI-MAPPO isolate local typed learning from centralised value estimation. The MILP oracle remains a bound on bounded scheduling windows, not a direct dynamic-interface baseline.
+The algorithmic comparison follows Section~\ref{sec:control-sota}. MOHITO-based and \gls{coin}-inspired adaptations examine coordination and modular reuse. Safety-layer and shielding references examine constraint enforcement, while \gls{marta}-based fault training examines robustness learned through adverse experience. \gls{gnn}-DT and HetGPS retain the relevant energy-specific comparisons. Each adaptation keeps its original mechanism explicit and declares the additional modelling, protection, and deployment support used in the common task.
+
+The complete-controller comparison measures the annual operating outcome together with computation, integration effort, interventions, and recovery. Matched ablations then examine particular mechanisms. A protected entity-based \gls{mappo} reference holds the learner, actor observations, critic information, action scope, and training budget constant while changing representation and compilation. Further contrasts change protection, fault handling, or compatibility checks with the remaining configuration held fixed. These studies attribute the observed effects without narrowing the overall research problem to one mechanism.
 
 \begin{table}[htbp]
 \centering
-\caption{Structural baselines required to isolate the TI-MARL contribution.}
+\small
+\caption{Matched comparisons for attributing \gls{timarl} behaviour.}
 \label{tab:timarl-structural-baselines}
-\begin{tabularx}{\textwidth}{@{}p{0.28\textwidth}X@{}}
+\begin{tabularx}{\textwidth}{@{}p{0.25\textwidth}p{0.36\textwidth}X@{}}
 \toprule
-\textbf{Baseline} & \textbf{Question tested} \\
+\textbf{Comparison} & \textbf{Held constant} & \textbf{Question}\\
 \midrule
-BAU and \texttt{RBCSmart} & Does learning improve cost and community outcomes without losing the service and safety behaviour of an inspectable controller? \\
-Selected fixed-layout RL/MARL & Is nominal performance attributable to the learning recipe rather than the typed interface? \\
-AgentTransformer variants & Does compilation add value beyond variable counts of already known entity types and a structured encoder? \\
-TI-PPO / TI-MAPPO & What changes when the actor and runtime path remain fixed but the critic gains the active community set? \\
-No projector / reward-only constraints & How much feasibility comes from learned behaviour and how much from explicit local construction? \\
-Local context / action-conditioned context & Do structural relations between a group and its observations improve control of repeated asset instances? \\
-Joint-agent / typed-group credit & Does routing service and constraint consequences to responsible groups improve learning without removing shared economic credit? \\
-Pure PPO / BC / causal auxiliaries & Which gains arise from typed representation and which require prior knowledge? \\
+Entity \gls{mappo} / \gls{timappo} & \gls{ppo}, information, population-aware critic, action scope, protection, budget. & What does the compiled interface add to a capable set representation?\\
+\addlinespace
+\gls{tippo} / \gls{timappo} & Compiler, actor, local construction, observations, reward. & What is gained through centralised value estimation?\\
+\addlinespace
+Health metadata / dependency closure & Detected events, measurement quality, thresholds, fallback. & Does changing dependent capabilities preserve more useful control?\\
+\addlinespace
+Protected / unprotected actor & Actor and held-out simulation trajectory. & How much feasibility is supplied by local construction?\\
+\addlinespace
+Local / action-conditioned decoding & Type vocabulary, observations, backbone, budget. & Does explicit group-to-observation binding improve repeated-asset decisions?\\
+\addlinespace
+Pure \gls{ppo} / prior knowledge & Evaluation inputs, action scope, later learning budget. & Which gains depend on demonstrations or causal auxiliaries?\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection{Reconfiguration Scenarios, Ablations, and Metrics}
+Ablations of entity binding, semantic metadata, dynamic bounds, group credit, \gls{rec} observations, and compatibility checks extend this design. Each changes one declared mechanism. The simulator retains its physical protections when an algorithmic protection is removed, and both proposed and applied actions are recorded. This exposes the cost of an ablation without treating a rejected command as successful control.
+
+\subsection{Annual Scenarios and Event Comparisons}
 \label{sec:timarl-scenarios}
 
-The scenarios are organised from controlled changes to integrated operation.
+The principal suite contains Core-30 Normal, Topology, Safety, Robustness, and Combined, together with Premium-100 Normal and All-in. These are the seven annual scenarios used in Chapter~\ref{chap:control-benchmark}. Normal establishes the original installation; the focused variants separate resource changes, electrical pressure, and disturbances; the combined scenarios examine their interaction. Premium-100 contains 80 residential, 17 small-service, and 3 larger-service members. \gls{dr} is evaluated only where the scenario enables it, with its financial credit and physical additionality reported separately.
 
-\paragraph{Development and stable control.}
-Core-15-Stripped provides short debugging and ablation runs with a static, lightly constrained composition. Core-30-Nominal supplies the main stable-interface comparison. The same physical members and 15-minute year are retained when the experimental dimension changes.
+The first event comparison adds a known charger to an existing building. The assessment follows its admission, the binding of the new session observations, the additional action group, and the allocation of local headroom. Actor parameter count, compiler cost, required configuration work, and subsequent service are all recorded. A controller can accept the new group structurally yet schedule it poorly, so interface acceptance and control quality remain separate measurements.
 
-\paragraph{Safety, health, and topology.}
-Core-30-Safety increases total and per-phase pressure. Core-30-Health introduces sensor, forecast, communication, actuator, and asset evidence. Core-30-Dynamic changes members and assets, including chargers independently of their host member. Core-30-Combined overlays these dimensions and demand-response events after they have been interpreted separately.
+The second comparison removes a measurement needed for one decision. A stale \gls{soc} tests whether dependent discharge is suspended while unaffected resources retain service. A failed main meter tests a broader loss of trustworthy headroom; loss of an aggregate \gls{rec} signal tests the continuation of local control. Candidate and reference receive the same actor-visible fault evidence. Recovery is timed against common freshness and hysteresis rules, distinguishing detection delay from the controller's response after detection.
 
-\paragraph{Integrated confirmation.}
-Premium-100-Clean retains the heterogeneous 70-residential, 20-small-service, and 10-larger-member catalogue, dynamic topology, several chargers per equipped service building, limits, services, and settlement without injected faults. Premium-100-AllIn adds coincident failure events. The AllIn run is reserved for final confirmation; it is not used to select hyperparameters.
+The third comparison introduces another building. It follows admission of the local actor, population handling in the learner, continuity of the remaining members' trajectories, and the change in \gls{rec} outcomes. New members and new local assets are varied separately before being combined. Held-out compositions contain recognised types; an unknown type exercises rejection and fallback, with that event recorded as an admission decision.
 
-\paragraph{Held-out semantics.}
-Held-out tests use new instance counts or compositions of known types. An unknown semantic or action-group type is expected to fail admission. Calling that rejection ``zero-shot generalisation'' would weaken the claim rather than strengthen it.
+Each annual scorecard includes the complete controller--supervisor trajectory. Event-centred records explain what happened within it: learned decisions retained, groups suspended, fallback duration, recovery, and missed service. Preparation or retraining for another installation is measured outside the frozen test year. This keeps the full operating consequence visible while preventing a change of policy during evaluation from being presented as immediate reuse.
 
-Ablations alter one implemented mechanism: semantic metadata, entity binding, health closure, dynamic bounds, action-conditioned group context, analytic projection, community observations, community reward, central set critic, typed-group credit, behaviour cloning, EV planning, storage planning, deterministic decoding, or compatibility validation. The evaluation reports five evidence groups:
+\subsection{Measurements across the Four Research Dimensions}
+\label{sec:timarl-measures}
 
-\begin{enumerate}
-  \item control and service performance;
-  \item reconfiguration and held-out-composition behaviour;
-  \item Safety and Robustness, including local adjustments and assurance interventions;
-  \item Scalability and runtime cost across agents, observations, groups, ports, and topology events; and
-  \item Deployability and explainability, including admission, compatibility, and trace completeness.
-\end{enumerate}
+The absolute scorecard retains energy-purchase cost, emissions, \gls{rec} import and export, \gls{pv} self-consumption, daily and maximum peak, upward ramping, \gls{ev} minimum service and target accuracy, electrical-violation energy, action correction, battery throughput, \gls{v2g} energy, and the number of members benefiting. Definitions, units, denominators, and aggregation follow Chapter~\ref{chap:simulator}. A single reward value cannot express all these outcomes, particularly when a low cost accompanies missed departures or frequent intervention.
 
-\subsection{Temporal Split, Seeds, and Selection Gates}
+\begin{table}[htbp]
+\centering
+\small
+\caption{Mechanisms and complementary evidence for the four research dimensions.}
+\label{tab:timarl-four-dimensions}
+\begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}p{0.37\textwidth}X@{}}
+\toprule
+\textbf{Dimension} & \textbf{Mechanisms examined} & \textbf{Evidence retained}\\
+\midrule
+Scalability and dynamic reconfiguration & Shared actor, variable observation/group sets, central set critic, structural caching. & Energy and service across counts; training/adaptation time, memory, throughput, compiler and inference latency.\\
+\addlinespace
+Deployability & Versioned interfaces, compatibility checks, actor bundle, stable resource bindings. & Configuration and validation effort; accepted/rejected changes; replay agreement, loading and recovery time.\\
+\addlinespace
+Safety & Dependency validity, physical bounds, local construction, external supervision. & Requested/projected/applied commands; violated energy, correction frequency and magnitude, missed service.\\
+\addlinespace
+Robustness & Scoped capability loss, surviving local decisions, fallback, recovery rules. & Fault exposure, unavailable groups, retained decisions, failed events, fallback and recovery duration, service deficits.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The same mechanism can affect several dimensions. Reusing an actor after charger installation can support dynamic reconfiguration while reducing training, adaptation, and integration effort. Computational growth is assessed under scalability; the effort needed to prepare and maintain that actor belongs to deployability. Health-dependent port removal contributes to safety by excluding an unsupported request and to robustness by retaining unaffected decisions. The measurements in Table~\ref{tab:timarl-four-dimensions} give those related claims distinct empirical meanings.
+
+Computational results identify hardware, batch size, member count, observation count, active groups, time resolution, and deterministic decoding settings. Constant parameter count is reported alongside the increasing work of processing additional resources. Operational measurements similarly identify their scope: validating an actor bundle in software and commissioning a real-world installation involve different tasks and durations.
+
+\subsection{Training, Selection, and Paired Evaluation}
 \label{sec:timarl-protocol}
 
-Each annual dataset contains 35,040 action steps. Four 1,344-step development windows cover different seasons: 4032--5375, 12792--14135, 21552--22895, and 30312--31655. Four disjoint windows, 6720--8063, 15480--16823, 24240--25583, and 33000--34343, are retained for confirmation. The remaining 24,288 steps are available for training and tuning. A complete replay on the same year after training is reported as a transductive annual benchmark, not as held-out evidence.
+The temporal split follows the annual protocol of Chapter~\ref{chap:control-benchmark}. Training uses 2023 excluding the first fourteen \gls{utc} days of February, May, August, and November, which are reserved for validation. Episode boundaries prevent a learning target from crossing into a held-out block. Preprocessing statistics are fitted on the training inputs and frozen. The complete 2024 sequence supplies the common test window, with no policy updates or tuning against its outcomes.
 
-Neural development uses seeds 123, 456, and 789. The confirmation set uses 1009, 2027, 3037, 4051, and 5059, paired with simulator seeds 2601--2604 where the scenario requires them. Checkpoint choice sees development results only. The selected policy must satisfy all of the following before cost is considered:
+The repetition design uses development seeds 123, 456, and 789 and five independently trained confirmation replicas with seeds 1009, 2027, 3037, 4051, and 5059. Candidate and reference share the same scenario chronology, initial physical conditions, exogenous inputs, and event schedule. Neural seeds vary the learned controller rather than the physical task. The principal estimate is the paired annual difference for each seed, with individual seed outcomes and the uncertainty interval retained. Daily or seasonal breakdowns interpret that complete window without replacing it.
 
-\begin{itemize}
-  \item total applied electrical-violation energy no greater than 0.5~kWh;
-  \item at least 99\% of feasible EV departures meeting minimum acceptable service;
-  \item no decrease in feasible EV target-tolerance rate or deferrable service relative to the paired reference;
-  \item no more than 5\% deterioration in daily peak ratio or ramping ratio;
-  \item no more than two percentage points loss in solar self-consumption.
-\end{itemize}
+Nominal selection first checks electrical and service requirements. Applied electrical-violation energy has a numerical tolerance of $10^{-6}$~kWh; at least 99\% of feasible \gls{ev} departures must satisfy the minimum service requirement; appliance deadlines and unserved energy are checked separately. \gls{ev} target accuracy and appliance service must not deteriorate relative to the matched reference. Daily peak and ramping may increase by at most 5\%, while \gls{pv} self-consumption may decrease by at most two percentage points. These thresholds are declared selection rules, applied before the test year is opened.
 
-Among policies that pass, promotion requires at least 0.1\% cost improvement. Daily peak, ramping, and solar self-consumption resolve ties in that order. The final scorecard also reports all-time peak, load factor, battery throughput, V2G export, community import/export/net exchange, members that improve, training time, and deterministic inference latency. Failing a hard gate cannot be offset by a lower scalar cost.
+Among candidates passing those conditions, the selected policy must reduce cost by at least the larger of EUR~0.01 and 0.1\% of the absolute reference cost. Daily peak, ramping, and solar utilisation resolve ties. In disturbed or physically infeasible periods, the record instead retains exposure, requested service, delivered service, and recovery. A power outage without backup cannot be judged by an uninterrupted-supply requirement. The appropriate comparison uses the same event for both controllers and a matched undisturbed replay to explain the attributable loss.
 
 \section{Results and Comparative Analysis}
 \label{sec:timarl-results}
 
-The evidence is divided into two levels. Software and runtime tests establish that the claimed interface, topology, feasibility, persistence, and trace mechanisms execute as described. Control superiority requires the frozen multi-seed campaign in \cref{sec:timarl-protocol}. Passing the first level does not substitute for the second.
+The available results establish the operation of the implemented interface, learner, and persistence mechanisms. The annual experimental comparisons specified above remain to be completed. This section reports the software evidence directly and retains the quantitative control questions separately, without assigning performance values to unexecuted comparisons.
 
-\subsection{Implemented and Verified Behaviour}
+\subsection{Interface and Learning Implementation}
 \label{sec:timarl-results-nominal}
 
-The focused v1 regression suite was rerun against Algorithms commit \texttt{58fb6370}. All 115 tests passed. The suite covers compiler contracts, policy runtime, checkpoint and trace contracts, the public typed-interface path, one dynamic real-simulator vertical slice, and the 15-second topology stress case. \Cref{tab:timarl-verified-evidence} states what this evidence supports.
+The focused regression suite passed all 139 tests in the repository snapshot based on Algorithms commit \texttt{a3c8194e}, using \texttt{softcpsrecsimulator==1.8.0}. The retained test log and source hashes identify the tested state. The suite covers compilation, policy runtime, checkpoints, traces, the public typed-interface path, a dynamic simulator integration case, and a high-frequency topology fixture. Table~\ref{tab:timarl-verified-evidence} summarises the exercised behaviour.
 
 \begin{table}[htbp]
 \centering
-\caption{Verified TI-MARL implementation evidence in the audited repository state.}
-\label{tab:timarl-verified-evidence}
 \small
-\begin{tabularx}{\textwidth}{@{}p{0.27\textwidth}p{0.25\textwidth}X@{}}
+\caption{\gls{timarl} behaviour established by the focused 139-test regression suite.}
+\label{tab:timarl-verified-evidence}
+\begin{tabularx}{\textwidth}{@{}p{0.25\textwidth}p{0.39\textwidth}X@{}}
 \toprule
-\textbf{Capability} & \textbf{Observed test evidence} & \textbf{Claim supported} \\
+\textbf{Mechanism} & \textbf{Exercised behaviour} & \textbf{Interpretation}\\
 \midrule
-Typed compilation and actor semantics & Determinism, order invariance, semantic distinction, unknown-type rejection, dynamic bounds, and multi-instance groups pass & The runtime interface has stable meaning beyond tensor position \\
-Local feasibility and service & Total/per-phase projection, EV service floor, V2G reserve, typed minimum power, and deferrable must-start cases pass & Final local bundles satisfy the encoded local contract while retaining raw/final evidence \\
-TI-PPO and TI-MAPPO & Both local and central-set critic paths train in the real-simulator vertical slice & The two declared backbones share one dynamic actor/runtime path \\
-Dynamic population & Join/leave GAE rules, checkpoint restoration across compatible compositions, and constant parameter count pass & Known members and assets can change without resizing the networks or discarding survivor history \\
-Health and trace closure & Sensor, communication, actuator, and asset events propagate to health, validity, closure logs, commands, and execution records & Degradation scope and requested/applied action lineage are machine-auditable \\
-High-frequency topology & Six shifted asset events produce seven structural versions in a 15-second fixture; compiler p95 is required to remain below 500~ms & Runtime values and sessions do not trigger unnecessary structural rebuilds \\
+Interface compilation & Determinism, ordering, semantic distinction, unknown-type rejection, dynamic bounds, repeated groups. & The tested resource associations survive changes in representation order and known instances.\\
+\addlinespace
+Local construction & Total/per-phase limits, \gls{ev} service floors, discharge reserves, operating minima, mandatory starts. & The tested bundles follow their encoded local contracts, with proposal and adjustment retained.\\
+\addlinespace
+Local and central training & \gls{tippo} and \gls{timappo} execute training in the simulator integration case. & Both critic arrangements operate with the common typed actor.\\
+\addlinespace
+Changing population & Join/leave trajectory boundaries, compatible restoration, unchanged parameter dimensions. & Population changes preserve the tested member identities and surviving trajectories.\\
+\addlinespace
+Health and execution records & Fault evidence reaches health, validity, closure records, commands, and execution feedback. & The tested intervention can be traced to its affected capability and rule.\\
+\addlinespace
+High-frequency topology & Six structural events yield seven structural versions; the compiler p95 meets a 500~ms test ceiling. & Routine value updates avoid unnecessary structural rebuilding in the 15-second fixture.\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-This evidence establishes implementation correctness under the exercised cases. It does not show that TI-MAPPO is cheaper than the best Chapter~\ref{chap:control-benchmark} controller, that it generalises to every compatible composition, or that the 500~ms test ceiling is a suitable deployment latency. Those are empirical questions.
+The integration tests establish a concrete connection between the formal objects and the simulator. A resource change reaches the compiler, creates or removes the corresponding groups, and passes through actor evaluation and action encoding. The topology fixture also distinguishes structural rebuilding from ordinary measurement updates. Its latency ceiling is a regression condition for that fixture; deployment timing requires the hardware-specific measurements in Section~\ref{sec:timarl-measures}.
 
-\begin{draftonly}
-\begin{table}[htbp]
-\centering
-\caption{Current single-window development diagnostic. This table is not confirmation evidence and is excluded from the clean thesis build.}
-\label{tab:timarl-development-diagnostic}
-\small
-\begin{tabular}{@{}lrr@{}}
-\toprule
-\textbf{Metric} & \textbf{RBCSmart} & \textbf{TI-MAPPO checkpoint} \\
-\midrule
-Cost (EUR) & 771.795 & 772.142 \\
-Applied electrical violation (kWh) & 0.968 & 0.371 \\
-Feasible EV minimum-service rate & 100.0\% & 100.0\% \\
-Feasible EV target-tolerance rate & 96.26\% & 97.20\% \\
-Battery throughput (kWh) & 750.74 & 750.38 \\
-Solar self-consumption & 68.09\% & 68.17\% \\
-Daily peak ratio to BAU & 1.198 & 1.175 \\
-Ramping ratio to BAU & 1.935 & 1.954 \\
-V2G export (kWh) & 8.70 & 11.17 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The diagnostic uses one development window and one neural seed. It suggests that the current checkpoint can reduce applied electrical-violation energy while preserving EV service, but it is slightly more expensive than the reference and does not improve every community metric. It neither passes the cost-promotion rule nor supports a superiority claim. Its purpose is to prevent the narrative from being written around imaginary favourable values.
-\end{draftonly}
-
-\subsection{Multiple Assets, Reconfiguration, and Held-Out Compositions}
+\subsection{Comparative Questions and Evidence Scope}
 \label{sec:timarl-results-reconfiguration}
-
-This analysis measures whether a policy trained over typed entity and group instances remains competent when the number of chargers changes, EV sessions move between chargers, modules are added or removed, buildings join or leave, and known module types appear in held-out combinations. Results report both control quality and interface correctness: entity-binding errors, invalid actions, admission decisions, retraining requirements, and recovery after topology changes.
-
-The key comparison is against the fixed-layout selected controller and the implemented AgentTransformer variant. A positive result requires more than accepting a different tensor length. It must preserve the relation between the new entity, its observations, action group, health, bounds, and affected constraints. Unknown types must be rejected, not assigned an arbitrary embedding.
-
-\draftnote{Populate the reconfiguration table from frozen Core-30-Dynamic, Core-30-Combined, Premium-100-Clean, and Premium-100-AllIn manifests. For every event report whether handling was zero-shot, checkpoint-restored, retrained, rejected, or forced to typed fallback.}
-
-\subsection{Health-Aware Robustness and Local Safety}
 \label{sec:timarl-results-health}
-
-Health experiments compare typed dependency-based recompilation with value replacement and mask-only handling where those baselines are executable. They measure service preservation, affected scope, detection duration, group disablement, bound contraction, unnecessary shutdown, fallback use, violation energy, and recovery hysteresis.
-
-Local safety results separate policy quality from the constraint-aware bundle construction. The analysis reports raw-bundle feasibility, final-bundle feasibility, adjustment frequency and magnitude, and the effect of removing local constraint semantics. Main-meter failure, charger failure, and stale SoC provide distinct failure scopes and should not collapse into one binary robustness score.
-
-\draftnote{Insert the final health and local-feasibility results, including the exact health thresholds, recovery rules, fallback controllers, and event durations.}
-
-\subsection{Multi-Agent Coordination and Shared Constraints}
 \label{sec:timarl-results-coordination}
-
-Community coordination is evaluated through aggregate observations, local and community reward components, and critic structure. The comparison includes TI-PPO, TI-MAPPO, the selected Chapter~\ref{chap:control-benchmark} MARL baseline, and the no-community-observation/reward ablations. It reports cost, participant benefit coverage, community peak and ramping, import/export, solar use, demand-response delivery, and residual shared-constraint pressure.
-
-A credible TI-MARL result should show that central training or community information changes the applied joint trajectory, not merely the critic loss. Since v1 contains no cross-member corrector, residual shared violations are attributed directly to the learned joint behaviour and simulator enforcement.
-
-\draftnote{Insert the final paired TI-PPO/TI-MAPPO and Chapter 5 comparisons. Keep local projector intervention separate from residual shared violations and report member-level benefit coverage.}
-
-\subsection{Scalability and Runtime Cost}
 \label{sec:timarl-results-scale}
-
-Scale experiments vary the number of members, observations, chargers and EV sessions, action groups, ports, and topology events. Actor latency, compiler latency, local-projector latency, critic latency, memory, training throughput, checkpoint size, and trace volume are measured alongside control performance.
-
-The results identify which dimension increased and which remained fixed. Shared heads keep model parameters constant when another known charger is added, but token processing and inference cost still grow. The set critic avoids rebuilding a fixed joint vector, while its pooling and encoder cost still grows with the active population.
-
-\draftnote{Insert actor, critic, compiler, projector, trace, and environment scaling curves with hardware, population, observation/group counts, batch sizes, and deterministic inference settings.}
-
-\subsection{Ablations, Explainability, and Boundary Conditions}
 \label{sec:timarl-results-ablations}
 
-The ablations determine whether typed semantics, entity binding, health closure, action-conditioned group decoding, local feasibility, the set critic, group credit, prior knowledge, and compatibility checks materially affect the claimed capability. Trace evidence is audited for completeness and fidelity: every record must match the snapshot, selected modes and fractions, active constraints, adjustments, commands, and simulator execution feedback.
+The tests support the implemented treatment of identity, validity, local construction, and restoration. The remaining empirical question is the benefit obtained when those mechanisms are used throughout an operating year. For the added charger, that benefit would appear in retained service and reduced rebuilding or retraining effort. For the missing measurement, it would appear in fewer unnecessary suspensions while respecting the affected physical constraints. For the joining building, it would appear in useful coordination at an acceptable computational and integration cost.
 
-Boundary results are reported explicitly. If the AgentTransformer baseline matches TI-MARL under the tested reconfiguration, the typed interface remains useful for software contracts and traces but the learning claim narrows. If the method requires retraining for every new combination of known modules, the compositional claim is weakened. If the projector intervenes frequently, safety is being supplied by the explicit layer rather than learned bundle coherence. If cost improves by missing service or shifting harm to a minority of members, the policy fails the protocol.
+Those outcomes require the matched comparisons in Section~\ref{sec:timarl-methodology}. A protected entity-based controller may achieve comparable energy performance; an explicit contract can still reduce integration ambiguity, but that becomes a deployability result requiring its own measurement. Conversely, accepting another charger without rebuilding the network establishes structural reuse while leaving its learned schedule to be assessed. The illustrative tables in Chapter~\ref{chap:control-benchmark} supply a reporting layout, not evidence of an advantage for \gls{timarl}.
 
-\draftnote{Insert the final ablation table, negative results, explanation-fidelity audit, and explicit reformulation decisions triggered by the evidence.}
+\section{Discussion}
+\label{sec:timarl-discussion}
 
-\begin{draftonly}
+The scientific question is whether \gls{timarl} sustains useful \gls{rec} control across scalability, deployability, safety, and robustness. The method connects learned coordination to resource interpretation, local protection, fault response, and model handoff. Its comparison with the state of the art therefore follows both the complete operating result and the contribution of each mechanism.
+
+\subsection{Relationship to State-of-the-Art Methods}
+\label{sec:timarl-neighbour-comparison}
+
+MOHITO's task-open formulation is especially relevant when service demands appear and disappear. In the running example, a vehicle arrival creates a session with an energy requirement and a deadline. \gls{timarl} distinguishes that session from the charger that serves it and from the building that owns the local controller. Its compiled action group remains attached to the charger while the target session changes. The distinction becomes consequential when a charger is installed or fails: that event changes a capability and its dependencies, rather than merely adding or removing a task. The energy adaptation in Section~\ref{sec:control-variable-references} makes these objects explicit before comparing the methods.
+
+\gls{coin} provide a complementary form of modularity. Their separation of perception, a shared controller, and action modules concerns which learned components can be reused across interface families. \gls{timarl} places explicit runtime bindings and constraints around repeated instances of recognised types. Two identical charger types share learned processing while retaining separate sessions, bounds, and phase incidence. This identifies the additional relationship under study; a modular reference equipped with the same bindings and protection is a stronger comparator than an unprotected fixed vector.
+
+The same reasoning applies to graph-based energy methods. \gls{gnn}-DT associates actions with charging resources across changing fleets, and HetGPS combines a reusable graph policy with physical correction. These are substantial precedents for the representation and safety components of the problem. \gls{timarl}'s distinguishing design is the common executable interface used by the actor, dependency rules, local construction, compatibility checks, and traces. Its empirical contribution depends on whether this connection improves the outcomes or effort measured under matched conditions.
+
+Fault-tolerant learning supplies a further algorithmic comparison. \gls{marta} changes the adverse experience used in training, whereas \gls{timarl}'s dependency rules determine which capabilities remain available after the recorded evidence changes. The two mechanisms can complement one another. A matched experiment compares ordinary and fault-aware training under the same detection, protection, and recovery conditions, so that retained service can be attributed to the learner or the operational response.
+
 \begin{table}[htbp]
 \centering
-\caption{Final TI-MARL result ledger to be populated from the frozen confirmation campaign.}
-\label{tab:timarl-final-result-ledger}
-\scriptsize
-\begin{tabularx}{\textwidth}{@{}p{0.25\textwidth}p{0.13\textwidth}p{0.13\textwidth}p{0.13\textwidth}X@{}}
+\small
+\caption{Relationships to neighbouring mechanisms and the specific \gls{timarl} comparison.}
+\label{tab:timarl-progression}
+\begin{tabularx}{\textwidth}{@{}p{0.22\textwidth}p{0.36\textwidth}X@{}}
 \toprule
-\textbf{Finding} & \textbf{Reference} & \textbf{TI-PPO} & \textbf{TI-MAPPO} & \textbf{Required evidence} \\
+\textbf{Neighbouring mechanism} & \textbf{Capability already established} & \textbf{\gls{timarl} comparison}\\
 \midrule
-Nominal cost and service & \evidencepending & \evidencepending & \evidencepending & paired seeds, confidence intervals, gate status \\
-Peak, ramping, solar, and exchange & \evidencepending & \evidencepending & \evidencepending & core scorecard and BAU ratios \\
-Member benefit coverage & \evidencepending & \evidencepending & \evidencepending & improved members / eligible members and distribution \\
-Dynamic known-type admission & \evidencepending & \evidencepending & \evidencepending & event-level binding, commands, retraining status \\
-Health containment and recovery & \evidencepending & \evidencepending & \evidencepending & scope, delay, service, violations, recovery \\
-Raw/projected/applied feasibility & \evidencepending & \evidencepending & \evidencepending & intervention rate and magnitude plus residual violation \\
-Scale and runtime cost & \evidencepending & \evidencepending & \evidencepending & compiler, actor, critic, memory, throughput, trace volume \\
-Training and inference time & \evidencepending & \evidencepending & \evidencepending & hardware, population, steps, deterministic mode \\
+Task-open hypergraphs & Relations between changing tasks, agents, and actions. & Persistent equipment and temporary sessions, with capability-dependent validity and bounds.\\
+\addlinespace
+\gls{coin} & Recombination of perception and action modules around a shared controller. & Runtime bindings of repeated resource instances and their constraints through one contract.\\
+\addlinespace
+Energy graph policies & Resource-level decisions, fleet/topology transfer, and, in HetGPS, corrective control. & Equal physical information and protection, with compilation and operational effort measured separately.\\
+\addlinespace
+Safety layers and compositional shields & Explicit correction or certified local obligations supporting declared safety properties. & Local feasible construction linked to current resources; global guarantees require shared assumptions and enforcement.\\
+\addlinespace
+Fault-tolerant learning & Selective adverse experience improves the policy response to the studied faults. & Equal fault exposure, detection and fallback; retained service, recovery, and training cost.\\
+\addlinespace
+Model lifecycle tooling & Versioning, packaging, validation, and deployment management. & Compatibility of the complete resource-to-command interpretation at the model handoff.\\
 \bottomrule
 \end{tabularx}
 \end{table}
-\end{draftonly}
 
-\section{Discussion, Generality, and Contribution to the Research Questions}
-\label{sec:timarl-discussion}
+\subsection{Scalability and Deployability}
 
-TI-MARL extends the methods of \cref{chap:control-benchmark} by changing the object over which the controller operates. The actor no longer assumes one fixed list of assets and action coordinates; it acts over an entity-bound interface compiled from the modules, sessions, health evidence, and bounds that exist now. TI-MAPPO's critic no longer requires a permanent concatenated population; it evaluates the active member set. The same semantics support local constraints, checkpoint compatibility, admission, and decision traces.
+A shared decoder allows the third charger to use the same learned parameters as the first two. The set critic similarly accepts another compatible building without extending a concatenated input layer. These choices address structural growth. Their practical value depends on processing time, memory, retained service, and the training or adaptation needed after the change. More resources still produce more observations, groups, and interactions to evaluate.
 
-RQ1 is addressed by stable member, charger, EV, and session identities; variable observation and action-group sets; known-type admission; topology-aware transitions; and a shared actor that preserves local information boundaries. The member can gain or lose a charger without inventing a new output coordinate, while the policy remains responsible for the active local bundle.
+Deployability asks what must be done to use that controller in the changed installation. The new charger must be identified, associated with the right measurements, assigned to its electrical constraints, and checked against the model's supported types. The compiled interface and compatibility signature preserve these associations in the actor bundle. They make reuse explicit enough to validate, and provide a common basis for the services described in Chapter~\ref{chap:energAIze}.
 
-RQ2 is addressed conditionally. Shared type heads and set encoders keep the parameter count independent of the number of known instances. Packed evaluation and cached structural preparation reduce repeated work. The central critic accepts a variable population. None of these makes computation constant: tokens, groups, compiler work, trace volume, and sample requirements still grow and are measured explicitly.
+The two dimensions overlap without becoming interchangeable. Avoiding network reconstruction can reduce computational work and installation effort at the same time. Yet a small model may still require extensive manual mapping, and a well-packaged model may be too expensive to evaluate on the target hardware. Separate timing, resource, and integration measurements reveal which benefit the method provides. The current actor bundle establishes the algorithm-side handoff; complete production serving and commissioning remain additional evidence requirements.
 
-RQ3 is addressed by causal health derivation, dependency closure, forced typed modes, dynamic bounds, EV and deferrable service floors, total and per-phase projection, and requested--projected--applied evidence. The guarantee is local and conditional on the encoded physical model. Shared community safety remains an empirical outcome because v1 has no cross-member hard corrector.
+\subsection{Safety and Robustness}
 
-RQ4 receives the algorithm-side contract: resolved interfaces, content-addressed snapshots, compatibility hashes, topology-aware checkpoints, actor-only handoff, and execution traces. These records make governance possible; they do not implement promotion, distributed rollout, monitoring, or rollback, which are developed in \cref{chap:lifecycle}.
+Safety concerns the action that reaches the resource and its consequences. A stale vehicle \gls{soc} can remove the discharge port because its reserve cannot be established. A valid charging request can still be reduced when two chargers compete for the same phase headroom. These are distinct interventions: dependency closure determines available capabilities, while local construction reconciles their combined physical effect. Requested, projected, and applied records make both visible alongside missed departures and other service outcomes.
 
-Typed explainability is a cross-cutting outcome. Mode identities, entity bindings, health rules, bounds, local adjustments, and simulator execution feedback are part of the executable contract. They can be reported directly, without translating anonymous output indices after the decision. This does not explain the internal causal reasoning of the network; it provides a faithful account of what the policy could observe and invoke, what the compiler excluded, and how the final command was obtained.
+Formal shielding provides an important comparison. Joint safety can follow from local obligations when their conjunction has been certified against the global specification \parencite{adalat2026contracts}. \gls{timarl}'s member-level projector has a narrower authority: it enforces the encoded local set. Shared transformer safety remains an outcome of the learned joint operation and the declared external protections. The four-dimension assessment therefore cannot convert local feasibility into a claim of complete \gls{rec} safety.
 
-The formal model can represent modular robots, industrial systems, edge services, and other CPSs with changing capabilities and local/shared resources. The evidence in this thesis remains energy-specific. Generality applies to the abstraction and implementation pattern. Performance in another domain requires new experiments, constraints, and safety evidence.
+Robustness concerns how much useful control remains during the same disturbance and how operation recovers. Disabling one charger's discharge while retaining another charger's service is more selective than suspending the entire building. That selectivity depends on trustworthy fault evidence and correct dependencies. Training against corrupted inputs can complement it by improving decisions over the remaining information. Equal detection thresholds and fallback rules are essential to determine whether an observed improvement comes from the policy, the compiled response, or earlier knowledge of the fault.
 
-The principal limitations are concrete. Known semantic and action-group families remain necessary. Mean-pooled community context cannot represent every feeder or phase topology. Aggregate signals can be delayed or insufficient. The projector is only as correct as its electrical and service contract, and repeated intervention can hide weak policy learning unless raw actions are reported. Auxiliary planners encode useful causal heuristics but can bias the policy towards their coverage. The current actor-only handoff is not yet a certified production serving path. Most importantly, final control and generalisation claims still depend on the multi-seed confirmation campaign.
+\subsection{Scope of the Contribution}
+
+\gls{timarl} integrates reusable multi-agent learning with local protection, health-dependent operation, and a compatible model handoff. The common typed description gives these mechanisms a consistent account of resources, observations, available actions, and constraints. Their combined value is assessed through retained energy and service performance, computation, integration effort, intervention, and recovery. Matched comparisons determine which mechanisms account for that value.
+
+The present implementation supports recognised resource and action families, declared health rules, and encoded local constraints. Its mean-pooled critic summarises the active \gls{rec}, while its actor bundle defines the algorithm-side deployment requirements. The focused tests establish operation under the exercised conditions. Comparative control and deployment evidence determines the practical benefit, including cases where another method achieves similar performance with different preparation or computational costs.
 
 \section{Chapter Summary}
 \label{sec:timarl-summary}
 
-TI-MARL treats the current observation--action interface of each agent as a versioned, entity-bound runtime object. The Typed Interface Compiler derives observation parts, dynamic action-group instances, parameterised ports, health-dependent validity, bounds, dependencies, and local constraint relations from the active modules and entities. A local policy encodes the variable interface into one shared local representation and jointly decodes an action bundle across the controllable groups that currently exist. New instances reuse the same type-conditioned decoders instead of requiring permanent asset-specific heads.
+\gls{timarl} connects multi-agent learning, local protection, health-dependent operation, and model handoff through a common typed description. Shared actors and local or central critics support \gls{rec} control, while resource bindings and constraints preserve the meaning of decisions. The assessment follows scalability, deployability, safety, and robustness through the same energy and service task, with matched comparisons examining the contribution of individual mechanisms.
 
-The method is multi-agent through the joint physical transition, coupled local and community outcomes, shared resources, dynamic population, and TI-MAPPO's central set critic. Execution remains decentralised: each actor receives its local interface and authorised aggregate community numbers. The analytic projector applies validity, service, and local electrical constraints. Health events change the interface at the appropriate scope, from one port to the complete member.
+Chapter~\ref{chap:real-world} returns to the installations and operational experience behind these requirements. Within the architecture of Chapter~\ref{chap:energAIze}, data services, learned decisions, supervision, and equipment interfaces must sustain that control together.
 
-This structure links the controller progression to the four requirements of the thesis. Dynamic heterogeneity becomes an interface and transition problem; scalability is tied to parameter sharing and measured variable-cardinality cost; safety and robustness acquire explicit health and feasibility semantics; deployability begins with compatibility, persistence, and trace contracts. The following chapter moves from that algorithm-side boundary to the lifecycle required to reproduce, validate, package, deploy, monitor, update, and recover policies and policy sets.
+\postdisplaypenalty=\timarlpostdisplaypenalty\relax

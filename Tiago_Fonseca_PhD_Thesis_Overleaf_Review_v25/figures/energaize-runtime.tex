@@ -1,0 +1,45 @@
+\begingroup
+\input{figures/energaize-architecture-styles}
+\begin{tikzpicture}
+\node[ea model box,text width=37mm,minimum height=12mm] (deployment) at (0,10.4) {\textbf{Deployment}\\Model and model contract};
+\node[ea control box,text width=32mm,minimum height=14mm] (controller) at (0,7.7) {\textbf{Controller}\\Inference service};
+\node[ea data box,text width=36mm,minimum height=15mm] (percepta) at (0,4.2) {\textbf{Percepta}\\Data processing\\and routing};
+\node[ea box,text width=36mm,minimum height=14mm] (interfaces) at (0,.65) {\textbf{Installation interfaces}\\CW Cloud Platform\\and other IoT APIs};
+\node[ea box,text width=36mm,minimum height=17mm] (assets) at (0,-2.5) {\textbf{Building equipment}\\Photovoltaic panels,\\storage, vehicles,\\chargers and loads};
+\node[ea model box,text width=30mm,minimum height=12mm] (config) at (-5.25,10.4) {\textbf{Configuration}\\Resources, interfaces\\and operating limits};
+\node[ea data box,text width=30mm,minimum height=14mm] (forecast) at (-5.25,7.45) {\textbf{Forecasting services}\\Production and consumption};
+\node[ea data box,text width=30mm,minimum height=12mm] (flexon) at (-5.25,5.2) {\textbf{Flexon}\\Flexibility forecasts};
+\node[ea data box,text width=30mm,minimum height=12mm] (pulse) at (-5.25,2.95) {\textbf{PulseCharge}\\Vehicle information};
+\node[ea data box,text width=30mm,minimum height=14mm] (context) at (-5.25,.5) {\textbf{User requirements}\\Prices and\\community information};
+\node[ea box,text width=29mm,minimum height=12mm] (watchdog) at (5.25,9.75) {\textbf{Watchdog}\\Service monitoring};
+\node[ea action box,text width=29mm,minimum height=13mm] (supervisor) at (5.25,5.9) {\textbf{Fail-Safe}\\\textbf{Supervisor}\\Action checks};
+\node[ea data box,text width=29mm,minimum height=12mm] (database) at (5.25,1.9) {\textbf{Database}\\Observations and\\decision records};
+\node[ea box,text width=29mm,minimum height=14mm] (ui) at (5.25,-1.45) {\textbf{Graphical user}\\\textbf{interfaces}\\\textbf{KPI Manager}\\Status and performance};
+\draw[ea model] (deployment.south) -- node[ea label,right] {Load model\\and contract} (controller.north);
+\draw[ea support] (config.east) -- (-2.8,10.4) -- (-2.8,8.15) -- (-1.8,8.15);
+\draw[ea support] (-2.8,8.15) -- (-2.8,4.65) -- (-2.0,4.65);
+\foreach \source/\y in {forecast/7.45,flexon/5.2,pulse/2.95,context/.5}{\draw[draw=eaData,line width=.8pt] (\source.east) -- (-3.2,\y);}
+\draw[draw=eaData,line width=.8pt] (-3.2,.5) -- (-3.2,7.45);
+\draw[ea data] (-3.2,4.2) -- (percepta.west);
+\draw[ea data] (percepta.north) -- node[ea label,left] {Processed\\observations} (controller.south);
+\draw[ea action] (controller.east) -- node[ea label,above] {Proposed actions} (5.25,7.7) -- (supervisor.north);
+\draw[ea action] (supervisor.south) -- (5.25,4.2) -- node[ea label,above] {Validated actions} (percepta.east);
+\draw[ea data] (-.65,1.45) -- node[ea label,left] {Measurements} (-.65,3.35);
+\draw[ea action] (.65,3.35) -- node[ea label,right] {Validated\\actions} (.65,1.45);
+\draw[ea data] (-.65,-1.55) -- node[ea label,left] {Measurements} (-.65,-.15);
+\draw[ea action] (.65,-.15) -- node[ea label,right] {Provider\\requests} (.65,-1.55);
+\draw[ea support] (watchdog.west) -- (2.55,9.75) -- (2.55,8.15) -- (1.8,8.15);
+\draw[ea support] (watchdog.east) -- (7.25,9.75) -- node[ea label,left] {Monitor} (7.25,5.9) -- (supervisor.east);
+\draw[ea support] (2.55,8.15) -- (2.55,4.7) -- (2,4.7);
+\draw[ea data] (percepta.east) -- (2.75,4.2) -- (2.75,1.9) -- node[ea label,above] {Records} (database.west);
+\draw[ea data] (database.south) -- node[ea label,right] {Inspect and evaluate} (ui.north);
+\draw[ea data] (-6.95,-4.15) -- (-6.2,-4.15);
+\node[ea label,anchor=west] at (-6.15,-4.15) {Data};
+\draw[ea action] (-3.65,-4.15) -- (-2.9,-4.15);
+\node[ea label,anchor=west] at (-2.85,-4.15) {Actions};
+\draw[ea model] (.05,-4.15) -- (.8,-4.15);
+\node[ea label,anchor=west] at (.85,-4.15) {Deployment};
+\draw[ea support] (4.1,-4.15) -- (4.85,-4.15);
+\node[ea label,anchor=west] at (4.9,-4.15) {Support};
+\end{tikzpicture}
+\endgroup

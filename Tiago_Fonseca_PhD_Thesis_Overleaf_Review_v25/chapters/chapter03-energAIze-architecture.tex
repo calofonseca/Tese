@@ -1,291 +1,376 @@
-\chapter{EnergAIze: An Integrated Framework for Intelligent Energy Management}
+\chapter{An Architecture for Real-World Community Energy Control: EnergAIze}
 \label{chap:energAIze}
-\markboth{The EnergAIze Framework}{The EnergAIze Framework}
+\label{chap:lifecycle}
+\markboth{An Architecture for Real-World Community Energy Control}{An Architecture for Real-World Community Energy Control}
+\newlength{\architectureoriginalparskip}
+\setlength{\architectureoriginalparskip}{\parskip}
+\setlength{\parskip}{0pt}
+\newlength{\architectureoriginaltextfloatsep}
+\newlength{\architectureoriginalintextsep}
+\newlength{\architectureoriginalcaptionskip}
+\setlength{\architectureoriginaltextfloatsep}{\textfloatsep}
+\setlength{\architectureoriginalintextsep}{\intextsep}
+\setlength{\architectureoriginalcaptionskip}{\abovecaptionskip}
+\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
+\setlength{\intextsep}{12pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{6pt}
+\raggedbottom
+\edef\architectureoriginalclubpenalty{\the\clubpenalty}
+\edef\architectureoriginalwidowpenalty{\the\widowpenalty}
+\clubpenalty=10000
+\widowpenalty=10000
 
-Control of a Renewable Energy Community extends well beyond the algorithm that selects an action. Before a controller can decide when an electric vehicle should charge, it must receive coherent measurements from different platforms, estimate information that is not directly observable, understand the user's flexibility, and translate its decision into a command accepted by the physical device. The same path must remain useful when measurements are delayed, a vehicle does not expose its state of charge, an asset becomes unavailable, or an external platform rejects an action. Data integration, prediction, optimisation, learning, safety, and deployment form one control system in a real community.
+The preceding chapter reviewed approaches to \gls{rec} energy control and identified gaps in their use in real-world installations. This chapter presents the architecture of EnergAIze, connecting control in buildings and \glspl{rec} to controller development, experiment orchestration, and deployment.
 
-EnergAIze is the integrated framework developed in this thesis to connect those concerns. It turns heterogeneous energy and mobility data into supervised decisions for flexible assets while preserving a controlled route for simulation, learning, evaluation, packaging, and runtime execution. Percepta and the Data Provider establish the integration boundary; prediction and vehicle services complete the controller's view of each installation; the Algorithms component produces local and community-aware decisions; the Fail-Safe Supervisor preserves physical and user constraints; CityLearn and EVLearn provide the experimental environment; and the inference and lifecycle services carry selected controllers towards real execution \parencite{fonseca2024energAIze,fonseca2025evlearn,fonseca2025realworldrec,percepta2025,opeva2026d63}.
-
-The architecture is easiest to understand by widening the scope progressively. A single charging decision first exposes the information, safety, robustness, and execution requirements that exist even inside one building. Repeating that decision across heterogeneous participants then exposes the scale, coordination, and deployment problem. Only after these pressures are visible is the detailed component architecture introduced. This progression follows the way the research problem emerged in practice: \gls{scalability}, \gls{deployability}, \gls{safety}, and \gls{robustness} arise from the control setting and are visible before the software diagram is complete.
-
-\draftnote{This chapter presents the EnergAIze framework through progressively refined architectural views and its concrete energy-domain components. Before submission, audit the final names and ownership of collaborative components, deployed versions, exact interface schemas, and the cloud, edge, and physical paths exercised in each demonstrator. Confirm the attribution and permission required for any final figure adapted from the OPEVA manuscript or deliverable D6.3.}
-
-\section{Architectural View I: A Supervised Energy Decision}
+\section{Energy Control in Buildings and Communities}
 \label{sec:energAIze-overview}
 \label{sec:energaize-overview}
-
-Consider one decision for an EV connected to a prosumer building. The site meter and photovoltaic inverter may report through an energy-management platform, the charger through a charging-service platform, and the vehicle through a manufacturer-facing service. Their messages use different identifiers, units, sampling periods, and communication mechanisms. Consumption and photovoltaic production over the decision horizon are uncertain forecasts. The intended departure time and minimum departure energy can originate in a recurrent routine, a prediction, or an explicit user request. Before any optimisation is attempted, the controller must know what each value means, which physical entity it describes, when it was produced, and how much confidence can be placed in it.
-
-The resulting installation state is not yet an action. A controller interprets that state together with prices, objectives, flexibility windows, and current constraints and proposes a charging, discharging, storage, or deferral decision. A supervision stage then checks whether the proposal remains admissible for the connected asset and the installation. Only the supervised result is translated into the protocol and command expected by the external platform. Telemetry and the provider response close the decision loop, allowing the system to distinguish what was proposed, what was requested, and what the device actually executed.
-
-\Cref{fig:energaize-decision-view} deliberately omits component names. It captures the smallest complete EnergAIze control loop and the first set of problems revealed by it.
-
-\begin{figure}[!t]
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-  font=\sffamily\small,
-  stage/.style={draw,rounded corners=2mm,align=center,minimum height=14mm,text width=28mm,inner sep=3mm,fill=white},
-  input/.style={stage,draw=blue!60!black,fill=blue!6},
-  decision/.style={stage,draw=engineering,very thick,fill=engineering!8},
-  guard/.style={stage,draw=red!65!black,fill=red!6},
-  physical/.style={stage,draw=black!65,fill=black!4},
-  pressure/.style={draw,rounded corners=4mm,align=center,minimum height=8mm,text width=36mm,inner sep=2mm,font=\sffamily\scriptsize,fill=black!2},
-  flow/.style={-{Latex[length=2.3mm]},thick,draw=engineering!85!black},
-  feedback/.style={-{Latex[length=2.1mm]},thick,dashed,draw=blue!65!black}
-]
-\node[input] (sources) at (-7.2,1.2) {Measurements, forecasts, and user needs};
-\node[input] (state) at (-3.6,1.2) {Coherent installation state};
-\node[decision] (policy) at (0,1.2) {Controller proposal};
-\node[guard] (supervisor) at (3.6,1.2) {Constraint and authority supervision};
-\node[physical] (asset) at (7.2,1.2) {Provider command and asset response};
-
-\draw[flow] (sources) -- (state);
-\draw[flow] (state) -- (policy);
-\draw[flow] (policy) -- (supervisor);
-\draw[flow] (supervisor) -- (asset);
-\draw[feedback] (asset.south) -- ++(0,-8mm) -| node[below,pos=0.25,font=\sffamily\scriptsize] {telemetry, acceptance, and executed action} (state.south);
-
-\node[pressure,draw=blue!55!black] (robust) at (-4.6,-1.8) {\textbf{Robustness}\\missing, stale, or predicted information};
-\node[pressure,draw=red!65!black] (safe) at (0,-1.8) {\textbf{Safety}\\asset, user, and site constraints};
-\node[pressure,draw=engineering!85!black] (deploy) at (4.6,-1.8) {\textbf{Deployability}\\deadline, runtime, and provider interface};
-
-\draw[dashed,draw=blue!55!black] (robust.north) -- (state.south);
-\draw[dashed,draw=red!65!black] (safe.north) -- (supervisor.south west);
-\draw[dashed,draw=engineering!85!black] (deploy.north) -- (asset.south);
-\end{tikzpicture}%
-}
-\caption{Architectural View I: the smallest complete EnergAIze decision loop. Heterogeneous information is converted into a coherent state, a controller proposes an action, supervision preserves physical and user constraints, and the external platform reports what was accepted and executed.}
-\label{fig:energaize-decision-view}
-\end{figure}
-
-Three cross-cutting requirements are already unavoidable in this single decision. \emph{Robustness} is required because a number in an observation does not reveal whether it is measured, forecast, stale, substituted, or unavailable. The appropriate response can range from normal inference to a contracted action range or conservative fallback. \emph{Safety} is required because state-of-charge limits, charger power, site capacity, connection state, and the user's departure requirement cannot be traded freely against cost or community reward. They influence state construction, the controller formulation, and the final supervision of the command.
-
-\emph{Deployability} appears as soon as the action must leave the model. The controller must execute within the decision interval, reconstruct the same preprocessing used during training, produce a named and bounded action, and communicate it through an interface that the provider and device accept. An action that is optimal in a notebook but cannot be interpreted, executed, or traced at the installation is not a usable energy decision.
-
-Scalability remains mostly latent at this first view. The loop concerns one installation and one decision deadline. Its importance becomes visible when the same semantic and execution contract must be preserved across participants whose assets, objectives, interfaces, connectivity, and computing resources are not identical.
-
-\section{Architectural View II: A Distributed Renewable Energy Community}
+\label{sec:energAIze-functional-view}
 \label{sec:energaize-community-view}
 
-Now consider the same decision loop across a Renewable Energy Community. One participant may contribute only demand and photovoltaic measurements. Another may expose a stationary battery and one domestic charger. A household can have two chargers whose sessions and actions vary independently. An office or service building can host several chargers under one site limit, while a larger installation can add local controllers, three-phase limits, and different actuation authority. Treating these participants as copies of one fixed vector would hide precisely the heterogeneity that determines what each local controller can observe and do.
+Households need their vehicles ready for travel, their rooms at a comfortable temperature, and their appliances to complete their work. Meeting these needs leaves choices about when electricity is consumed or stored, especially where a building also produces some of its own energy. To make those choices, a controller needs information about the services people require, the resources available to deliver them, and the limits within which they can operate. EnergAIze connects this information to the equipment through which a decision takes effect.
 
-EnergAIze uses a repeatable installation-level control boundary whose contents are configured by the assets and information available at that site. Local observations, user requirements, asset constraints, and physical actions remain associated with their installation. Community coordination contributes only the shared context required by the selected control formulation, such as a price, aggregate exchange, peak, ramping signal, demand-response request, or authorised message from other agents. This keeps local physical decisions identifiable within the community objective.
+Consider the vehicle introduced in Chapter~\ref{chap:introduction}, arriving home at 18:00 with a \gls{soc} of 30\% and a target of 80\% by 08:00. The charger reports that the vehicle is connected, vehicle information supplies its \gls{soc}, and the household meter shows how much power the other loads are using. Together with the departure requirement and the available charging capacity, these observations allow the controller to choose a charging power. That decision is sent through the installation's control interface, and subsequent measurements report the power delivered and the progress towards the target.
 
-\Cref{fig:energaize-community-view} widens the first view. Each installation retains the same semantic loop, but its asset composition and execution environment differ. The community layer connects these loops while preserving their local differences.
+\Cref{fig:energaize-building-loop} presents this flow. In the figure, \emph{State of the Environment} denotes the observations assembled for a decision. EnergAIze uses them to determine actions for the connected resources. Measurements and actions pass through the local control system or external service provider associated with the equipment.
 
-\begin{figure}[!t]
+\begin{figure}[htbp]
 \centering
-\resizebox{0.98\textwidth}{!}{%
-\begin{tikzpicture}[
-  font=\sffamily\small,
-  site/.style={draw,rounded corners=2mm,align=center,minimum height=26mm,text width=42mm,inner sep=3mm,fill=white},
-  community/.style={draw,rounded corners=2mm,align=center,minimum height=13mm,text width=142mm,inner sep=3mm,draw=engineering,very thick,fill=engineering!8},
-  platform/.style={draw,rounded corners=2mm,align=center,minimum height=12mm,text width=142mm,inner sep=3mm,draw=black!60,fill=black!3},
-  pressure/.style={draw,rounded corners=4mm,align=center,minimum height=8mm,text width=30mm,inner sep=2mm,font=\sffamily\scriptsize,fill=white},
-  shared/.style={<->,thick,draw=engineering!85!black},
-  local/.style={<->,thick,draw=blue!60!black}
-]
-\node[community] (community) at (0,4.2) {\textbf{Community coordination}\\authorised aggregate state, prices, objectives, grid requests, and coordination signals};
-
-\node[site,draw=blue!55!black,fill=blue!5] (home) at (-5.1,1.4) {\textbf{Residential instance}\\demand, PV, battery, one or two chargers};
-\node[site,draw=green!45!black,fill=green!6] (office) at (0,1.4) {\textbf{Service/office instance}\\several chargers, deferrable loads, shared site limit};
-\node[site,draw=red!55!black,fill=red!4] (large) at (5.1,1.4) {\textbf{Larger installation}\\local controller, multiple phases, restricted actuation};
-
-\draw[shared] (community.south west) -- (home.north);
-\draw[shared] (community.south) -- (office.north);
-\draw[shared] (community.south east) -- (large.north);
-
-\node[platform] (external) at (0,-1.2) {\textbf{External platforms and physical assets}\\provider-specific telemetry and control remain behind installation adapters and lower-level protections};
-\draw[local] (home.south) -- (external.north west);
-\draw[local] (office.south) -- (external.north);
-\draw[local] (large.south) -- (external.north east);
-
-\node[pressure,draw=engineering!85!black] at (-5.4,-3.1) {\textbf{Scalability}\\population, interfaces, coordination, compute};
-\node[pressure,draw=engineering!85!black] at (-1.8,-3.1) {\textbf{Deployability}\\cloud, server, HPC, and edge targets};
-\node[pressure,draw=red!65!black] at (1.8,-3.1) {\textbf{Safety}\\local and shared physical limits};
-\node[pressure,draw=blue!55!black] at (5.4,-3.1) {\textbf{Robustness}\\join, leave, faults, and degraded links};
-\end{tikzpicture}%
-}
-\caption{Architectural View II: heterogeneous installation instances participate in one community without being reduced to an identical asset model. The wider scope exposes population, interface, coordination, computing, deployment, shared-safety, and reconfiguration pressures.}
-\label{fig:energaize-community-view}
+\includegraphics[width=\linewidth]{energaize-information-actions.png}
+\caption[Information and actions in EnergAIze.]{Information and action flow. Source: author's master's dissertation.}
+\label{fig:energaize-building-loop}
 \end{figure}
 
-At this scope, \emph{scalability} is no longer equivalent to adding buildings. Population increases the number of decisions, but heterogeneity also increases the number and meaning of observations and action groups. Several chargers inside one building increase local action coupling without increasing the agent count. Community coordination introduces communication and aggregation costs. Training adds simulator throughput, replay, model, and experiment-management demands. Deployment adds memory, latency, image, network, and target-management requirements. The architecture must allow these dimensions to be measured separately because improving one does not guarantee improvement in the others.
+The inputs shown in \cref{fig:energaize-building-loop} fall into seven categories, according to the information they contribute to a decision:
 
-Deployability also becomes a distributed-systems concern. One installation can execute centrally, another on a server-side container, and another near its assets on an edge device. Training can use a personal workstation, an institutional server, an HPC system, or a remote GPU platform whose runtime, storage, authentication, and image requirements differ. A common experiment and policy contract is needed so that changing the execution target does not silently change the scientific meaning of the run or the runtime meaning of the controller.
+\begin{description}[font=\normalfont\bfseries,leftmargin=0pt,itemsep=0.25\baselineskip,topsep=0.4\baselineskip]
+\item[User requirements and flexibility.] Requested services and the freedom to adjust their delivery, such as a vehicle's departure time and target \gls{soc}, a comfort range, or an appliance's operating window.
+\item[Vehicle data.] Battery \gls{soc}, charging status, and battery capacity. These describe the vehicle's current condition and help determine the energy needed for its next use.
+\item[Building and grid data.] Demand, \gls{pv} production, storage state, grid exchange, and connection limits. These describe the installation's energy balance and the capacity available for flexible resources.
+\item[Electricity prices.] Purchase prices and, where applicable, export remuneration or \gls{rec} exchange prices. Their variation over time informs the cost of a charging or storage decision.
+\item[Carbon intensity.] Emissions associated with electricity supply. This information allows the controller to consider the emissions consequences of using grid electricity at different times.
+\item[Environmental data.] Weather conditions and forecasts, including temperature and solar irradiance. These help anticipate changes in renewable production and weather-dependent demand.
+\item[Travel and traffic data.] Planned journeys, routes, and traffic conditions. These can inform estimates of vehicle arrival, departure, and energy use, complementing the requirements supplied by the user.
+\end{description}
 
-Safety and robustness become coupled across levels. A local charger action is constrained by its EV and circuit, while several chargers can compete for one site limit and several buildings can contribute to a shared grid condition. A participant can leave, an EV session can end, an asset can fail, or a community message can become stale. Local control should continue where its information and authority remain sufficient. Shared coordination must expose its degraded state and prevent obsolete context from producing an apparently valid action.
+These categories can contain measurements, user declarations, configuration values, or forecasts. The vehicle's current \gls{soc} is a measurement; its required departure charge is a user requirement; its expected return time may be a forecast. Keeping these roles distinct allows the controller to use each value appropriately. The input selection for each experiment is retained in the configuration records described in Appendix~\ref{app:controller-configurations}.
 
-The two architectural views make algorithm selection only one part of the research problem. The control method operates inside a system that must preserve meaning across heterogeneous participants, increasing scale, physical constraints, degraded information, and different training and deployment environments.
+The loop repeats as conditions change. Cooking and heating can reduce the power available for charging; when those loads subside, charging can increase. At each decision interval, the controller receives updated measurements and accounts for the time remaining before departure. The measurements also show how closely the delivered power followed the request.
 
-\section{Architectural View III: Functional Components and Interfaces}
-\label{sec:energAIze-functional-view}
+Across a \gls{rec}, this arrangement is repeated for buildings with different equipment and daily routines. One household may have \gls{pv} panels and a battery, another a vehicle charger, and a workplace several charging points. Each building has a controller and associated data processing, configured for its resources. Measurements and actions remain linked to that building, while information relevant to the \gls{rec} can be shared among the participating controllers.
 
-The complete component view assigns each of the preceding responsibilities to an explicit architectural boundary. It separates provider-specific communication from installation semantics, predictive context from measured state, policy inference from physical supervision, and experimental development from runtime authority. These separations allow individual components to evolve without requiring the complete control system to be rewritten.
+\Cref{fig:energaize-community} extends the first view to several buildings. Each local controller receives observations from its building and returns actions to its equipment. In the illustrated deployment, a \gls{rec} server supplies shared information, including time, weather, carbon intensity, and electricity prices. The actor network represents the learned controller executed for each building. This organisation also accommodates the hierarchical methods developed in Chapter~\ref{chap:control-benchmark}, where a \gls{rec} controller supplies guidance for local decisions.
 
-\Cref{fig:energaize-overview} presents the functional architecture used throughout the remainder of the thesis. The figure shows one installation instance; the instance is repeated with different contents for the participants introduced in Architectural View II.
-
-\begin{figure}[!t]
+\begin{figure}[htbp]
 \centering
-\resizebox{0.98\textwidth}{!}{%
-\begin{tikzpicture}[
-  font=\sffamily\scriptsize,
-  component/.style={draw,rounded corners=2mm,align=center,minimum height=15mm,text width=32mm,inner sep=2.5mm,fill=white},
-  integration/.style={component,draw=blue!60!black,fill=blue!6},
-  context/.style={component,draw=green!45!black,fill=green!7,text width=45mm},
-  decision/.style={component,draw=engineering,very thick,fill=engineering!9,text width=36mm},
-  safety/.style={component,draw=red!65!black,fill=red!6},
-  external/.style={component,draw=black!65,fill=black!3,text width=36mm},
-  support/.style={component,draw=black!55,dashed,fill=black!2,text width=55mm},
-  trace/.style={component,draw=black!55,fill=black!4,text width=36mm},
-  dataflow/.style={-{Latex[length=2.2mm]},thick,draw=blue!65!black},
-  actionflow/.style={-{Latex[length=2.2mm]},thick,draw=engineering},
-  supportflow/.style={-{Latex[length=2.1mm]},thick,dashed,draw=black!65},
-  tinylabel/.style={font=\sffamily\tiny,fill=white,inner sep=1pt,align=center}
-]
-\node[context] (prediction) at (-2.9,5.6) {\textbf{Predictive and user context}\\consumption, PV, vehicle state, and flexibility};
-\node[context,draw=engineering!85!black,fill=engineering!5] (community) at (2.9,5.6) {\textbf{Renewable Energy Community context}\\shared objectives, prices, grid signals, and coordination messages};
+\includegraphics[width=\linewidth]{energaize-community-deployment-revised.png}
+\caption[Building controllers within a \gls{rec}.]{\gls{rec} deployment. Adapted from the author's master's dissertation.}
+\label{fig:energaize-community}
+\end{figure}
 
-\node[external] (platforms) at (-6.6,2.5) {\textbf{External platforms and physical installation}\\provider APIs, meters, PV, batteries, chargers, EVs, and flexible loads};
-\node[integration] (percepta) at (-2.2,2.5) {\textbf{Percepta and Data Provider}\\receive, translate, align, quality-check, aggregate, and route};
-\node[decision] (inference) at (2.2,2.5) {\textbf{Algorithms and inference}\\RBC, optimisation, RL, MARL, and TI-MARL policy execution};
-\node[safety] (supervisor) at (6.6,2.5) {\textbf{Fail-Safe Supervisor}\\constraint, health, and authority checks};
+\Needspace{3\baselineskip}
+The blue arrows carry observations from each building and the shared services into its controller; the purple arrows carry the resulting actions to its equipment. For the charging example, local information establishes what the household can do, while \gls{rec} information helps determine when that flexibility is useful. On a different day, when the vehicle remains connected until late afternoon, the controller can account for renewable production available elsewhere in the \gls{rec}. When many vehicles arrive together, spreading charging over their connection windows can limit the combined demand.
 
-\node[trace] (record) at (-2.2,-0.3) {\textbf{Decision record}\\inputs, versions, proposals, interventions, responses, and KPIs};
-\node[support] (development) at (-3.5,-3.0) {\textbf{Experimental development}\\historical and synthetic scenarios $\rightarrow$ CityLearn/EVLearn $\rightarrow$ controller training and evaluation};
-\node[support] (lifecycle) at (3.5,-3.0) {\textbf{Policy lifecycle}\\validated bundle $\rightarrow$ target selection $\rightarrow$ runtime loading, observation, and recovery};
+Organising data processing and control around each building gives installation-specific work a clear scope. Connecting a new charger changes that building's configuration and available actions. Adding a building introduces another local loop and updates the \gls{rec} information used for coordination. Processing close to the data source can reduce communication and keep detailed measurements within the local processing path. The controllers in \cref{fig:energaize-community} coexist with shared services and provider platforms, with placement determined by each installation.
 
-\draw[dataflow] (platforms.east) -- (percepta.west);
-\draw[dataflow] (percepta.east) -- (inference.west);
-\draw[actionflow] (inference.east) -- (supervisor.west);
-\draw[dataflow] (prediction.south) -- (percepta.north);
-\draw[dataflow] (community.south) -- (inference.north);
+\begin{samepage}
+Putting these local control loops into operation involves two complementary paths. During \emph{runtime}, incoming observations support a decision whose consequences are measured at the installation. During \emph{development}, data and simulation provide the conditions in which a controller is prepared and evaluated for that role. The runtime path is considered first, establishing what the controller must receive and produce. The development path then explains how such a controller is obtained, followed by the infrastructure that runs the experiments and loads the selected model into service.
 
-\draw[actionflow] (supervisor.south) -- ++(0,-11mm) -| node[tinylabel,pos=0.64,above] {validated provider request} (platforms.south);
-\draw[supportflow] (percepta.south) -- (record.north);
-\draw[supportflow] (development.east) -- (lifecycle.west);
-\end{tikzpicture}%
-}
-\caption{Architectural View III: functional EnergAIze components and interfaces for one installation. Provider integration, predictive context, controller execution, safety supervision, experimental development, and the policy lifecycle remain distinct while contributing to one closed control loop.}
+\end{samepage}
+
+% Keep the runtime overview in the chapter's portrait page orientation.
+\section{Runtime Architecture}
+\label{sec:energaize-runtime}
+
+The information and action flow described above requires several services to work within each decision interval. Measurements must reach the controller in a usable form, the controller must choose an action, and that action must reach the equipment with the applicable checks. The \gls{cw} cloud platform and other \gls{iot} interfaces connect the equipment to these services through \glspl{api}. \Cref{fig:energaize-overview} shows how EnergAIze assigns these responsibilities, expanding one building to expose its runtime components.
+
+\begin{figure}[H]
+\centering
+\makebox[\linewidth][c]{\includegraphics[width=1.1\linewidth]{energaize-runtime-revised.pdf}}
+\caption[Runtime architecture of EnergAIze.]{Runtime architecture of EnergAIze, expanded for one building.}
 \label{fig:energaize-overview}
 \end{figure}
 
-\subsection{Percepta and the Data Provider}
-\label{sec:energaize-percepta}
+\begin{samepage}
+On the right of the figure, the \gls{cw} cloud platform and other \gls{iot} interfaces connect the physical equipment to EnergAIze. On the left, Percepta processes incoming observations and routes outgoing actions. Vehicle information and forecasts support the controller, while action validation, service monitoring, and operational records accompany its decisions. This organisation underlies the integrations described in the EnergAIze publications and \gls{opeva} demonstrator \parencite{fonseca2024energAIze,fonseca2025realworldrec,opeva2026d63}.
 
-Percepta addresses the first obstacle to intelligent control: physical installations do not produce model-ready observations. Cleanwatts, my.i-charging, meters, local controllers, vehicle services, and other IoT providers expose different APIs, message formats, identifiers, units, and sampling rates. Coupling a controller directly to those details would make each provider or asset change a modification of the decision model. Percepta provides the stream-processing capability that separates transport and provider semantics from the installation-level representation \parencite{percepta2025}.
+\end{samepage}
 
-In the OPEVA instantiation, the Data Provider middleware realises this boundary for both historical-data preparation and runtime inference \parencite{opeva2026d63}. A receiver contains the communication logic for a source, such as HTTP for a REST service or RabbitMQ for a message-based provider. A translator extracts the relevant fields and converts the provider message into the common EnergAIze representation. Installation queues and an accumulator decouple subsequent processing from the original source. A manager then aligns the decision interval, checks missing values, reconstructs relationships among assets, and assembles the observation expected by the controller.
+\begin{samepage}
+Installation configuration links these components to equipment, measurement sources, commands, and operating limits. A model contract specifies the controller's inputs and outputs; Section~\ref{sec:energaize-contract} describes its passage into runtime. The architecture and the roles of its components were conceived and designed by the author, who also guided the collaborative research and student projects through which several components were implemented. Their implementation contributions are acknowledged in the associated publications and the Statement on Co-Authored Work.
 
-This organisation makes a new provider a bounded integration task: its receiver and translator can be added without modifying the other providers or the controller. It also keeps data treatment visible. Resampling a power measurement, interpolating a short gap, repeating a previous state, and substituting a forecast are not equivalent operations. The source, timestamp, quality, and transformation of a value are part of the information needed to determine whether normal control remains defensible.
+\end{samepage}
 
-The historical-data path retrieves and aligns installation records for simulation and training. The runtime path performs the same semantic work under a decision deadline, constructs an inference request, receives a supervised decision, and forwards the provider-specific request. Percepta and the Data Provider are bidirectional: they carry observations towards the controller and validated device requests towards the responsible external platform.
-
-The OPEVA middleware calls the service that invokes an installation's AI model the \emph{Predictor}. In this specific interface, the term denotes an inference gateway and does not refer to a forecasting model. Throughout the thesis, runtime inference executes a control policy, whereas prediction estimates future or unavailable quantities used by that policy.
-
-\subsection{Prediction, PulseCharge, and User Flexibility}
-\label{sec:energaize-prediction}
-
-A useful scheduling decision requires information that is not always measured directly. Near-term consumption and photovoltaic production influence whether flexible demand should be served immediately or deferred. A charger may report connection and delivered energy without exposing the EV state of charge. The user's departure time and required energy are behavioural service constraints, separate from electrical telemetry. EnergAIze represents each source explicitly and retains its meaning outside the numerical observation vector.
-
-Consumption and photovoltaic-production services estimate the exogenous profiles used by the scheduling controller. Their outputs permit anticipation of a demand peak or local photovoltaic surplus and can provide a bounded substitute during a temporary sensor interruption. A forecast remains identifiable as a forecast, allowing the same controller to be evaluated with perfect, predicted, degraded, or unavailable information. Forecast models can evolve independently of provider adapters, safety supervision, and the control method.
-
-PulseCharge supplies vehicle context that the charging infrastructure alone often cannot provide. It hides manufacturer-specific authentication and telemetry behind a common vehicle-data interface and retrieves state of charge, connection, and charging state where available. Request budgets and periodic-task supervision reflect the rate limits and temporary failures of manufacturer-facing services.
-
-The associated flexibility model orders information by authority and confidence. A non-integrated or uncontrollable vehicle exposes no actionable flexibility. A recurrent schedule provides a low-interaction baseline. Flexibility Prediction estimates likely connection windows and energy needs from historical behaviour. Explicit user input takes precedence when the current journey differs from the routine. This hierarchy prevents a statistically convenient prediction from silently overriding a declared departure requirement \parencite{opeva2026d63}.
-
-The Route Planner extends the same information model to an EV in transit by combining route, range, charger, price, and community information. It is an optional application component; installation-level control can operate without it. The evidence for its integration is bounded separately in \cref{chap:real-world}.
-
-\subsection{Algorithms, Inference, and the Fail-Safe Supervisor}
+\subsection{The Controller and Its Inference Service}
 \label{sec:energaize-algorithms}
 
-The Algorithms component is the decision-making core of EnergAIze. In the OPEVA demonstrator it is also described as the Flexibility Scheduling Algorithm. It receives the installation state assembled by the Data Provider, including measurements, prices, forecasts, asset availability, vehicle requirements, and the community information permitted by the selected formulation. It returns named actions such as a battery charge or discharge request, an EV charging limit, or the schedule of a deferrable load \parencite{fonseca2024energAIze,opeva2026d63}.
+At the centre of the runtime is the controller, shown within the inference service in \cref{fig:energaize-overview}. It determines how the resources under its control should operate during the next interval. The surrounding services supply information, apply its decisions, and report their consequences. The control methods investigated in Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} occupy this position in the architecture.
 
-Each installation controller represents local objectives and available assets. Community coordination introduces effects that cannot be inferred from one local meter alone, including aggregate peak, renewable sharing, ramping, and a common demand-response request. EnergAIze is not tied to one algorithm family: rule-based control provides an interpretable baseline and fallback, optimisation exposes explicit objectives and constraints, reinforcement learning supports adaptive local control, and MARL or hierarchical methods coordinate several participants. TI-MARL later addresses the fixed-interface assumptions that remain when assets, agents, and capabilities change. Their formulations and experimental evidence belong to Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl}; this chapter treats every method through its declared observation and action contract.
+For the household vehicle, the immediate choice is the charging power to request. Its consequences extend beyond the next interval: charging now contributes towards the departure requirement but also increases household demand, while delaying charging preserves capacity now and leaves less time to deliver the remaining energy. A stationary battery introduces a related choice. Discharging it may support the household during a busy period, although the energy then used will no longer be available later. The controller considers these resources together, using the observations and forecasts selected for its decision problem.
 
-The energAIze inference runtime preserves that contract outside the training process. A deployable bundle associates policy artefacts with observation names, encoders, action names, action bounds, topology, and deployment metadata. The runtime reconstructs preprocessing and executes either a learned model or a deterministic policy behind the same request interface. Explicit aliases keep transport-specific field names outside the policy. Chapter~\ref{chap:lifecycle} describes the bundle, runtime, and deployment mechanisms in detail.
+The control methods reviewed in Chapter~\ref{chap:related-work} can occupy this role through a common observation and action interface. A \gls{rbc} applies its configured rules, an optimisation method solves the current scheduling problem, and a learned controller evaluates its policy. The reinforcement-learning methods studied in this thesis use that interface during both development and operation, keeping decisions associated with the same resources and service requirements.
 
-The result of inference is a proposed action, not unconditional physical authority. The Fail-Safe Supervisor checks it against rated power, state-of-charge bounds, connection state, vehicle departure requirements, site and phase limits, unavailable observations, and the authority granted to the current controller. According to the installation and failure condition, it can bound or reject the action, retain a previously safe value, or invoke a conservative rule-based alternative. External platforms, local controllers, and device firmware retain their lower-level protection and can still reject the resulting command.
+At \gls{rec} level, the decisions made in one building influence the conditions experienced by others. Several households postponing charging until the same low-price interval can create a new peak. Coordination requires the controller formulation to represent the relevant \gls{rec} information and relationships, whether through shared observations, the learning process, or guidance from a \gls{rec} controller. The runtime provides the communication and resource associations needed by the selected method. The progression from building decisions to coordinated and hierarchical control is developed in Chapter~\ref{chap:control-benchmark}; Chapter~\ref{chap:ti-marl} examines how the controller can accommodate changes in the participating resources.
 
-EnergAIze records the observation context, controller and model version, proposed action, supervised request, provider response, executed value where available, and relevant KPIs. These records separate policy behaviour from the protection applied around it. A stable physical trajectory accompanied by frequent supervisor corrections demonstrates an effective protection layer, but it does not by itself demonstrate a reliable learned policy.
+The inference service executes the model selected for this role. It receives the prepared observations, applies the input processing declared by the model contract, evaluates the model, and returns named actions. The algorithm determines the decision; the service supplies the software interface through which that decision becomes available to the rest of EnergAIze. A compatible rule-based policy can occupy the same interface. Keeping the observation and action interpretation with the model allows a selected controller to be loaded without reconstructing its processing by hand.
 
-\Cref{tab:energaize-component-responsibilities} condenses the functional responsibilities without turning them into independent contributions.
+The returned actions are proposals for the current interval. Before they reach the charger or battery, they pass through the validation and provider interfaces described below. Subsequent measurements close the loop by revealing what the equipment actually did. Preparing the inputs for this sequence begins with the data-integration service.
+
+\subsection{Data Integration and Routing: Percepta}
+\label{sec:energaize-percepta}
+
+The measurements required for a decision can arrive through different interfaces and at different times. A building energy-management platform may expose meter readings and battery status, a charging platform may report connection and charging power, and a vehicle service may provide \gls{soc}. The stream-processing component, Percepta, handles the integration and processing of these sources so that the controller receives observations associated with the correct building and resources \parencite{percepta2025}.
+
+Source-specific receivers obtain the incoming data, and translators map their fields into the representation used by the installation. Subsequent processing aligns the values used for a decision interval. For example, charging power reported in watts and household demand reported in kilowatts must be expressed consistently before they enter a common calculation. Their timestamps also matter: a charging measurement taken before the vehicle disconnected describes a different condition from the latest connection status. The data-processing path retains these associations when assembling the controller's observations.
+
+In the \gls{opeva} integration, the Data Provider implements this path through receivers, translators, queues, an accumulator, and a manager that prepares the inference request \parencite{opeva2026d63}. The same integration work supports the retrieval of historical records for development. On the action path, a forwarder converts the validated action into the format and destination required by the equipment provider. This arrangement places provider-specific communication at the boundary of the system, allowing the controller to work with the observation and action names defined for the installation.
+
+\subsection{Vehicle Information: PulseCharge}
+\label{sec:energaize-pulsecharge}
+
+Vehicle information extends what can be learned from the charger. The vehicle-data service, PulseCharge, retrieves information such as \gls{soc} and charging status through manufacturer interfaces, subject to the information available for the connected vehicle. It handles the corresponding authentication and periodic data retrieval, then makes that information available to the data-processing path.
+
+In the running example, the charger establishes that a vehicle is connected, while PulseCharge can supply the 30\% \gls{soc} needed to determine how much energy remains to be delivered. These sources describe the same charging session from different points: one reports the charger and its power, the other the vehicle and its battery. Associating them with the correct vehicle and charger allows the controller to interpret them together. The charging platform remains the interface through which the charging action is applied.
+
+\subsection{Production and Consumption Forecasting}
+\label{sec:energaize-prediction}
+
+The production and consumption forecasting services, represented by \emph{Predictor} within the forecasting group in \cref{fig:energaize-overview}, supply expected conditions over the period considered by the controller. Production forecasts estimate \gls{pv} output; consumption forecasts estimate the demand against which charging or battery operation will take place. Their inputs can include historical measurements, weather information, and calendar variables. Percepta makes the resulting forecasts available alongside the latest observations, with the forecast horizon and time interval identifying the period they describe.
+
+For the vehicle arriving at 18:00, a forecast of high household demand can support spreading charging over the night. If the vehicle remains at home on another day, a forecast of substantial midday production may favour charging during that period. Each forecast concerns a future quantity whose realised value will later be measured. As new observations arrive, subsequent decisions can account for the difference between the expected and actual conditions. This connection keeps forecasts within the ordinary sequence of measurement, decision, and response.
+
+\subsection{Flexibility Forecasting: Flexon}
+\label{sec:energaize-flexon}
+
+The flexibility-forecasting component, Flexon, estimates the flexibility expected to be available from participating resources. Within the forecasting role shown in the runtime figure, it supplies information about opportunities to adjust consumption or storage. For vehicle charging, this includes anticipating when a vehicle will be available and the energy associated with its expected use. The controller can then consider whether the anticipated connection window offers room to move charging towards a more favourable period.
+
+User requirements establish the service to be delivered during the current connection. In the example, the driver requests 80\% by 08:00. If an earlier departure is specified, the available charging window becomes shorter even when previous journeys suggest a later departure. The controller receives both the forecast used to anticipate availability and the current requirement that its decisions must satisfy. Production and consumption forecasts describe the energy conditions around this opportunity; Flexon describes the flexibility expected to be available within it.
+
+\subsection{Action Validation: Fail-Safe Supervisor}
+\label{sec:energaize-supervision}
+
+The Fail-Safe Supervisor is a separate component between the controller's proposed action and the request sent to the equipment. It checks the proposal against the installation's operating limits and current resource information, including charger ratings, battery limits, and available connection capacity. A proposal within those limits passes through unchanged; where a request exceeds the available capacity, the supervisor limits it before forwarding. In the \gls{opeva} middleware, validation precedes the forwarder that constructs the provider request \parencite{opeva2026d63}.
+
+Each part of this path has a distinct responsibility. The controller's feasibility mechanisms account for the constraints represented by its method, while the inference service applies the output bounds and resolution declared for the model. The supervisor checks the resulting request against the operating conditions reported by the installation. Provider platforms and equipment retain their own protections when executing the validated action. This separation preserves the distinction between policy proposals, supervisory intervention, and equipment response developed in Section~\ref{sec:ch2-safety-literature}.
+
+For the household vehicle, an increase in other loads may leave less power available than the controller requested. The supervisor reduces the charging command to the available capacity, and the next measurements show how much energy was delivered. Subsequent decisions then account for the energy still required before 08:00. The record of the original proposal and its correction makes it possible to examine both the immediate limit and the effect on departure readiness.
+
+If the algorithm stops or produces no inference output for the current interval, the supervisor uses a lightweight \gls{rbc} to provide a fallback action. Its configured rules use the available operating information and remain subject to the installation's limits. The supervisor logs these fallback decisions as well as adjustments to policy proposals. The resulting records show when the learned controller supplied the action, when supervision changed it, and when control continued through the fallback.
+
+\subsection{Service Monitoring: Watchdog}
+\label{sec:energaize-watchdog}
+
+The Watchdog monitors the services involved in the control loop, including data processing, controller execution, and supervision. It identifies interruptions so that the affected service can be examined and restored. The supervisor provides the immediate fallback when an inference output is unavailable; the Watchdog makes the service interruption visible to the operator. Its scope follows the dependencies: losing one vehicle-data source affects that vehicle's observations, while losing a shared inference service may affect several buildings. Resuming learned control requires the relevant observations and inference outputs to be available again.
+
+Data availability also matters while the services themselves remain running. In the documented \gls{opeva} middleware, an absent measurement can be completed with the previous value when preparing an interval \parencite{opeva2026d63}. Its source time remains important when deciding how that value can be used. A delayed price update and an unavailable battery \gls{soc} have different implications for the charging decision. The response depends on the information needed for the requested action and the alternative control behaviour configured for the installation.
+
+\subsection{Operational Records, User Interfaces, and KPI Manager}
+\label{sec:energaize-records}
+
+The database retains observations and decision records so that the course of operation can be examined. These records associate the controller version and its observations with the proposed action, any supervisory adjustment or fallback, the validated action, the provider response, and subsequent measurements. For the vehicle, they allow a reduction in charging power to be traced to the policy, the supervisor, or the equipment. Keeping that distinction through the session connects each intervention to the energy delivered before departure.
+
+The graphical user interfaces give operators access to the current state of the installation and its operational records. They provide a way to inspect the participating resources, follow their measurements and actions, and examine interruptions reported through monitoring. An operator investigating unexpectedly slow charging can therefore relate the requested power to the vehicle state and the limits applied along the control path.
+
+The \gls{kpi} Manager calculates \glspl{kpi} from the recorded operation. Electricity cost and peak demand can be examined at building and \gls{rec} level, alongside the vehicle's \gls{soc} at departure. The intervention records show when those outcomes were obtained with corrections or fallback control. The same operational records supply data and cases for subsequent training and evaluation.
+
+\section{Controller Development}
+\label{sec:energaize-development-runtime}
+\label{sec:lifecycle-architecture}
+
+The runtime architecture establishes what a controller receives, how its proposals reach the equipment, and how their consequences are recorded. Development prepares the controller for that role. Historical data and installation configuration provide the starting point, while simulation allows candidate policies to encounter successive conditions and be evaluated against the services they should deliver. The same process supports later retraining when operational records reveal conditions that call for a revised controller.
+
+\Cref{fig:energaize-development} follows this controller through development. Installation records~(1) and \gls{rec} configuration~(2) define the scenarios~(3). Training~(4) and evaluation~(5) lead to the selected model bundle~(6), which reappears at the start of the deployment view in \cref{fig:energaize-deployment}. The computing infrastructure in Section~\ref{sec:orchestration} executes the training and evaluation stages as experiments.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{energaize-controller-development.pdf}
+\caption[Controller development through simulation and evaluation.]{Controller development, with the model bundle~(6) continuing into the deployment view.}
+\label{fig:energaize-development}
+\end{figure}
+
+\subsection{Data Preparation and Simulation Scenarios}
+\label{sec:energaize-scenarios}
+
+The household meter, vehicle service, and charger introduced in the runtime view also provide records from which development scenarios can be constructed. These records describe when energy was consumed, when a vehicle was present, and how its charging progressed. Data preparation aligns timestamps, units, and sampling intervals, identifies missing periods, and separates the records used for training from those reserved for evaluation. The \gls{rec} configuration identifies its buildings, equipment, capacities, and operating limits. These describe the setting in which the selected control method is developed.
+
+The building-energy simulator, CityLearn, uses these inputs to represent the environment in which controllers act \parencite{nweye2025citylearnv2}. Vehicle and charger modelling was extended through EVLearn \parencite{fonseca2025evlearn}, and the CityLearn v3 development presented in Chapter~\ref{chap:simulator} supplies the experimental environment used throughout this thesis. Historical demand and production describe the conditions around a decision, while resource models calculate how the controllable equipment responds to it.
+
+The distinction matters for the charging example. Recorded household demand can supply the background load for the evening, but the vehicle's \gls{soc} must evolve according to the actions chosen by the controller being tested. Replaying the recorded charging trajectory would prevent a different decision from changing the outcome. The vehicle model instead updates the stored energy as charging proceeds, subject to its parameters and the charger limits. The next observation reflects that response, allowing the controller to reconsider its decision as the departure approaches.
+
+Supervisor records identify intervals in which a proposal was limited or a fallback supplied the action. These intervals help select conditions to reproduce during development, such as a recurring evening capacity shortage or an interruption in inference. When operational records are used directly as learning experience, the proposed action, validated action, and measured response remain associated. This retains the quantities needed to account for intervention in the learning method, following the distinction in Section~\ref{sec:ch2-constrained-foundations}.
+
+A scenario fixes the conditions of this interaction. It identifies the buildings and resources, the available observations and actions, the external data, and the events encountered during the episode. The arrival at 18:00 and requirement of 80\% by 08:00 can be held constant while several controllers are compared. An earlier departure, a lower connection limit, or an additional vehicle creates a further scenario. These variations let the development process examine particular changes while preserving the settings needed to interpret their consequences.
+
+The scenario also defines the correspondence with runtime. An observation of \gls{soc} belongs to a specified vehicle, and a charging action belongs to a specified charger with a defined unit and range. Forecasts describe information available when the decision is made. Maintaining these associations during simulation prepares the controller for the data and action interfaces through which it will later operate.
+
+\subsection{Controller Training and Evaluation}
+\label{sec:energaize-training-evaluation}
+
+With the environment established, \gls{rl} proceeds through repeated interaction. The controller receives the current observations and selects actions for the represented resources. The simulator applies those actions, advances the resource states, and returns the next observations and a reward. The learning procedure uses this experience to adjust the policy. Over successive episodes, the controller encounters the consequences of its choices across complete operating periods.
+
+In the household example, selecting a low charging power may reduce demand during a busy interval, yet leave more energy to be supplied later. The simulated trajectory exposes both effects. The reward expresses the objectives used during learning, while the environment and the controller's feasibility mechanisms represent the applicable constraints. Costs, peaks, and service outcomes can then be examined over the resulting charging session. Their precise formulation depends on the method studied and is developed in the control chapters.
+
+Multi-agent training extends this interaction to the \gls{rec}. Each agent acts for the resources assigned to it, and the environment calculates the combined effect of those actions on buildings and shared quantities. The learning procedure may use information from several agents, even where the resulting controller uses local observations during execution. The development configuration records that distinction: information available to training and information required by the deployed policy have different roles. The runtime interface is determined by the latter.
+
+Evaluation applies a candidate policy with its parameters fixed under scenarios kept separate from training. Common scenarios and information allow comparison with rule-based and other control methods. Energy and service outcomes are read alongside supervisory corrections and fallback use, with the same protection settings retained across a comparison. For the vehicle, a lower cost can then be related to departure readiness, household peak, and the interventions needed to obtain them. Following retraining, comparison with the previous controller also shows how behaviour changes under both the newly identified conditions and the previous evaluation scenarios. Repeated training runs with different random seeds expose variation introduced by learning.
+
+The outcome of this process is a set of results associated with the configuration and model that produced them. Model selection uses those results to identify the controller intended for a particular runtime role. The selected model is exported together with its input and output description, forming the model bundle introduced in Section~\ref{sec:energaize-contract}. Its observation order, processing, and action interpretation must agree with the controller evaluated in simulation.
+
+These stages can require many executions: training several candidates, repeating seeds, and evaluating each controller under several scenarios. Their sequence establishes the work that the infrastructure must support. The next section follows an experiment from its configuration to execution on an available computing resource, then follows the selected model into the inference service.
+
+\section{Experiment Orchestration and Controller Deployment}
+\label{sec:orchestration}
+\label{sec:energaize-deployment}
+\label{sec:lifecycle-governance}
+
+Executing the development process requires a persistent account of each experiment and a way to run it on suitable computing resources. The experiment-management service, the Job Orchestrator, maintains the configuration, queue, and execution record. A Worker Agent connects that record to the machine or remote service that performs the computation. Once a model has been selected, the deployment backend manages its bundle and requests its loading at the chosen inference target. These services carry the controller from an experimental configuration to its place in the runtime architecture.
+
+\subsection{Infrastructure and Experiment Configuration}
+\label{sec:energaize-infrastructure}
+\label{sec:lifecycle-core}
+\label{sec:lifecycle-entities}
+
+\Cref{fig:energaize-orchestration} shows the computing arrangement behind this process. The web interface, backend, and orchestrator run as separate services on the \gls{opeva} server, alongside persistent storage and the workers configured there. The web interface accesses jobs and experiment data through the orchestrator, while the backend provides the deployment interface. A local Worker Agent starts experiment containers through the host's Docker service. Other workers submit work to Deucalion or Union, where the experiment is executed remotely. Personal computers and the Jetson host run their own Worker Agent and experiment containers.
+
+The execution targets provide \glspl{cpu} and, where required, \glspl{gpu}; the worker selects an execution image compatible with the target hardware. Remote submission uses \gls{ssh} or an \gls{api}, according to the target. The Jetson target uses the 64-bit Arm architecture, labelled ARM64 in the figure.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{energaize-orchestration.pdf}
+\caption[Computing infrastructure for experiment orchestration.]{Worker Agents manage training~(4) and evaluation~(5) on local or remote resources. The expanded experiment retains the simulator and controller of \cref{fig:energaize-development}.}
+\label{fig:energaize-orchestration}
+\end{figure}
+
+The worker is a persistent service responsible for obtaining work, launching it, and reporting its progress. The experiment is the process that runs the simulator and control method for one job. With Docker execution, the worker and experiment occupy separate containers on the same host; access to the host's Docker service allows the worker to start and stop the experiment. A remote adapter performs the equivalent management through the target's submission interface. This division allows the experiment software to retain its own dependencies and execution environment while the worker manages its lifecycle.
+
+The experiment configuration combines the \gls{rec} configuration and dataset with the selected controller, observations, actions, reward, random seed, and training or evaluation period. The execution request adds the software image and computing requirements. Resolving these settings before dispatch gives the worker a complete description of the work to perform. The configuration actually executed is retained with the job, so that a later change to a reusable configuration file does not change the account of an earlier experiment.
+
+For the charging example, two runs may use the same controller and household data while assuming different departure times or charging limits. Their interpretation depends on keeping those differences visible. A retraining run likewise has its own configuration and record, even when it continues from an earlier model.
+
+\begin{samepage}
+Experiment tracking, model storage, and serving are established concerns in machine-learning operations \parencite{kreuzberger2023mlops,zaharia2018mlflow}. \gls{rl} also requires the environment in which experience is generated \parencite{li2022rlops}. The experiment record therefore retains the simulator and scenario configuration alongside the controller settings.
+
+\end{samepage}
+
+The orchestrator is implemented as a \gls{http} service using FastAPI. Its interface supports experiment submission, job inspection, worker communication, and access to configurations and results. Shared storage retains each job's settings, state, and outputs under a common identity used by the web interface and workers. The experiment can therefore continue independently of the browser session through which it was submitted.
+
+A worker periodically reports its availability, software version, active work, and relevant computing capabilities. When it has capacity, it requests a job that matches its execution profile. The orchestrator supplies the software image, resolved configuration, execution command, and required data locations. The worker then launches the simulator and controller using the execution mechanism of its target. The algorithms receive the configuration prepared for the experiment, while the worker handles the surrounding execution process.
+
+This separation gives each service a clear responsibility. Queueing and job identity remain with the orchestrator; resource-specific execution remains with the worker. The training program can consequently run on a local machine or through a remote scheduler using the same experiment description. Additional workers make it possible to execute independent experiments concurrently, including different random seeds, controller settings, or scenarios.
+
+\subsection{Execution on Heterogeneous Computing Resources}
+\label{sec:energaize-compute}
+
+The computing resources used during development have different execution environments. A workstation can start a container directly, a supercomputer admits work through a batch scheduler, and a remote service may require data to be transferred before execution begins. The Worker Agent accommodates these differences through target-specific adapters. Each adapter carries the common job description into the target environment and returns its state and outputs to the orchestrator.
+
+\Cref{tab:lifecycle-targets} summarises the supported execution profiles. The distinction between them concerns how the experiment reaches the processor, obtains its data, and returns its results. The scenario and controller settings remain attached to the same job throughout this process.
 
 \begin{table}[htbp]
 \centering
-\caption{Principal EnergAIze components and their interfaces within the control loop.}
-\label{tab:energaize-component-responsibilities}
-\footnotesize
-\begin{tabularx}{\textwidth}{@{}p{0.22\textwidth}p{0.32\textwidth}X@{}}
+\caption{Computing resources and their execution adapters.}
+\label{tab:lifecycle-targets}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.20\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}X@{}}
 \toprule
-\textbf{Component} & \textbf{Principal input} & \textbf{Responsibility and output} \\
+\textbf{Resource} & \textbf{Execution mechanism} & \textbf{Responsibility of the adapter} \\
 \midrule
-Percepta and Data Provider & Provider messages, identifiers, units, timestamps, and commands & Normalised installation state, data-quality context, and provider-specific forwarding \\
-Prediction services & Historical and recent demand, PV, weather, and contextual variables & Forecast profiles with explicit provenance and confidence \\
-PulseCharge and flexibility services & Vehicle telemetry, schedules, behaviour, and user declarations & Vehicle state, connection window, energy need, and flexibility authority \\
-Algorithms and inference & Declared observations, objectives, constraints, topology, and policy bundle & Named local and community-aware proposed actions \\
-Fail-Safe Supervisor & Proposed actions, health, authority, and physical/user limits & Bounded, rejected, retained, or fallback device requests \\
-Decision record & Inputs, versions, proposals, interventions, provider responses, and telemetry & Traceable relation between context, proposed control, requested control, and observed execution \\
+Server & Docker with shared storage & Start the selected image, provide data access, and collect outputs. \\
+Personal computer & Docker with optional \gls{gpu} & Connect an intermittently available resource and complete active work before shutdown. \\
+Deucalion & Slurm and Singularity/Apptainer & Stage inputs, submit the batch job, follow scheduler state, and retrieve results. \\
+Union \gls{inesctec} & Remote tasks with \gls{gpu} resources & Transfer inputs, retain the remote run identity, and recover the returned results. \\
+Jetson Xavier & Docker with a compatible NVIDIA image & Match the ARM64 architecture and installed \gls{gpu} software to the execution image. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\section{Controller Development and Runtime Operation}
+For server and personal-computer workers, the experiment container reads the configuration and data from mounted storage. For Deucalion, the Worker Agent remains on the submission side. Its adapter creates a remote workspace, stages the required inputs, and submits a Slurm request using a compatible container image. Slurm allocates the computing resources on which the experiment runs through Singularity or Apptainer. Scheduler limits and resource requests become part of that execution setup. Logs are synchronised while the job runs, and the final outputs return to the job's stored record.
 
-\subsection{CityLearn, EVLearn, and Experimental Development}
-\label{sec:energaize-simulation}
+The Union Worker Agent similarly remains on the \gls{opeva} side and submits remote tasks. Inputs and results pass through object storage. The worker retains the remote run identity so that monitoring and result retrieval can continue across interruptions. The Jetson profile addresses another form of heterogeneity: its processor architecture and installed \gls{gpu} software require a compatible image. These differences are handled at the worker boundary, where the information needed to execute the experiment is available.
 
-Trial-and-error learning cannot begin on occupied buildings or connected vehicles. An exploratory charging action can violate a site limit, increase cost, or leave a user without the required departure energy. EnergAIze develops controllers against a simulated representation of the intended installations before considering real-world inference or actuation.
+Keeping the adapters behind the common worker interface allows the computing infrastructure to grow without introducing a separate experiment format for each resource. It also preserves information about where and how a result was produced. The software image, execution target, and returned logs remain available when interpreting differences between runs or preparing a further experiment.
 
-CityLearn provides the building, demand, photovoltaic, storage, weather, tariff, and community environment. EVLearn extends it with vehicles, chargers, connection sessions, battery dynamics, and V1G/V2G flexibility \parencite{nweye2025citylearnv2,fonseca2025evlearn}. Historical data processed through the integration path can populate this environment, while synthetic and hybrid scenarios expose controllers to reconfiguration, faults, tight limits, and rare events that are impractical or unsafe to create physically. Rule-based, optimisation, RL, and MARL controllers can then be compared under the same assets, information, time period, and KPI definitions.
+\subsection{Job Progress, Results, and Recovery}
+\label{sec:energaize-job-recovery}
 
-The simulator is an experimental representation of selected physical mechanisms. It does not copy the complete physical system. Provider latency, rejected commands, unavailable vehicle telemetry, human overrides, and electrical protections require explicit disturbance models or separate real-world evidence. Chapter~\ref{chap:simulator} establishes the scenario and simulation contracts; Chapter~\ref{chap:real-world} identifies which assumptions survived interaction with external platforms and demonstrators.
+An experiment passes through several stages before its results are available. After submission and queueing, a worker accepts the job, prepares its execution environment, and starts the training or evaluation process. The job record follows this progression through explicit states. Remote preparation has its own place in that record because transferring a dataset or waiting for a scheduler is different from running the controller inside the simulator.
 
-Training and evaluation bind the controller configuration to a scenario, dataset, simulator version, seed, reward, and compute target. Logs, progress, KPIs, checkpoints, and the final policy artefacts remain associated with that job. This record allows a result to be reconstructed and prevents a model file from becoming detached from the world in which its behaviour was evaluated.
+Progress updates and logs make this distinction useful to the operator. The EnergAIze web interface displays the queue, worker availability, execution state, training progress, and completed outputs. It also provides access to configurations and \gls{kpi} comparisons, with links to MLflow records where tracking is enabled. These views connect the visible result to the experiment that produced it. For a charging study, the operator can inspect cost and peak demand alongside the departure charge, then return to the corresponding scenario and controller settings.
 
-\subsection{Runtime Topologies and Deployment Boundary}
-\label{sec:energaize-deployment}
+Persistent state also supports recovery when communication or execution is interrupted. Each dispatched attempt can carry an identifying token that the worker returns with its updates. If a job is reassigned, updates from the superseded attempt are rejected. This prevents a delayed worker from replacing the state or results of a newer execution. A stop request follows the same division of responsibility: the orchestrator records the request, and the worker stops the container or remote job that it manages.
 
-An EnergAIze instance can execute centrally for several installations or locally beside one installation. Central execution suits a community platform that already aggregates participant data. Edge execution suits an installation requiring lower latency, reduced data movement, or continued local service during a cloud interruption. These placements implement the same logical control loop, but they have different connectivity, hardware, packaging, observation, and recovery requirements.
+Remote result retrieval requires particular care. A training process may finish successfully while the connection needed to download its outputs is unavailable. In the Union adapter, a recovering state records this interval between completed computation and locally available results. The remote run identity and recovery progress are persisted, allowing the transfer to resume after the worker restarts. The completed training outputs can then be recovered without repeating the experiment. Deucalion similarly retains the connection between the local job and the remote scheduler record while its adapter monitors execution and retrieves the outputs.
 
-The model runtime and integration middleware remain separable. A policy bundle can be updated without replacing every provider adapter, while a new provider receiver does not require the controller to be retrained solely because the transport protocol changed. In OPEVA, OCPP links chargers and the charging platform; Modbus TCP/IP links selected chargers, meters, and local controllers; OCPI carries charging information and profiles between platforms; and REST or RabbitMQ connects data and algorithm services. The integration boundary absorbs these protocols and keeps them outside the policy.
+Once execution and result retrieval are complete, model selection can use the recovered evidence. The selected controller then needs a description that allows the inference service to reconstruct the input processing and action interpretation used during evaluation. This is the role of the model contract.
 
-The lifecycle infrastructure connects personal and institutional compute, remote HPC and GPU platforms, shared experiment storage, policy export, and one or more inference services. Its purpose is not merely to make training faster. It ensures that the configuration executed on heterogeneous workers produces a traceable artefact that can be validated and loaded by the runtime without a manual reimplementation of preprocessing or action semantics. Chapter~\ref{chap:lifecycle} develops this path and its failure semantics.
+\subsection{The Model Contract}
+\label{sec:energaize-contract}
 
-The presence of a component in the architecture does not assign the same evidence level to every site. An installation can contribute historical data, participate only in simulation, execute inference without actuation, or accept bounded physical commands. Chapter~\ref{chap:real-world} reports OPEVA and DemFlex by evidence level and keeps their deployment conditions separate.
+The selected model is exported with a model contract that preserves its input and output settings: observation names, ordering and encoding, returned actions, and agent--model associations. This manifest and the model files form the \emph{model bundle}~(6) shown in the development and deployment views. The full experiment configuration remains in the job record.
 
-\section{Architectural Rationale and Thesis Map}
+\Cref{tab:energaize-model-contract} groups the information passed through this interface. The installation configuration supplies the connection to physical equipment and its provider interfaces. The model contract supplies the interpretation required by the selected controller. Their correspondence is what allows an observation assembled by Percepta to reach the intended input and a returned action to be directed to the correct resource.
+
+\begin{table}[htbp]
+\centering
+\caption{Information carried by the model contract.}
+\label{tab:energaize-model-contract}
+\small
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{0.24\textwidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Part of the contract} & \textbf{Stored information} & \textbf{Use in runtime} \\
+\midrule
+Observations & Names, ordering, and input encoders & Reconstruct the input representation used during development. \\
+Actions & Names, bounds, and output settings & Return identifiable actions in the form expected by the integration path. \\
+Agents and models & Agent indices, model format, and file locations & Select the model associated with the requested agent. \\
+Origin and configuration & Run identity and accompanying environment metadata & Associate the loaded controller with its development record. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For the household vehicle, the contract determines where \gls{soc} enters the model and how the returned charging decision is named. If the model was trained with encoded calendar variables or a particular observation order, the inference service reconstructs that processing when it loads the bundle. A controller serving several agents also needs the association between each agent and its model. This association can point to separate model files or to a shared model used by several agents.
+
+The general export path produces neural models in the \gls{onnx} format and rule-based policies in \gls{json}. Before the bundle is finalised, validation checks the manifest structure, declared formats, referenced files, agent indices, and observation and action dimensions. The resulting package can be passed from the experiment implementation to the inference service without manually rebuilding its feature ordering or action mapping. The control methods developed in Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} supply any additional requirements for their runtime components.
+
+\subsection{Controller Deployment and Updates}
+\label{sec:policy-registry}
+\label{sec:edge-deploy}
+\label{sec:lifecycle-monitoring}
+
+The deployment backend maintains a catalogue of model bundles in shared storage. Each stored bundle retains its manifest and model files under a content-derived identity. The web interface allows the operator to inspect the available bundles and select a version for an inference target. A target is the service endpoint at which the selected controller will be loaded; the installation configuration determines which observations and equipment are associated with that service.
+
+\Cref{fig:energaize-deployment} continues from the same model bundle~(6), through catalogue storage~(7), operator selection~(8), and backend loading~(9). The controller runs inside the inference service, using the runtime connections shown in \cref{fig:energaize-overview}.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{energaize-model-deployment.pdf}
+\caption[Model deployment and the runtime control loop.]{Model deployment~(6--9) and the controller within the runtime control loop.}
+\label{fig:energaize-deployment}
+\end{figure}
+
+For the selected target, the backend resolves the stored bundle location and sends a loading request to the inference service. The service reads the manifest, locates the model files, prepares the input encoders, and creates the appropriate \gls{onnx} or rule-based executor. It then reports the loaded configuration and agent indices, making the active controller visible to the backend and web interface.
+
+During operation, health information exposes the service's readiness, while request identifiers associate inference calls with their responses. The records described in Section~\ref{sec:energaize-records} connect the loaded controller to supervisory interventions, provider responses, and subsequent measurements. An operator can consequently follow a charging request from the selected model to the power delivered at the installation.
+
+Updates use the same loading path. The operator selects a new bundle for the target and inspects the reported active version after loading. Earlier bundles can remain in the catalogue and be selected again when a previous controller is required. The backend protects a bundle reported as active by a reachable target from deletion, preserving the files associated with that deployment. Each target exposes its own loaded state, allowing the operator to follow changes across installations.
+
+The operational records retained during deployment supply the datasets and cases used for subsequent development. An operator can revisit intervals with repeated corrections or fallback use, together with changes in connection times, equipment, or operating limits. These findings guide scenario revisions, configuration updates, or controller retraining through the same orchestration service. The resulting candidate is evaluated through the process in Section~\ref{sec:energaize-training-evaluation}, after which the operator can select its model bundle for deployment. Its development record retains the connection to the operating conditions that motivated the update.
+
+\section{Chapter Summary}
 \label{sec:energAIze-forward-map}
 \label{sec:energaize-chapter-map}
 
-The progressive views establish the architectural argument. Architectural View I showed that a useful local decision already depends on robust information treatment, explicit safety boundaries, and an executable runtime contract. Architectural View II showed that a community multiplies the number of decisions, interface diversity, coordination, shared constraints, computing demands, and deployment targets. Architectural View III assigned those pressures to explicit functional boundaries. EnergAIze provides the common system context in which the later contributions can be stated and evaluated. Evidence that the four requirements have been satisfied must still come from the experiments and demonstrators.
+EnergAIze connects \gls{rec} energy control to the services needed to develop and operate its controllers. Runtime integrates observations, controller execution, independent supervision, and equipment interfaces. Development uses data and simulation to train and evaluate candidates, with the Job Orchestrator and Worker Agent managing experiment execution. The deployment backend loads the selected model bundle into the inference service. Operational records return measured outcomes and supervisory interventions to development, supporting later retraining and evaluation.
 
-\Cref{tab:energaize-requirement-map} records where the four requirements enter the architecture and where the thesis develops the corresponding methods and evidence.
+These connections give architectural form to the four dimensions established in Chapters~\ref{chap:introduction} and~\ref{chap:related-work}. For \emph{scalability}, \gls{rec} configurations and experiment records allow control outcomes to be related to the system's size, composition, and computing requirements. For \emph{deployability}, the model contract, development services, and equipment interfaces organise preparation, training and adaptation, integration, and maintenance so that evaluated behaviour can be reproduced and sustained. \emph{Safety} is addressed through constraint enforcement and separate records of proposals, supervisory intervention, and equipment response. \emph{Robustness} draws on service monitoring, fallback control, and recovery, with retained service examined under the conditions recorded during operation.
 
-\begin{table}[htbp]
-\centering
-\caption{Traceability between the four cross-cutting requirements, EnergAIze mechanisms, and the detailed thesis chapters.}
-\label{tab:energaize-requirement-map}
-\footnotesize
-\begin{tabularx}{\textwidth}{@{}p{0.18\textwidth}p{0.45\textwidth}X@{}}
-\toprule
-\textbf{Requirement} & \textbf{Architectural manifestation} & \textbf{Detailed treatment} \\
-\midrule
-Scalability & Repeatable heterogeneous installation instances; bounded local interfaces; explicit community information; separable simulation, training, orchestration, and inference resources & Simulator performance and scenario scale in Chapter~\ref{chap:simulator}; control and learning scale in Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl}; worker and runtime scale in Chapter~\ref{chap:lifecycle} \\
-Deployability & Stable data and action boundaries; self-contained controller bundles; central and edge topologies; target-specific execution behind common experiment and inference contracts & Policy lifecycle, heterogeneous workers, packaging, inference, monitoring, and recovery in Chapter~\ref{chap:lifecycle}; demonstrated integrations in Chapter~\ref{chap:real-world} \\
-Safety & Entity, user, site, and shared constraints; distinction between proposal and executed action; independent supervision and lower-level protection & Constraint representation in Chapter~\ref{chap:simulator}; controller mechanisms in Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl}; runtime evidence in Chapter~\ref{chap:real-world} \\
-Robustness & Provenance and quality of observations; explicit health and availability; local degraded operation; traceable failures, reconfiguration, fallback, and recovery & Disturbance scenarios in Chapter~\ref{chap:simulator}; robust and dynamic control in Chapter~\ref{chap:ti-marl}; lifecycle recovery in Chapter~\ref{chap:lifecycle}; real-world boundaries in Chapter~\ref{chap:real-world} \\
-\bottomrule
-\end{tabularx}
-\end{table}
+Chapter~\ref{chap:simulator} develops the simulation environment used to represent buildings and resources and compare their controllers. Chapters~\ref{chap:control-benchmark} and~\ref{chap:ti-marl} develop the control methods, while Chapter~\ref{chap:real-world} examines their integration and use in operating installations.
 
-The heterogeneous installation model also establishes the architectural setting for RQ1: participants, assets, capabilities, and interfaces are allowed to differ and change while local and community objectives remain connected. RQ2 is investigated through the several dimensions of scalability made visible in the second view. Safety and robustness provide the two complementary parts of RQ3. The experiment, bundle, deployment, monitoring, and recovery path provides the system setting for RQ4.
-
-This map determines the remaining thesis progression. Chapter~\ref{chap:simulator} constructs the controlled world in which the relevant conditions can be represented and repeated. Chapter~\ref{chap:control-benchmark} develops progressively more capable controllers, while Chapter~\ref{chap:ti-marl} addresses dynamic typed interfaces as the principal algorithmic contribution. Chapter~\ref{chap:lifecycle} governs experiments and policy execution across heterogeneous infrastructure. Chapter~\ref{chap:real-world} then returns to the complete EnergAIze architecture and examines which components, interfaces, and control paths were exercised in OPEVA and DemFlex.
-
-\section{Chapter Summary}
-
-EnergAIze connects heterogeneous energy and mobility information to a supervised physical decision. Its architecture becomes necessary progressively. A single decision exposes robust information treatment, physical and user safety, and an executable deployment contract. A distributed community adds multidimensional scale, heterogeneous interfaces, shared constraints, reconfiguration, and heterogeneous computing targets. Percepta, prediction, PulseCharge, the Algorithms and inference services, the Fail-Safe Supervisor, CityLearn and EVLearn, and the experiment lifecycle give these responsibilities explicit boundaries.
-
-The framework integrates the research context while the methods and evidence remain the responsibility of the later chapters. The next chapter begins that evidence chain by establishing the data, scenario, and simulation foundation used to train and compare controllers under the conditions revealed by the architectural views.
+\setlength{\parskip}{\architectureoriginalparskip}
+\clearpage
+\setlength{\textfloatsep}{\architectureoriginaltextfloatsep}
+\setlength{\intextsep}{\architectureoriginalintextsep}
+\setlength{\abovecaptionskip}{\architectureoriginalcaptionskip}
+\flushbottom
+\clubpenalty=\architectureoriginalclubpenalty
+\widowpenalty=\architectureoriginalwidowpenalty

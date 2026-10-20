@@ -1,0 +1,21 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration, Core-30 Normal. Nominal performance before a change of resource configuration.}
+\label{tab:control-dynamic-scorecard}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrr@{}}
+\toprule
+\textbf{Configuration} & \textbf{Cost} & \textbf{CO$_2$} & \textbf{\gls{ev} min.} & \textbf{\gls{ev} band} & \textbf{Corrected}\\
+ & [EUR] & [kg] & [\%] & [\%] & [\%]\\
+\midrule
+\multicolumn{6}{@{}l}{\emph{Fixed-layout reference}}\\
+\gls{matd3} (residual) & 19\,680 & 25\,200 & 99.8 & 96.0 & 2.3\\
+\addlinespace[4pt]
+\multicolumn{6}{@{}l}{\emph{Variable-resource representations}}\\
+Transformer \gls{ppo} & 21\,360 & 28\,100 & 99.0 & 89.0 & 5.0\\
+Transformer \gls{matd3} & 20\,160 & 25\,700 & 99.7 & 95.5 & 2.0\\
+\bottomrule
+\end{tabular*}
+\end{table}

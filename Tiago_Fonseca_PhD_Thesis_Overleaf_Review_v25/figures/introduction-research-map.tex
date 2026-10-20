@@ -1,0 +1,107 @@
+% Editable vector map: chapter order and feedback from operational studies.
+\begingroup
+\definecolor{introMapInk}{HTML}{19344B}
+\definecolor{introMapBlue}{HTML}{28668C}
+\definecolor{introMapTeal}{HTML}{337E7B}
+\definecolor{introMapPurple}{HTML}{74608F}
+\definecolor{introMapLine}{HTML}{C9D4DC}
+\begin{tikzpicture}[
+  x=1cm,y=1cm,
+  chapter/.style={circle,draw=introMapBlue,fill=introMapBlue!5,
+    minimum size=1.02cm,inner sep=1pt,align=center,
+    font=\small\bfseries,text=introMapInk},
+  heading/.style={anchor=north west,font=\small\bfseries,text=introMapInk},
+  detail/.style={anchor=north west,text width=9.15cm,align=left,
+    font=\small,text=introMapInk,inner sep=0pt},
+  pathline/.style={-{Stealth[length=2mm]},draw=introMapLine,line width=0.8pt},
+  icon/.style={draw=introMapBlue,line width=0.75pt,line cap=round,line join=round}
+]
+\node[font=\scriptsize\sffamily,text=introMapInk] at (0.55,0.83) {CHAPTER};
+\node[anchor=west,font=\scriptsize\sffamily,text=introMapInk] at (2.85,0.83) {ROLE IN THE INVESTIGATION};
+
+\foreach \y in {0,-1.6,-3.2,-4.8,-6.4,-8.0}
+  \draw[pathline] (0.55,\y-0.55) -- (0.55,\y-1.04);
+
+\node[chapter] at (0.55,0) {\ref{chap:foundations}};
+\node[heading] at (2.8,0.36) {Research foundations};
+\node[detail] at (2.85,-0.12) {Literature, research gaps and requirements for practical control.};
+% Open book.
+\begin{scope}[shift={(1.95,0)},icon]
+\draw[fill=introMapBlue!5] (-0.39,0.27) -- (-0.08,0.20) -- (0,-0.30) -- (-0.35,-0.22) -- cycle;
+\draw[fill=introMapBlue!5] (0.39,0.27) -- (0.08,0.20) -- (0,-0.30) -- (0.35,-0.22) -- cycle;
+\draw (0,0.20) -- (0,-0.30);
+\end{scope}
+
+\node[chapter] at (0.55,-1.6) {\ref{chap:energAIze}};
+\node[heading] at (2.8,-1.24) {System architecture};
+\node[detail] at (2.85,-1.72) {Information, learning, deployment and supervised execution.};
+% Controller with connected services.
+\begin{scope}[shift={(1.95,-1.6)},icon]
+\draw (-0.30,0.27) -- (0,0) -- (0.30,0.27);
+\draw (-0.30,-0.27) -- (0,0) -- (0.30,-0.27);
+\foreach \x/\y in {-0.30/0.27,0.30/0.27,-0.30/-0.27,0.30/-0.27}
+  \draw[fill=white] (\x-0.075,\y-0.065) rectangle (\x+0.075,\y+0.065);
+\draw[fill=introMapBlue!12] (-0.11,-0.11) rectangle (0.11,0.11);
+\end{scope}
+
+\node[chapter] at (0.55,-3.2) {\ref{chap:simulator}};
+\node[heading] at (2.8,-2.84) {Experimental environment};
+\node[detail] at (2.85,-3.32) {Simulation of resources and events; datasets, scenarios and KPIs.};
+% Simulation display and trace.
+\begin{scope}[shift={(1.95,-3.2)},icon]
+\draw[fill=introMapBlue!4] (-0.38,-0.19) rectangle (0.38,0.30);
+\draw (-0.27,-0.08) -- (-0.12,0.09) -- (0.01,-0.01) -- (0.12,0.19) -- (0.27,0.08);
+\draw (0,-0.19) -- (0,-0.32) (-0.16,-0.32) -- (0.16,-0.32);
+\end{scope}
+
+\node[chapter] at (0.55,-4.8) {\ref{chap:control-benchmark}};
+\node[heading] at (2.8,-4.44) {Controller studies};
+\node[detail] at (2.85,-4.92) {Compare control approaches and identify the requirements that remain.};
+% Comparative traces; schematic, no empirical values.
+\begin{scope}[shift={(1.95,-4.8)},icon]
+\draw (-0.35,0.31) -- (-0.35,-0.29) -- (0.38,-0.29);
+\draw (-0.28,-0.18) -- (-0.08,0.03) -- (0.09,-0.02) -- (0.30,0.24);
+\draw[dashed,draw=introMapTeal] (-0.28,-0.08) -- (-0.08,-0.14) -- (0.09,0.10) -- (0.30,0.06);
+\end{scope}
+
+\node[chapter,draw=introMapPurple,fill=introMapPurple!5] at (0.55,-6.4) {\ref{chap:ti-marl}};
+\node[heading] at (2.8,-6.04) {Proposed learning method};
+\node[detail] at (2.85,-6.52) {Develop and assess an integrated response to those requirements.};
+% Connected learning units.
+\begin{scope}[shift={(1.95,-6.4)},icon,draw=introMapPurple]
+\foreach \y in {-0.23,0.23} {
+  \draw (-0.31,\y) -- (0,0.27) -- (0.31,\y);
+  \draw (-0.31,\y) -- (0,-0.27) -- (0.31,\y);
+}
+\foreach \x/\y in {-0.31/-0.23,-0.31/0.23,0/0.27,0/-0.27,0.31/-0.23,0.31/0.23}
+  \draw[fill=white] (\x,\y) circle (0.075);
+\end{scope}
+
+\node[chapter,draw=introMapTeal,fill=introMapTeal!5] at (0.55,-8.0) {\ref{chap:real-world}};
+\node[heading] at (2.8,-7.64) {Real-world deployment and studies};
+\node[detail] at (2.85,-8.12) {Installation interfaces, equipment and operational behaviour.};
+% House and charger.
+\begin{scope}[shift={(1.95,-8.0)},icon,draw=introMapTeal]
+\draw (-0.37,0.02) -- (-0.09,0.30) -- (0.19,0.02);
+\draw (-0.30,0.08) -- (-0.30,-0.29) -- (0.11,-0.29) -- (0.11,0.08);
+\draw (-0.17,-0.29) -- (-0.17,-0.09) -- (-0.03,-0.09) -- (-0.03,-0.29);
+\draw (0.24,-0.29) rectangle (0.41,0.03);
+\draw (0.29,-0.04) -- (0.35,-0.04) (0.41,-0.06) -- (0.47,-0.10) -- (0.47,-0.23);
+\end{scope}
+
+\node[chapter] at (0.55,-9.6) {\ref{chap:discussion}--\ref{chap:conclusions}};
+\node[heading] at (2.8,-9.24) {Synthesis and conclusions};
+\node[detail] at (2.85,-9.72) {Answer the RQs, assess the thesis and identify further research.};
+% Synthesis document.
+\begin{scope}[shift={(1.95,-9.6)},icon]
+\draw[fill=introMapBlue!4] (-0.25,-0.32) rectangle (0.25,0.32);
+\draw (-0.15,0.18) -- (0.15,0.18) (-0.15,0.06) -- (0.15,0.06);
+\draw[draw=introMapTeal] (-0.13,-0.12) -- (-0.04,-0.22) -- (0.15,-0.04);
+\end{scope}
+
+\draw[-{Stealth[length=2mm]},dashed,draw=introMapTeal,line width=0.8pt]
+  (12.25,-8.22) -- (13.05,-8.22) -- (13.05,-3.42) -- (12.25,-3.42);
+\node[rotate=90,font=\scriptsize,text=introMapTeal,inner sep=0pt]
+  at (13.42,-5.82) {Operational experience informs development};
+\end{tikzpicture}
+\endgroup

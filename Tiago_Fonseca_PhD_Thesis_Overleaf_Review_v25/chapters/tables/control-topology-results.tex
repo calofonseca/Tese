@@ -1,0 +1,19 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Annual operation through Core-30 Topology changes.}
+\label{tab:control-topology-results}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.3\textwidth}*{4}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & Cost [EUR] & Failed \glspl{ev} [$n$] & Fallback [building-h] & Deficit [kWh]\\
+\midrule
+\gls{rbc} Smart Local & 21\,033 & 90 & 2\,234.8 & 166.5\\
+\gls{matd3} (residual) & 20\,192 & 288 & 18\,622.0 & 532.8\\
+Transformer \gls{ppo} & 20\,799 & 162 & 10\,242.2 & 299.7\\
+Transformer \gls{matd3} & 19\,631 & 99 & 10\,242.2 & 183.1\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Invented complete-year controller-plus-supervisor outcomes. Policies remain frozen on the held-out year. Fallback supplies commands outside the usable learned interface; it does not certify that the original implementation supports every topology event. The eligible departure cohort is 9\,000.\end{minipage}
+\end{table}

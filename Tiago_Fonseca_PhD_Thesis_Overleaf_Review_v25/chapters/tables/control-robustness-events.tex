@@ -1,0 +1,35 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Missed \gls{ev} service over the full 2024 test-window illustration. Paired Core-30 Normal and Robustness settings.}
+\label{tab:control-robustness-events}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+\toprule
+\textbf{Scenario} & \textbf{Failed} & \textbf{Eligible} & \textbf{Deficit} & \textbf{Largest}\\
+ & [$n$] & [$N$] & [kWh] & [kWh]\\
+\midrule
+\multicolumn{5}{@{}l}{\emph{\gls{rbc} Smart Local}}\\
+Normal & 20 & 10\,000 & 40 & 6\\
+Robustness & 230 & 10\,000 & 690 & 14\\
+\addlinespace[4pt]
+\multicolumn{5}{@{}l}{\emph{\gls{maddpg}}}\\
+Normal & 140 & 10\,000 & 420 & 14\\
+Robustness & 640 & 10\,000 & 2\,304 & 22\\
+\addlinespace[4pt]
+\multicolumn{5}{@{}l}{\emph{\gls{matd3} (residual)}}\\
+Normal & 20 & 10\,000 & 34 & 5\\
+Robustness & 270 & 10\,000 & 702 & 13\\
+\addlinespace[4pt]
+\multicolumn{5}{@{}l}{\emph{\gls{mappo}}}\\
+Normal & 50 & 10\,000 & 125 & 10\\
+Robustness & 370 & 10\,000 & 1\,147 & 18\\
+\addlinespace[4pt]
+\multicolumn{5}{@{}l}{\emph{Transformer \gls{matd3}}}\\
+Normal & 30 & 10\,000 & 54 & 6\\
+Robustness & 210 & 10\,000 & 504 & 11\\
+\bottomrule
+\end{tabular*}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize The invented cohort has 10\,000 eligible departures and 200 additional unattainable requests in each setting; it is not a measured dataset count. Failed departures fall below the minimum service threshold. Deficit sums their battery-energy shortfall; Largest is the maximum individual shortfall. Appliance completion is illustrated in Table~\ref{tab:control-runtime-events}; \gls{dr} is inactive.\end{minipage}
+\end{table}

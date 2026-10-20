@@ -1,0 +1,25 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration, Core-30 Normal. Hierarchical coordination, energy and economic outcomes.}
+\label{tab:control-hierarchy-results}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrr@{}}
+\toprule
+\textbf{Configuration} & \textbf{Cost} & \textbf{Daily peak} & \textbf{Ramping} & \textbf{Solar}\\
+ & [EUR] & [kW] & [kW] & [\%]\\
+\midrule
+\multicolumn{5}{@{}l}{\emph{\gls{rbc} Smart Local}}\\
+Standalone & 21\,600 & 54.0 & 167\,400 & 71.0\\
+Global signal & 20\,880 & 51.0 & 158\,400 & 73.0\\
+Per-member signal & 20\,640 & 49.8 & 156\,600 & 74.0\\
+\addlinespace[4pt]
+\multicolumn{5}{@{}l}{\emph{\gls{matd3} (residual)}}\\
+Standalone & 19\,680 & 49.2 & 153\,000 & 76.0\\
+Global signal & 19\,920 & 46.8 & 144\,000 & 77.0\\
+Per-member signal & 20\,160 & 45.6 & 140\,400 & 78.0\\
+\bottomrule
+\end{tabular*}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Standalone is the same local controller with a neutral coordination signal. Cost uses the unchanged billing tariff.\end{minipage}
+\end{table}

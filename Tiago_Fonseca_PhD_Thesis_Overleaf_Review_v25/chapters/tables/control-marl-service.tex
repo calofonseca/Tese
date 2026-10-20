@@ -1,0 +1,31 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Full 2024 test-window illustration, Core-30 Normal. Common scorecard, service, safety, and resource use.}
+\label{tab:controller-service-ledger}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrrr@{}}
+\toprule
+\textbf{Configuration} & \textbf{\gls{ev} min.} & \textbf{\gls{ev} band} & \textbf{Viol.} & \textbf{Corrected} & \textbf{Battery} & \textbf{\gls{v2g}} & \textbf{Saving}\\
+ & [\%] & [\%] & [kWh] & [\%] & [kWh] & [kWh] & [$n/N$]\\
+\midrule
+\multicolumn{8}{@{}l}{\emph{References}}\\
+\gls{bau} & 100.0 & 18.0 & 0 & 3.0 & 22\,000 & 0 & --\\
+\gls{rbc} Smart Local & 99.8 & 92.0 & 0 & 4.0 & 25\,500 & 0 & 26/30\\
+\gls{rbc} Community & 99.8 & 93.0 & 0 & 3.6 & 26\,800 & 0 & 27/30\\
+\addlinespace[4pt]
+\multicolumn{8}{@{}l}{\emph{Local learning}}\\
+Local \gls{ppo} & 98.2 & 81.0 & 0 & 9.5 & 28\,200 & 0 & 23/30\\
+Local \gls{td3} & 98.8 & 85.0 & 0 & 8.0 & 29\,100 & 0 & 25/30\\
+\addlinespace[4pt]
+\multicolumn{8}{@{}l}{\emph{Multi-agent learning}}\\
+\gls{maddpg} & 98.6 & 84.0 & 0 & 14.0 & 32\,000 & 0 & 26/30\\
+\gls{matd3} (residual) & 99.8 & 96.0 & 0 & 2.3 & 28\,000 & 0 & 29/30\\
+\gls{mappo} & 99.5 & 91.0 & 0 & 5.5 & 29\,700 & 0 & 27/30\\
+\gls{happo} & 99.6 & 92.5 & 0 & 4.8 & 30\,300 & 0 & 28/30\\
+\gls{masac} & 99.3 & 90.0 & 0 & 6.5 & 31\,000 & 0 & 27/30\\
+\bottomrule
+\end{tabular*}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize Battery denotes stationary-battery throughput; Saving counts members with a lower bill than matched \gls{bau}. \gls{v2g} is disabled in this setting. The invented departure cohort is recorded in Appendix~\ref{app:annual-bau}; the complete annual fixtures appear in Appendix~\ref{app:control-variant-coverage}.\end{minipage}
+\end{table}

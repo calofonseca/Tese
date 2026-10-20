@@ -1,0 +1,18 @@
+\begin{table}[!htbp]
+\centering
+\caption{\illustrativecaption Offline-policy illustration against its behaviour-policy reference, Core-30 Normal.}
+\label{tab:control-offline-results}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{tabularx}{\textwidth}{@{}p{0.32\textwidth}*{4}{>{\raggedleft\arraybackslash}X}@{}}
+\toprule
+Configuration & Cost [EUR] & \gls{ev} min. [\%] & \gls{ev} band [\%] & Corrected [\%]\\
+\midrule
+\gls{rbc} Smart Local & 21\,600 & 99.8 & 92.0 & 4.0\\
+Offline policy* & 21\,240 & 99.2 & 89.0 & 5.8\\
+\gls{matd3} (residual) & 19\,680 & 99.8 & 96.0 & 2.3\\
+\bottomrule
+\end{tabularx}
+\par\smallskip\begin{minipage}{\textwidth}\footnotesize *This generic numerical example does not identify a tested offline algorithm or report the associated collaborative study.\end{minipage}
+\end{table}
